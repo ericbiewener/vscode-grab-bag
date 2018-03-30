@@ -482,8 +482,8 @@ escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
 
 eslint-config-ericbiewener@^1.0.0:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/eslint-config-ericbiewener/-/eslint-config-ericbiewener-1.0.1.tgz#c77d9e917520e3d8929401b840c3012d510b258e"
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/eslint-config-ericbiewener/-/eslint-config-ericbiewener-1.0.5.tgz#298b62e995feeaf6c6824a62b7965b73f7acb531"
 
 eslint-scope@^3.7.1:
   version "3.7.1"
@@ -1399,7 +1399,7 @@ lodash.templatesettings@^3.0.0:
     lodash._reinterpolate "^3.0.0"
     lodash.escape "^3.0.0"
 
-lodash@^4.17.4, lodash@^4.3.0:
+lodash@^4.17.4, lodash@^4.17.5, lodash@^4.3.0:
   version "4.17.5"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.5.tgz#99a92d65c0272debe8c96b6057bc8fbfa3bed511"
 

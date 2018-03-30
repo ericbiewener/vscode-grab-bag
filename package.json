@@ -21,8 +21,40 @@
                 "title": "Hide Tests"
             },
             {
+                "command": "grabBag.showTests",
+                "title": "Show Tests"
+            },
+            {
                 "command": "grabBag.gotoSymbolGrouped",
                 "title": "Go to Symbol in File (Grouped)..."
+            },
+            {
+                "command": "grabBag.openCorrespondingTestFile",
+                "title": "Open Corresponding Test File"
+            },
+            {
+                "command": "grabBag.openCorrespondingSnapshot",
+                "title": "Open Corresponding Snapshot"
+            },
+            {
+                "command": "grabBag.jestWatchActiveFile",
+                "title": "Jest Watch Active File"
+            },
+            {
+                "command": "grabBag.jestUpdateActiveFile",
+                "title": "Jest Update Active File"
+            },
+            {
+                "command": "grabBag.moveEditorToOtherGroup",
+                "title": "Move Editor to Other Group"
+            },
+            {
+                "command": "grabBag.toggleEditorMaxWidth",
+                "title": "Toggle Editor Max Width"
+            },
+            {
+                "command": "grabBag.flowStatus",
+                "title": "Flow Status"
             }
         ]
     },
@@ -38,5 +70,7 @@
         "typescript": "^2.6.1",
         "vscode": "^1.1.6"
     },
-    "dependencies": {}
+    "dependencies": {
+        "lodash": "^4.17.5"
+    }
 }
