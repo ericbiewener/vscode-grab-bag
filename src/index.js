@@ -1,6 +1,7 @@
 const path = require('path')
-const {Uri, window, workspace, commands, ConfigurationTarget} = require('vscode')
+const {Uri, window, workspace, commands, ConfigurationTarget, Selection} = require('vscode')
 const _ = require('lodash')
+const clipboardy = require('clipboardy')
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -15,7 +16,10 @@ function activate(context) {
     commands.registerCommand('grabBag.jestUpdateActiveFile', () => jestActiveFile('ju')),
     commands.registerCommand('grabBag.moveEditorToOtherGroup', moveEditorToOtherGroup),
     commands.registerCommand('grabBag.toggleEditorMaxWidth', toggleEditorMaxWidth),
-    commands.registerCommand('grabBag.flowStatus', flowStatus)
+    commands.registerCommand('grabBag.moveCaretDown', moveCaret),
+    commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false)),
+    commands.registerCommand('grabBag.flowStatus', flowStatus),
+    commands.registerCommand('grabBag.copyEscapedFilePath', copyEscapedFilePath),
   )
 }
 exports.activate = activate
@@ -118,4 +122,19 @@ function jestActiveFile(cmd) {
 function flowStatus() {
   changeToWorkspaceFolder()
   executeTerminalCmd('echo -e \\\\033c; ./node_modules/.bin/flow status')
+}
+
+async function moveCaret(down=true) {
+  const editor = window.activeTextEditor
+  const position = editor.selection.active
+  const change = down ? 10 : -10
+  const newLine = Math.min(editor.document.lineCount, Math.max(0, position.line + change))
+  var newPosition = position.with(newLine, position.character)
+  var newSelection = new Selection(newPosition, newPosition)
+  editor.selection = newSelection
+  await commands.executeCommand('revealLine', {lineNumber: newLine})
+}
+
+function copyEscapedFilePath() {
+  clipboardy.writeSync(window.activeTextEditor.document.fileName.replace(/ /g, '\\ '))
 }
