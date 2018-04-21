@@ -1,0 +1,63 @@
+const path = require('path')
+const fs = require('fs')
+const {window, workspace, Uri} = require('vscode')
+
+function getTestFilePath(filePath, swapExt=true) {
+  if (filePath.includes('__tests__')) return filePath
+  const ext = path.extname(filePath)
+  const fileName = path.basename(filePath, ext) + '.test' + ext
+  const testPath =  path.join(path.dirname(filePath), '__tests__', fileName)
+  return swapExt ? swapJsxExtensionIfNoFile(testPath) : testPath
+}
+
+function showTextDocument(filePath, move, preserveFocus) {
+  let {viewColumn} = window.activeTextEditor
+  if (move) viewColumn += viewColumn > 1 ? -1 : 1
+  return window.showTextDocument(Uri.file(filePath), {viewColumn, preserveFocus, preview: false})
+}
+
+function changeToWorkspaceFolder() {
+  const {fileName} = window.activeTextEditor.document
+  for (const {uri} of workspace.workspaceFolders) {
+    if (fileName.startsWith(uri.path)) {
+      executeTerminalCmd('cd ' + uri.path.replace(/ /g, '\\ '), false)
+      return
+    }
+  }
+}
+
+function executeWorkspaceTerminalCmd(cmd, show=true) {
+  changeToWorkspaceFolder()
+  executeTerminalCmd(cmd, show)
+}
+
+let terminal
+function executeTerminalCmd(cmd, show=true) {
+  terminal = terminal || window.createTerminal('Grab Bag')
+  terminal.sendText(cmd)
+  if (show) terminal.show()
+}
+
+function isFile(file) {
+  try {
+    return fs.statSync(file).isFile()
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e // File might exist, but something else went wrong (e.g. permissions error)
+    return false
+  }
+}
+
+function swapJsxExtensionIfNoFile(filePath) {
+  return isFile(filePath)
+    ? filePath
+    : filePath.endsWith('x') ? filePath.slice(0, -1) : filePath + 'x'
+}
+
+module.exports = {
+  getTestFilePath,
+  showTextDocument,
+  changeToWorkspaceFolder,
+  executeWorkspaceTerminalCmd,
+  swapJsxExtensionIfNoFile,
+  isFile,
+}

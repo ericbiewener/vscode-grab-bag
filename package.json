@@ -23,6 +23,7 @@
             {"title": "Open Corresponding Snapshot", "command": "grabBag.openCorrespondingSnapshot"},
             {"title": "Jest Watch Active File", "command": "grabBag.jestWatchActiveFile"},
             {"title": "Jest Update Active File", "command": "grabBag.jestUpdateActiveFile"},
+            {"title": "ESLint Fix Active File", "command": "grabBag.lintFixActiveFile"},
             {"title": "Move Editor to Other Group", "command": "grabBag.moveEditorToOtherGroup"},
             {"title": "Toggle Editor Max Width", "command": "grabBag.toggleEditorMaxWidth"},
             {"title": "Move Caret Down 10 Lines", "command": "grabBag.moveCaretDown"},

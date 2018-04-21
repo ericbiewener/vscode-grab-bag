@@ -1,7 +1,8 @@
 const path = require('path')
-const {Uri, window, workspace, commands, ConfigurationTarget, Selection} = require('vscode')
+const {window, workspace, commands, ConfigurationTarget, Selection} = require('vscode')
 const _ = require('lodash')
 const clipboardy = require('clipboardy')
+const {executeWorkspaceTerminalCmd, getTestFilePath, showTextDocument, swapJsxExtensionIfNoFile, isFile} = require('./utils')
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -14,6 +15,7 @@ function activate(context) {
     commands.registerCommand('grabBag.openCorrespondingSnapshot', openCorrespondingSnapshot),
     commands.registerCommand('grabBag.jestWatchActiveFile', () => jestActiveFile('jw')),
     commands.registerCommand('grabBag.jestUpdateActiveFile', () => jestActiveFile('ju')),
+    commands.registerCommand('grabBag.lintFixActiveFile', lintFixActiveFile),
     commands.registerCommand('grabBag.moveEditorToOtherGroup', moveEditorToOtherGroup),
     commands.registerCommand('grabBag.toggleEditorMaxWidth', toggleEditorMaxWidth),
     commands.registerCommand('grabBag.moveCaretDown', moveCaret),
@@ -35,17 +37,10 @@ const testGlobs = [
 ]
 
 async function toggleTests(hide) {
-  const files = workspace.getConfiguration('files', ConfigurationTarget.Global)
+  const files = workspace.getConfiguration('files', ConfigurationTarget.Workspace)
   const exclude = files.get('exclude')
   testGlobs.forEach(g => exclude[g] = hide)
-  await files.update('exclude', exclude, ConfigurationTarget.Global)
-}
-
-function getTestFilePath(filePath) {
-  if (filePath.includes('__tests__')) return filePath
-  const ext = path.extname(filePath)
-  const fileName = path.basename(filePath, ext) + '.test' + ext
-  return path.join(path.dirname(filePath), '__tests__', fileName)
+  await files.update('exclude', exclude, ConfigurationTarget.Workspace)
 }
 
 function moveEditorToOtherGroup() {
@@ -54,12 +49,6 @@ function moveEditorToOtherGroup() {
   } else {
     commands.executeCommand('workbench.action.moveEditorToNextGroup')
   }
-}
-
-function showTextDocument(filePath, move, preserveFocus) {
-  let {viewColumn} = window.activeTextEditor
-  if (move) viewColumn += viewColumn > 1 ? -1 : 1
-  return window.showTextDocument(Uri.file(filePath), {viewColumn, preserveFocus, preview: false})
 }
 
 function openCorrespondingTestFile() {
@@ -72,20 +61,26 @@ function openCorrespondingTestFile() {
   const ext = _.last(fileNameParts)
   const newFilePath = isTest
     ? path.join(path.dirname(path.dirname(filePath)), fileNameParts.slice(0, -2).join('.') + '.' + ext)
-    : getTestFilePath(filePath)
+    : getTestFilePath(filePath, false)
 
-  showTextDocument(newFilePath, true)
+  showTextDocument(swapJsxExtensionIfNoFile(newFilePath), true)
 }
 
 function openCorrespondingSnapshot() {
   if (!window.activeTextEditor) return
   const filePath = window.activeTextEditor.document.fileName
-  const fileName = path.basename(filePath)
-
-  const newFilePath = filePath.endsWith('.snap')
-    ? path.join(path.dirname(path.dirname(filePath)), fileName.slice(0, fileName.lastIndexOf('.')))
-    : path.join(path.dirname(filePath), '__snapshots__', fileName + '.snap')
-
+  
+  let newFilePath
+  if (filePath.endsWith('.snap')) {
+    const fileName = path.basename(filePath)
+    newFilePath = path.join(path.dirname(path.dirname(filePath)), fileName.slice(0, fileName.lastIndexOf('.')))
+  }
+  else {
+    const testFilePath = getTestFilePath(filePath)
+    const fileName = path.basename(testFilePath)
+    newFilePath = path.join(path.dirname(testFilePath), '__snapshots__', fileName + '.snap')
+  }
+  
   showTextDocument(newFilePath, true)
 }
 
@@ -96,32 +91,17 @@ function toggleEditorMaxWidth() {
   isMaximized = !isMaximized
 }
 
-let terminal
-function executeTerminalCmd(cmd, show=true) {
-  terminal = terminal || window.createTerminal('Grab Bag')
-  terminal.sendText(cmd)
-  if (show) terminal.show()
-}
-
-function changeToWorkspaceFolder() {
-  const {fileName} = window.activeTextEditor.document
-  for (const {uri} of workspace.workspaceFolders) {
-    if (fileName.startsWith(uri.path)) {
-      executeTerminalCmd('cd ' + uri.path.replace(/ /g, '\\ '), false)
-      return
-    }
-  }
-}
-
 function jestActiveFile(cmd) {
-  changeToWorkspaceFolder()
   const filePath = getTestFilePath(window.activeTextEditor.document.fileName)
-  executeTerminalCmd(cmd + ' ' + filePath)
+  executeWorkspaceTerminalCmd(cmd + ' ' + filePath)
+}
+
+function lintFixActiveFile() {
+  executeWorkspaceTerminalCmd('./node_modules/.bin/eslint --fix ' + window.activeTextEditor.document.fileName)
 }
 
 function flowStatus() {
-  changeToWorkspaceFolder()
-  executeTerminalCmd('echo -e \\\\033c; ./node_modules/.bin/flow status')
+  executeWorkspaceTerminalCmd('echo -e \\\\033c; ./node_modules/.bin/flow status')
 }
 
 async function moveCaret(down=true) {
