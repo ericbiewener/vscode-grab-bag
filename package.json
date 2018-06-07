@@ -21,6 +21,7 @@
             {"title": "Go to Symbol in File (Grouped)...", "command": "grabBag.gotoSymbolGrouped"},
             {"title": "Open Corresponding Test File", "command": "grabBag.openCorrespondingTestFile"},
             {"title": "Open Corresponding Snapshot", "command": "grabBag.openCorrespondingSnapshot"},
+            {"title": "Jest Test Active File", "command": "grabBag.jestActiveFile"},
             {"title": "Jest Watch Active File", "command": "grabBag.jestWatchActiveFile"},
             {"title": "Jest Update Active File", "command": "grabBag.jestUpdateActiveFile"},
             {"title": "ESLint Fix Active File", "command": "grabBag.lintFixActiveFile"},
@@ -47,5 +48,8 @@
     "dependencies": {
         "clipboardy": "^1.2.3",
         "lodash": "^4.17.5"
-    }
+    },
+    "eslintIgnore": [
+        "test"
+    ]
 }

@@ -2,7 +2,8 @@ const path = require('path')
 const {window, workspace, commands, ConfigurationTarget, Selection} = require('vscode')
 const _ = require('lodash')
 const clipboardy = require('clipboardy')
-const {executeWorkspaceTerminalCmd, getTestFilePath, showTextDocument, swapJsxExtensionIfNoFile, isFile} = require('./utils')
+const {executeWorkspaceTerminalCmd, getTestFilePath, showTextDocument, swapJsxExtensionIfNoFile,
+  getCorrespondingPathForSnapshot} = require('./utils')
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -13,6 +14,7 @@ function activate(context) {
     commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped),
     commands.registerCommand('grabBag.openCorrespondingTestFile', openCorrespondingTestFile),
     commands.registerCommand('grabBag.openCorrespondingSnapshot', openCorrespondingSnapshot),
+    commands.registerCommand('grabBag.jestActiveFile', () => jestActiveFile('j')),
     commands.registerCommand('grabBag.jestWatchActiveFile', () => jestActiveFile('jw')),
     commands.registerCommand('grabBag.jestUpdateActiveFile', () => jestActiveFile('ju')),
     commands.registerCommand('grabBag.lintFixActiveFile', lintFixActiveFile),
@@ -64,24 +66,13 @@ function openCorrespondingTestFile() {
     : getTestFilePath(filePath, false)
 
   showTextDocument(swapJsxExtensionIfNoFile(newFilePath), true)
+    .then(() => jestActiveFile('jw'))
 }
 
 function openCorrespondingSnapshot() {
   if (!window.activeTextEditor) return
-  const filePath = window.activeTextEditor.document.fileName
-  
-  let newFilePath
-  if (filePath.endsWith('.snap')) {
-    const fileName = path.basename(filePath)
-    newFilePath = path.join(path.dirname(path.dirname(filePath)), fileName.slice(0, fileName.lastIndexOf('.')))
-  }
-  else {
-    const testFilePath = getTestFilePath(filePath)
-    const fileName = path.basename(testFilePath)
-    newFilePath = path.join(path.dirname(testFilePath), '__snapshots__', fileName + '.snap')
-  }
-  
-  showTextDocument(newFilePath, true)
+  const filePath = getCorrespondingPathForSnapshot(window.activeTextEditor.document.fileName)
+  showTextDocument(filePath, true)
 }
 
 let isMaximized

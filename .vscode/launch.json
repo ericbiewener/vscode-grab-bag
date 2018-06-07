@@ -11,7 +11,7 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "${workspaceFolder}/_tp-fe.code-workspace",
+                "${workspaceFolder}/test",
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ]
         },
