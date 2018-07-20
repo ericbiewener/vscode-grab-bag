@@ -16,21 +16,66 @@
     "main": "./src/index.js",
     "contributes": {
         "commands": [
-            {"title": "Hide Tests", "command": "grabBag.hideTests"},
-            {"title": "Show Tests", "command": "grabBag.showTests"},
-            {"title": "Go to Symbol in File (Grouped)...", "command": "grabBag.gotoSymbolGrouped"},
-            {"title": "Open Corresponding Test File", "command": "grabBag.openCorrespondingTestFile"},
-            {"title": "Open Corresponding Snapshot", "command": "grabBag.openCorrespondingSnapshot"},
-            {"title": "Jest Test Active File", "command": "grabBag.jestActiveFile"},
-            {"title": "Jest Watch Active File", "command": "grabBag.jestWatchActiveFile"},
-            {"title": "Jest Update Active File", "command": "grabBag.jestUpdateActiveFile"},
-            {"title": "ESLint Fix Active File", "command": "grabBag.lintFixActiveFile"},
-            {"title": "Move Editor to Other Group", "command": "grabBag.moveEditorToOtherGroup"},
-            {"title": "Toggle Editor Max Width", "command": "grabBag.toggleEditorMaxWidth"},
-            {"title": "Move Caret Down 10 Lines", "command": "grabBag.moveCaretDown"},
-            {"title": "Move Caret Up 10 Lines", "command": "grabBag.moveCaretUp"},
-            {"title": "Flow Status", "command": "grabBag.flowStatus"},
-            {"title": "Copy Escaped File Path", "command": "grabBag.copyEscapedFilePath"}
+            {
+                "title": "Hide Tests",
+                "command": "grabBag.hideTests"
+            },
+            {
+                "title": "Show Tests",
+                "command": "grabBag.showTests"
+            },
+            {
+                "title": "Go to Symbol in File (Grouped)...",
+                "command": "grabBag.gotoSymbolGrouped"
+            },
+            {
+                "title": "Open Corresponding Test File",
+                "command": "grabBag.openCorrespondingTestFile"
+            },
+            {
+                "title": "Open Corresponding Snapshot",
+                "command": "grabBag.openCorrespondingSnapshot"
+            },
+            {
+                "title": "Jest Watch Active File",
+                "command": "grabBag.jestWatchActiveFile"
+            },
+            {
+                "title": "Jest Update Active File",
+                "command": "grabBag.jestUpdateActiveFile"
+            },
+            {
+                "title": "ESLint Fix Active File",
+                "command": "grabBag.lintFixActiveFile"
+            },
+            {
+                "title": "Move Editor to Other Group",
+                "command": "grabBag.moveEditorToOtherGroup"
+            },
+            {
+                "title": "Toggle Editor Max Width",
+                "command": "grabBag.toggleEditorMaxWidth"
+            },
+            {
+                "title": "Move Caret Down 10 Lines",
+                "command": "grabBag.moveCaretDown"
+            },
+            {
+                "title": "Move Caret Up 10 Lines",
+                "command": "grabBag.moveCaretUp"
+            },
+            {
+                "title": "Flow Status",
+                "command": "grabBag.flowStatus"
+            },
+            {
+                "title": "Copy Escaped File Path",
+                "command": "grabBag.copyEscapedFilePath"
+            },
+            {
+                "title": "Copy Python Test Path",
+                "command": "grabBag.copyPythonTestPath"
+            }
         ]
     },
     "scripts": {
@@ -47,7 +92,8 @@
     },
     "dependencies": {
         "clipboardy": "^1.2.3",
-        "lodash": "^4.17.5"
+        "lodash": "^4.17.5",
+        "make-dir": "^1.3.0"
     },
     "eslintIgnore": [
         "test"
