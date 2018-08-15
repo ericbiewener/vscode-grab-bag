@@ -25,6 +25,10 @@
                 "command": "grabBag.showTests"
             },
             {
+                "title": "Toggle Light/Dark Theme",
+                "command": "grabBag.toggleLightDarkTheme"
+            },
+            {
                 "title": "Go to Symbol in File (Grouped)...",
                 "command": "grabBag.gotoSymbolGrouped"
             },
@@ -75,6 +79,10 @@
             {
                 "title": "Copy Python Test Path",
                 "command": "grabBag.copyPythonTestPath"
+            },
+            {
+                "title": "Close All Panels",
+                "command": "grabBag.closeAllPanels"
             }
         ]
     },

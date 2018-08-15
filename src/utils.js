@@ -1,6 +1,6 @@
 const path = require('path')
 const fs = require('fs')
-const {window, workspace, Uri} = require('vscode')
+const { commands, Uri, window, workspace } = require( 'vscode')
 
 function getCorrespondingPathForSnapshot(filePath) {
   if (filePath.endsWith('.snap')) {
@@ -54,7 +54,8 @@ let terminal
 function executeTerminalCmd(cmd, show=true) {
   terminal = terminal || window.createTerminal('Grab Bag')
   terminal.sendText(cmd)
-  if (show) terminal.show()
+  if (show) terminal.show(false)
+  setTimeout(() => commands.executeCommand('workbench.action.focusActiveEditorGroup'), 1000)
 }
 
 function isFile(file) {

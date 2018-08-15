@@ -25,6 +25,10 @@ function activate(context) {
   context.subscriptions.push(
     commands.registerCommand('grabBag.hideTests', () => toggleTests(true)),
     commands.registerCommand('grabBag.showTests', () => toggleTests()),
+    commands.registerCommand(
+      'grabBag.toggleLightDarkTheme',
+      toggleLightDarkTheme
+    ),
     commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped),
     commands.registerCommand(
       'grabBag.openCorrespondingTestFile',
@@ -56,7 +60,8 @@ function activate(context) {
       'grabBag.copyEscapedFilePath',
       copyEscapedFilePath
     ),
-    commands.registerCommand('grabBag.copyPythonTestPath', copyPythonTestPath)
+    commands.registerCommand('grabBag.copyPythonTestPath', copyPythonTestPath),
+    commands.registerCommand('grabBag.closeAllPanels', closeAllPanels)
   )
 }
 exports.activate = activate
@@ -72,14 +77,26 @@ const testGlobs = [
   '**/*.spec.js'
 ]
 
-async function toggleTests(hide) {
+async function toggleTests(shouldHide) {
   const files = workspace.getConfiguration(
     'files',
     ConfigurationTarget.Workspace
   )
   const exclude = files.get('exclude')
-  testGlobs.forEach(g => (exclude[g] = hide))
+  testGlobs.forEach(g => (exclude[g] = shouldHide))
   await files.update('exclude', exclude, ConfigurationTarget.Workspace)
+}
+
+function toggleLightDarkTheme() {
+  const config = workspace.getConfiguration(
+    'workbench',
+    ConfigurationTarget.Global
+  )
+  config.update(
+    'colorTheme',
+    config.get('colorTheme') === 'Ayu Light' ? 'Ayu Mirage' : 'Ayu Light',
+    ConfigurationTarget.Global
+  )
 }
 
 function moveEditorToOtherGroup() {
@@ -126,13 +143,6 @@ function openCorrespondingSnapshot() {
     window.activeTextEditor.document.fileName
   )
   showTextDocument(filePath, true)
-}
-
-let isMaximized
-function toggleEditorMaxWidth() {
-  const cmd = isMaximized ? 'evenEditorWidths' : 'maximizeEditor'
-  commands.executeCommand('workbench.action.' + cmd)
-  isMaximized = !isMaximized
 }
 
 function jestActiveFile(cmd) {
@@ -195,4 +205,17 @@ function copyPythonTestPath() {
 
   clipboardy.writeSync(`tpf ${finalPath}`)
   window.showInformationMessage('Copied test path.')
+}
+
+let isMaximized
+function toggleEditorMaxWidth() {
+  const cmd = isMaximized ? 'evenEditorWidths' : 'maximizeEditor'
+  isMaximized = !isMaximized
+  return commands.executeCommand('workbench.action.' + cmd)
+}
+
+async function closeAllPanels() {
+  commands.executeCommand('workbench.action.closePanel')
+  await commands.executeCommand('workbench.action.maximizeEditor')
+  commands.executeCommand('workbench.action.evenEditorWidths')
 }
