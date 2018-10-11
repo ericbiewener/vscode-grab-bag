@@ -39,12 +39,11 @@ function activate(context) {
       openCorrespondingSnapshot
     ),
     commands.registerCommand('grabBag.jestWatchActiveFile', () =>
-      jestActiveFile('jw')
+      jestActiveFile('jw', false)
     ),
     commands.registerCommand('grabBag.jestUpdateActiveFile', () =>
       jestActiveFile('ju')
     ),
-    commands.registerCommand('grabBag.lintFixActiveFile', lintFixActiveFile),
     commands.registerCommand(
       'grabBag.moveEditorToOtherGroup',
       moveEditorToOtherGroup
@@ -55,19 +54,23 @@ function activate(context) {
     ),
     commands.registerCommand('grabBag.moveCaretDown', () => moveCaret(true)),
     commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false)),
-    commands.registerCommand('grabBag.flowStatus', flowStatus),
     commands.registerCommand(
       'grabBag.copyEscapedFilePath',
       copyEscapedFilePath
     ),
     commands.registerCommand('grabBag.copyPythonTestPath', copyPythonTestPath),
-    commands.registerCommand('grabBag.closeAllPanels', closeAllPanels)
+    commands.registerCommand('grabBag.closeAllPanels', closeAllPanels),
+    commands.registerCommand('grabBag.focusOpenEditor', focusOpenEditor)
   )
 }
 exports.activate = activate
 
 function gotoSymbolGrouped() {
   commands.executeCommand('workbench.action.quickOpen', '@:')
+}
+
+function focusOpenEditor() {
+  commands.executeCommand('workbench.action.quickOpen', 'edit active ')
 }
 
 const testGlobs = [
@@ -145,23 +148,13 @@ function openCorrespondingSnapshot() {
   showTextDocument(filePath, true)
 }
 
-function jestActiveFile(cmd) {
+async function jestActiveFile(cmd, focusEditor) {
   const filePath = getTestFilePath(window.activeTextEditor.document.fileName)
   if (cmd === 'jw' && !filePath.includes('mumbai')) cmd = 'yt'
-  executeWorkspaceTerminalCmd(cmd + ' ' + filePath)
-}
-
-function lintFixActiveFile() {
-  executeWorkspaceTerminalCmd(
-    './node_modules/.bin/eslint --fix ' +
-      window.activeTextEditor.document.fileName
-  )
-}
-
-function flowStatus() {
-  executeWorkspaceTerminalCmd(
-    'echo -e \\\\033c; ./node_modules/.bin/flow status'
-  )
+  await commands.executeCommand('workbench.action.terminal.sendSequence', {
+    text: '\u0003'
+  })
+  executeWorkspaceTerminalCmd(cmd + ' ' + filePath, true, focusEditor)
 }
 
 async function moveCaret(down = true) {

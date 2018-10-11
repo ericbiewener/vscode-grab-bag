@@ -45,17 +45,17 @@ function changeToWorkspaceFolder() {
   }
 }
 
-function executeWorkspaceTerminalCmd(cmd, show=true) {
+function executeWorkspaceTerminalCmd(cmd, show=true, focusEditor=true) {
   changeToWorkspaceFolder()
-  executeTerminalCmd(cmd, show)
+  executeTerminalCmd(cmd, show, focusEditor)
 }
 
 let terminal
-function executeTerminalCmd(cmd, show=true) {
+function executeTerminalCmd(cmd, show=true, focusEditor=true) {
   terminal = terminal || window.createTerminal('Grab Bag')
   terminal.sendText(cmd)
   if (show) terminal.show(false)
-  setTimeout(() => commands.executeCommand('workbench.action.focusActiveEditorGroup'), 1000)
+  if (focusEditor) setTimeout(() => commands.executeCommand('workbench.action.focusActiveEditorGroup'), 1000)
 }
 
 function isFile(file) {
