@@ -14,7 +14,6 @@
         "*"
     ],
     "main": "./src/index.js",
-    "enableProposedAPI": true,
     "contributes": {
         "commands": [
             {
@@ -48,6 +47,10 @@
             {
                 "title": "Jest Update Active File",
                 "command": "grabBag.jestUpdateActiveFile"
+            },
+            {
+                "title": "Python Test Active Function",
+                "command": "grabBag.pythonTestActiveFunction"
             },
             {
                 "title": "Move Editor to Other Group",

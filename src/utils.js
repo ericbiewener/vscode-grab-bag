@@ -1,6 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 const { commands, Uri, window, workspace } = require( 'vscode')
+const { findMatchForOffset, getPythonDeclarations } = require('./regex')
 
 function getCorrespondingPathForSnapshot(filePath) {
   if (filePath.endsWith('.snap')) {
@@ -78,13 +79,34 @@ function strUntil(str, endChar) {
   return index < 0 ? str : str.slice(0, index)
 }
 
+function getPythonTestPath() {
+  const editor = window.activeTextEditor
+  const {fileName} = editor.document
+
+  let needle = 'django/'
+  let index = fileName.lastIndexOf(needle)
+  if (index < 0) {
+    needle = 'duluth/'
+    index = fileName.indexOf(needle) // we want the first one, since we need the path to contain a preceding "duluth"
+    if (index < 0) return
+  }
+  const finalPath = fileName
+    .slice(index + needle.length, fileName.lastIndexOf('.'))
+    .replace(/\//g, '.')
+
+  const match = findMatchForOffset(getPythonDeclarations())
+  return match ? finalPath + '.T.' + match.name : finalPath;
+}
+
 module.exports = {
   getCorrespondingPathForSnapshot,
   getTestFilePath,
   showTextDocument,
   changeToWorkspaceFolder,
+  executeTerminalCmd,
   executeWorkspaceTerminalCmd,
   swapJsxExtensionIfNoFile,
   isFile,
   strUntil,
+  getPythonTestPath,
 }

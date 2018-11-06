@@ -10,13 +10,8 @@ const {
 const _ = require('lodash')
 const clipboardy = require('clipboardy')
 const makeDir = require('make-dir')
-const {
-  executeWorkspaceTerminalCmd,
-  getTestFilePath,
-  showTextDocument,
-  swapJsxExtensionIfNoFile,
-  getCorrespondingPathForSnapshot,
-  isFile
+const { executeTerminalCmd, executeWorkspaceTerminalCmd, getCorrespondingPathForSnapshot,
+  getPythonTestPath, getTestFilePath, isFile, showTextDocument, swapJsxExtensionIfNoFile
 } = require('./utils')
 
 // this method is called when your extension is activated
@@ -44,6 +39,7 @@ function activate(context) {
     commands.registerCommand('grabBag.jestUpdateActiveFile', () =>
       jestActiveFile('ju')
     ),
+    commands.registerCommand('grabBag.pythonTestActiveFunction', pythonTestActiveFunction),
     commands.registerCommand(
       'grabBag.moveEditorToOtherGroup',
       moveEditorToOtherGroup
@@ -66,11 +62,11 @@ function activate(context) {
 exports.activate = activate
 
 function gotoSymbolGrouped() {
-  commands.executeCommand('workbench.action.quickOpen', '@:')
+  return commands.executeCommand('workbench.action.quickOpen', '@:')
 }
 
 function focusOpenEditor() {
-  commands.executeCommand('workbench.action.quickOpen', 'edit active ')
+  return commands.executeCommand('workbench.action.quickOpen', 'edt active ')
 }
 
 const testGlobs = [
@@ -177,29 +173,6 @@ function copyEscapedFilePath() {
   )
 }
 
-function copyPythonTestPath() {
-  const editor = window.activeTextEditor
-  const {fileName} = editor.document
-
-  let needle = 'django/'
-  let index = fileName.lastIndexOf(needle)
-  if (index < 0) {
-    needle = 'duluth/'
-    index = fileName.indexOf(needle) // we want the first one, since we need the path to contain a preceding "duluth"
-    if (index < 0) return
-  }
-  let finalPath = fileName
-    .slice(index + needle.length, fileName.lastIndexOf('.'))
-    .replace(/\//g, '.')
-
-  const range = editor.document.getWordRangeAtPosition(editor.selection.active)
-  const testName = range ? editor.document.getText(range) : null
-  if (testName) finalPath = finalPath + '.T.' + testName
-
-  clipboardy.writeSync(`tpf ${finalPath}`)
-  window.showInformationMessage('Copied test path.')
-}
-
 let isMaximized
 function toggleEditorMaxWidth() {
   const cmd = isMaximized ? 'evenEditorWidths' : 'maximizeEditor'
@@ -212,3 +185,20 @@ async function closeAllPanels() {
   await commands.executeCommand('workbench.action.maximizeEditor')
   commands.executeCommand('workbench.action.evenEditorWidths')
 }
+
+function copyPythonTestPath() {
+  const testPath = getPythonTestPath()
+  clipboardy.writeSync(`tpf ${testPath}`)
+  window.showInformationMessage(`Copied test path: ${testPath}`)
+}
+
+function pythonTestActiveFunction() {
+  const testPath = getPythonTestPath()
+  executeTerminalCmd(`tpf ${testPath}`)
+}
+
+// function toggleAndFocusMaximizedPanel() {
+//   workbench.action.focusActiveEditorGroup
+//   workbench.action.focusPanel
+//   workbench.action.toggleMaximizedPanel
+// }
