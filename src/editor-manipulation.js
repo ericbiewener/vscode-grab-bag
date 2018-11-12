@@ -1,4 +1,5 @@
 const { commands, Selection, window } = require('vscode')
+const { showTextDocument } = require('./utils')
 
 function moveEditorToOtherGroup() {
   if (window.activeTextEditor.viewColumn > 1) {
@@ -6,6 +7,10 @@ function moveEditorToOtherGroup() {
   } else {
     commands.executeCommand('workbench.action.moveEditorToNextGroup')
   }
+}
+
+function openActiveFileInOtherGroup() {
+  showTextDocument(window.activeTextEditor.document.fileName, true)
 }
 
 async function moveCaret(down = true) {
@@ -37,6 +42,7 @@ async function closeAllPanels() {
 
 module.exports = {
   moveEditorToOtherGroup,
+  openActiveFileInOtherGroup,
   moveCaret,
   toggleEditorMaxWidth,
   closeAllPanels,

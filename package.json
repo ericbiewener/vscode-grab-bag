@@ -87,6 +87,10 @@
             {
                 "title": "Repeat Last Terminal Command",
                 "command": "grabBag.repeatLastTerminalCmd"
+            },
+            {
+                "title": "Open Active File in Other Group",
+                "command": "grabBag.openActiveFileInOtherGroup"
             }
         ]
     },

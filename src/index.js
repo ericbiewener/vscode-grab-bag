@@ -3,6 +3,7 @@ const {
   closeAllPanels,
   moveCaret,
   moveEditorToOtherGroup,
+  openActiveFileInOtherGroup,
   toggleEditorMaxWidth,
 } = require('./editor-manipulation')
 const {
@@ -71,6 +72,10 @@ function activate(context) {
     commands.registerCommand(
       'grabBag.repeatLastTerminalCmd',
       repeatLastTerminalCmd
+    ),
+    commands.registerCommand(
+      'grabBag.openActiveFileInOtherGroup',
+      openActiveFileInOtherGroup
     )
   )
 }
