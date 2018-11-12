@@ -83,6 +83,10 @@
             {
                 "title": "Focus Open Editor",
                 "command": "grabBag.focusOpenEditor"
+            },
+            {
+                "title": "Repeat Last Terminal Command",
+                "command": "grabBag.repeatLastTerminalCmd"
             }
         ]
     },

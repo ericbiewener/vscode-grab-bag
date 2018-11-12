@@ -51,12 +51,17 @@ function executeWorkspaceTerminalCmd(cmd, show=true, focusEditor=true) {
   executeTerminalCmd(cmd, show, focusEditor)
 }
 
-let terminal
+let lastCmd
 function executeTerminalCmd(cmd, show=true, focusEditor=true) {
-  terminal = terminal || window.createTerminal('Grab Bag')
+  lastCmd = cmd
+  const terminal = window.terminals[0] || window.createTerminal('Grab Bag')
   terminal.sendText(cmd)
   if (show) terminal.show(false)
   if (focusEditor) setTimeout(() => commands.executeCommand('workbench.action.focusActiveEditorGroup'), 1000)
+}
+
+function repeatLastTerminalCmd() {
+  if (lastCmd) executeTerminalCmd(lastCmd)
 }
 
 function isFile(file) {
@@ -109,4 +114,5 @@ module.exports = {
   isFile,
   strUntil,
   getPythonTestPath,
+  repeatLastTerminalCmd,
 }
