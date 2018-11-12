@@ -5,6 +5,7 @@ const testGlobs = [
   '**/__mocks__',
   '**/__fixtures__',
   '**/*.spec.js',
+  '**/tests/*.py',
 ]
 
 export async function toggleTests(shouldHide) {
