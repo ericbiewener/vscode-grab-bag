@@ -5,7 +5,7 @@ const pyRegex = {
   class: /^[ \t]*class ([^(]+)/gm,
 }
 
-function getPythonDeclarations(type='def') {
+function getPythonDeclarations(type = 'def') {
   const editor = window.activeTextEditor
   const text = editor.document.getText()
 

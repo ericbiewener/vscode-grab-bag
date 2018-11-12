@@ -4,7 +4,7 @@ const testGlobs = [
   '**/__tests__',
   '**/__mocks__',
   '**/__fixtures__',
-  '**/*.spec.js'
+  '**/*.spec.js',
 ]
 
 export async function toggleTests(shouldHide) {
@@ -31,5 +31,5 @@ function toggleLightDarkTheme() {
 
 module.exports = {
   toggleTests,
-  toggleLightDarkTheme
+  toggleLightDarkTheme,
 }

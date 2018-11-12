@@ -1,11 +1,24 @@
-
 const { commands } = require('vscode')
-const { closeAllPanels, moveCaret, moveEditorToOtherGroup, toggleEditorMaxWidth
+const {
+  closeAllPanels,
+  moveCaret,
+  moveEditorToOtherGroup,
+  toggleEditorMaxWidth,
 } = require('./editor-manipulation')
-const { jestActiveFile, openCorrespondingSnapshot, openCorrespondingTestFile
+const {
+  jestActiveFile,
+  openCorrespondingSnapshot,
+  openCorrespondingTestFile,
 } = require('./jest-testing')
-const { copyEscapedFilePath, focusOpenEditor, gotoSymbolGrouped } = require('./misc')
-const { copyPythonTestPath, pythonTestActiveFunction } = require('./python-testing')
+const {
+  copyEscapedFilePath,
+  focusOpenEditor,
+  gotoSymbolGrouped,
+} = require('./misc')
+const {
+  copyPythonTestPath,
+  pythonTestActiveFunction,
+} = require('./python-testing')
 const { toggleLightDarkTheme, toggleTests } = require('./settings')
 const { repeatLastTerminalCmd } = require('./utils')
 
@@ -34,7 +47,10 @@ function activate(context) {
     commands.registerCommand('grabBag.jestUpdateActiveFile', () =>
       jestActiveFile('ju')
     ),
-    commands.registerCommand('grabBag.pythonTestActiveFunction', pythonTestActiveFunction),
+    commands.registerCommand(
+      'grabBag.pythonTestActiveFunction',
+      pythonTestActiveFunction
+    ),
     commands.registerCommand(
       'grabBag.moveEditorToOtherGroup',
       moveEditorToOtherGroup
@@ -52,22 +68,13 @@ function activate(context) {
     commands.registerCommand('grabBag.copyPythonTestPath', copyPythonTestPath),
     commands.registerCommand('grabBag.closeAllPanels', closeAllPanels),
     commands.registerCommand('grabBag.focusOpenEditor', focusOpenEditor),
-    commands.registerCommand('grabBag.repeatLastTerminalCmd', repeatLastTerminalCmd)
+    commands.registerCommand(
+      'grabBag.repeatLastTerminalCmd',
+      repeatLastTerminalCmd
+    )
   )
 }
 exports.activate = activate
-
-
-
-
-
-
-
-
-
-
-
-
 
 // function toggleAndFocusMaximizedPanel() {
 //   workbench.action.focusActiveEditorGroup

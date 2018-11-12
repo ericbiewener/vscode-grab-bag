@@ -17,6 +17,6 @@ function copyEscapedFilePath() {
 
 module.exports = {
   gotoSymbolGrouped,
-focusOpenEditor,
-copyEscapedFilePath,
+  focusOpenEditor,
+  copyEscapedFilePath,
 }

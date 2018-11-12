@@ -20,5 +20,5 @@ function pythonTestActiveFunction() {
 
 module.exports = {
   copyPythonTestPath,
-pythonTestActiveFunction
+  pythonTestActiveFunction,
 }

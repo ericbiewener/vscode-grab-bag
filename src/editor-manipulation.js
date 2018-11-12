@@ -1,4 +1,3 @@
-
 const { commands, Selection, window } = require('vscode')
 
 function moveEditorToOtherGroup() {
@@ -20,7 +19,7 @@ async function moveCaret(down = true) {
   var newPosition = position.with(newLine, position.character)
   var newSelection = new Selection(newPosition, newPosition)
   editor.selection = newSelection
-  await commands.executeCommand('revealLine', {lineNumber: newLine})
+  await commands.executeCommand('revealLine', { lineNumber: newLine })
 }
 
 let isMaximized
@@ -38,7 +37,7 @@ async function closeAllPanels() {
 
 module.exports = {
   moveEditorToOtherGroup,
-moveCaret,
-toggleEditorMaxWidth,
-closeAllPanels,
+  moveCaret,
+  toggleEditorMaxWidth,
+  closeAllPanels,
 }

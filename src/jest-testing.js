@@ -3,8 +3,14 @@ const _ = require('lodash')
 const makeDir = require('make-dir')
 const path = require('path')
 const { commands, window } = require('vscode')
-const { executeWorkspaceTerminalCmd, getCorrespondingPathForSnapshot, getTestFilePath, isFile,
-  showTextDocument, swapJsxExtensionIfNoFile } = require('./utils')
+const {
+  executeWorkspaceTerminalCmd,
+  getCorrespondingPathForSnapshot,
+  getTestFilePath,
+  isFile,
+  showTextDocument,
+  swapJsxExtensionIfNoFile,
+} = require('./utils')
 
 function openCorrespondingTestFile() {
   if (!window.activeTextEditor) return
@@ -16,9 +22,9 @@ function openCorrespondingTestFile() {
   const ext = _.last(fileNameParts)
   const newFilePath = isTest
     ? path.join(
-      path.dirname(path.dirname(filePath)),
-      fileNameParts.slice(0, -2).join('.') + '.' + ext
-    )
+        path.dirname(path.dirname(filePath)),
+        fileNameParts.slice(0, -2).join('.') + '.' + ext
+      )
     : getTestFilePath(filePath, false)
 
   const jsxSwappedPath = swapJsxExtensionIfNoFile(newFilePath)
@@ -26,8 +32,8 @@ function openCorrespondingTestFile() {
   const fileCreation = noFileCreation
     ? Promise.resolve()
     : makeDir(path.dirname(newFilePath)).then(() =>
-      fs.writeFile(newFilePath, '')
-    )
+        fs.writeFile(newFilePath, '')
+      )
 
   fileCreation.then(() => {
     showTextDocument(noFileCreation ? jsxSwappedPath : newFilePath, true).then(
@@ -48,13 +54,13 @@ async function jestActiveFile(cmd, focusEditor) {
   const filePath = getTestFilePath(window.activeTextEditor.document.fileName)
   if (cmd === 'jw' && !filePath.includes('mumbai')) cmd = 'yt'
   await commands.executeCommand('workbench.action.terminal.sendSequence', {
-    text: '\u0003'
+    text: '\u0003',
   })
   executeWorkspaceTerminalCmd(cmd + ' ' + filePath, true, focusEditor)
 }
 
 module.exports = {
   openCorrespondingTestFile,
-openCorrespondingSnapshot,
-jestActiveFile
+  openCorrespondingSnapshot,
+  jestActiveFile,
 }
