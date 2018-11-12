@@ -5,16 +5,17 @@ const testGlobs = [
   '**/__mocks__',
   '**/__fixtures__',
   '**/*.spec.js',
-  '**/tests/*.py',
+  '**/tests',
 ]
 
-export async function toggleTests(shouldHide) {
+async function toggleTests(shouldHide) {
   const files = workspace.getConfiguration(
     'files',
     ConfigurationTarget.Workspace
   )
   const exclude = files.get('exclude')
   testGlobs.forEach(g => (exclude[g] = shouldHide))
+  console.log(exclude)
   await files.update('exclude', exclude, ConfigurationTarget.Workspace)
 }
 
