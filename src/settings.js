@@ -1,4 +1,4 @@
-const { ConfigurationTarget, workspace } = require('vscode')
+const { ConfigurationTarget, window, workspace } = require('vscode')
 
 const testGlobs = [
   '**/__tests__',
@@ -20,13 +20,26 @@ async function toggleTests(shouldHide) {
 }
 
 function toggleLightDarkTheme() {
-  const config = workspace.getConfiguration(
+  const grabBagConfig = workspace.getConfiguration(
+    'grabBag',
+    ConfigurationTarget.Global
+  )
+  const light = grabBagConfig.get('lightTheme')
+  const dark = grabBagConfig.get('darkTheme')
+  if (!light || !dark) {
+    window.showInformationMessage(
+      'Both light & dark themes must be set in grab bag config'
+    )
+    return
+  }
+
+  const workbenchConfig = workspace.getConfiguration(
     'workbench',
     ConfigurationTarget.Global
   )
-  config.update(
+  workbenchConfig.update(
     'colorTheme',
-    config.get('colorTheme') === 'Ayu Light' ? 'Ayu Mirage' : 'Ayu Light',
+    workbenchConfig.get('colorTheme') === light ? dark : light,
     ConfigurationTarget.Global
   )
 }

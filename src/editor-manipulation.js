@@ -9,7 +9,7 @@ function moveEditorToOtherGroup() {
   }
 }
 
-function openActiveFileInOtherGroup() {
+function mirrorFile() {
   showTextDocument(window.activeTextEditor.document.fileName, true)
 }
 
@@ -42,7 +42,7 @@ async function closeAllPanels() {
 
 module.exports = {
   moveEditorToOtherGroup,
-  openActiveFileInOtherGroup,
+  mirrorFile,
   moveCaret,
   toggleEditorMaxWidth,
   closeAllPanels,

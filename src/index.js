@@ -1,9 +1,11 @@
 const { commands } = require('vscode')
+const { betterGoToSymbol } = require('./code-navigation')
+const { removeUnusedVariableDestructuring } = require('./edit')
 const {
   closeAllPanels,
   moveCaret,
   moveEditorToOtherGroup,
-  openActiveFileInOtherGroup,
+  mirrorFile,
   toggleEditorMaxWidth,
 } = require('./editor-manipulation')
 const {
@@ -73,16 +75,12 @@ function activate(context) {
       'grabBag.repeatLastTerminalCmd',
       repeatLastTerminalCmd
     ),
+    commands.registerCommand('grabBag.mirrorFile', mirrorFile),
+    commands.registerCommand('grabBag.betterGoToSymbol', betterGoToSymbol),
     commands.registerCommand(
-      'grabBag.openActiveFileInOtherGroup',
-      openActiveFileInOtherGroup
+      'grabBag.removeUnusedVariableDestructuring',
+      removeUnusedVariableDestructuring
     )
   )
 }
 exports.activate = activate
-
-// function toggleAndFocusMaximizedPanel() {
-//   workbench.action.focusActiveEditorGroup
-//   workbench.action.focusPanel
-//   workbench.action.toggleMaximizedPanel
-// }

@@ -89,10 +89,34 @@
                 "command": "grabBag.repeatLastTerminalCmd"
             },
             {
-                "title": "Open Active File in Other Group",
-                "command": "grabBag.openActiveFileInOtherGroup"
+                "title": "Mirror File",
+                "command": "grabBag.mirrorFile"
+            },
+            {
+                "title": "Better Go To Symbol",
+                "command": "grabBag.betterGoToSymbol"
+            },
+            {
+                "title": "Remove Unused Variable Destructuring",
+                "command": "grabBag.removeUnusedVariableDestructuring"
             }
-        ]
+        ],
+        "configuration": {
+          "type": "object",
+          "title": "Grab Bag",
+          "properties": {
+            "grabBag.lightTheme": {
+              "type": "string",
+              "default": null,
+              "title": "Light Theme"
+            },
+            "grabBag.darkTheme": {
+              "type": "string",
+              "default": null,
+              "title": "Dark Theme"
+            }
+          }
+        }
     },
     "scripts": {
         "postinstall": "node ./node_modules/vscode/bin/install",

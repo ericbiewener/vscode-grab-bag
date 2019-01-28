@@ -14,6 +14,15 @@
                 "${workspaceFolder}/test-workspaces/py",
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ]
-        },
+        },{
+            "name": "Python Dev",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "/Users/ericbiewener/dev",
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ]
+        }
     ]
 }
