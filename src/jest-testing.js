@@ -46,13 +46,18 @@ function openCorrespondingSnapshot() {
   showTextDocument(filePath, true);
 }
 
-async function jestActiveFile(cmd, focusEditor) {
+function getJestCommand(cmd) {
   const filePath = getTestFilePath(window.activeTextEditor.document.fileName);
   if (cmd === "jw" && !filePath.includes("mumbai")) cmd = "yt";
+  return cmd + " " + filePath;
+}
+
+async function jestActiveFile(cmd, focusEditor) {
+  const jestCmd = getJestCommand(cmd);
   await commands.executeCommand("workbench.action.terminal.sendSequence", {
     text: "\u0003"
   });
-  executeWorkspaceTerminalCmd(cmd + " " + filePath, true, focusEditor);
+  executeWorkspaceTerminalCmd(jestCmd, true, focusEditor);
 }
 
 module.exports = {

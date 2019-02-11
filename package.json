@@ -49,6 +49,10 @@
                 "command": "grabBag.jestUpdateActiveFile"
             },
             {
+                "title": "Copy Jest Watch Path",
+                "command": "grabBag.copyJestWatchPath"
+            },
+            {
                 "title": "Python Test Active Function",
                 "command": "grabBag.pythonTestActiveFunction"
             },
