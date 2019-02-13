@@ -1,3 +1,4 @@
+const clipboardy = require("clipboardy");
 const fs = require("fs");
 const _ = require("lodash");
 const makeDir = require("make-dir");
@@ -52,6 +53,10 @@ function getJestCommand(cmd) {
   return cmd + " " + filePath;
 }
 
+function copyJestCommand(cmd) {
+  clipboardy.writeSync(getJestCommand(cmd));
+}
+
 async function jestActiveFile(cmd, focusEditor) {
   const jestCmd = getJestCommand(cmd);
   await commands.executeCommand("workbench.action.terminal.sendSequence", {
@@ -63,5 +68,6 @@ async function jestActiveFile(cmd, focusEditor) {
 module.exports = {
   openCorrespondingTestFile,
   openCorrespondingSnapshot,
+  copyJestCommand,
   jestActiveFile
 };

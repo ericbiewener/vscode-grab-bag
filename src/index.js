@@ -9,6 +9,7 @@ const {
   toggleEditorMaxWidth
 } = require("./editor-manipulation");
 const {
+  copyJestCommand,
   jestActiveFile,
   openCorrespondingSnapshot,
   openCorrespondingTestFile
@@ -51,7 +52,7 @@ function activate(context) {
       jestActiveFile("ju")
     ),
     commands.registerCommand("grabBag.copyJestWatchPath", () =>
-      getJestCommand("jw")
+      copyJestCommand("jw")
     ),
     commands.registerCommand(
       "grabBag.pythonTestActiveFunction",
