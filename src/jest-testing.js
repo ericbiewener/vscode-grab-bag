@@ -4,6 +4,7 @@ const _ = require("lodash");
 const makeDir = require("make-dir");
 const path = require("path");
 const { commands, window } = require("vscode");
+const { toggleTests } = require("./settings");
 const {
   executeWorkspaceTerminalCmd,
   getCorrespondingPathForSnapshot,
@@ -13,7 +14,7 @@ const {
   swapJsxExtensionIfNoFile
 } = require("./utils");
 
-async function openCorrespondingTestFile() {
+async function openCorrespondingTestFile(copyOnly) {
   if (!window.activeTextEditor) return;
   const filePath = window.activeTextEditor.document.fileName;
   const fileNameParts = path.basename(filePath).split(".");
@@ -36,7 +37,9 @@ async function openCorrespondingTestFile() {
   }
 
   await showTextDocument(noFileCreation ? jsxSwappedPath : newFilePath, true);
-  await jestActiveFile("jw");
+  clipboardy.writeSync(`jw ${isTest ? filePath : newFilePath}`);
+  await toggleTests(false);
+  if (!copyOnly) await jestActiveFile("jw");
 }
 
 function openCorrespondingSnapshot() {

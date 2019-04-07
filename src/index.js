@@ -19,6 +19,7 @@ const {
   focusOpenEditor,
   gotoSymbolGrouped
 } = require("./misc");
+const { moveCursorAfterToken } = require("./moveCursorAfterToken");
 const {
   copyPythonTestPath,
   pythonTestActiveFunction
@@ -37,9 +38,11 @@ function activate(context) {
       toggleLightDarkTheme
     ),
     commands.registerCommand("grabBag.gotoSymbolGrouped", gotoSymbolGrouped),
-    commands.registerCommand(
-      "grabBag.openCorrespondingTestFile",
-      openCorrespondingTestFile
+    commands.registerCommand("grabBag.openCorrespondingTestFile", () =>
+      openCorrespondingTestFile()
+    ),
+    commands.registerCommand("grabBag.openCorrespondingTestFileCopyOnly", () =>
+      openCorrespondingTestFile(true)
     ),
     commands.registerCommand(
       "grabBag.openCorrespondingSnapshot",
@@ -84,6 +87,10 @@ function activate(context) {
     commands.registerCommand(
       "grabBag.removeUnusedVariableDestructuring",
       removeUnusedVariableDestructuring
+    ),
+    commands.registerCommand(
+      "grabBag.moveCursorAfterToken",
+      moveCursorAfterToken
     )
   );
 }

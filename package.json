@@ -33,8 +33,12 @@
                 "command": "grabBag.gotoSymbolGrouped"
             },
             {
-                "title": "Open Corresponding Test File",
+                "title": "Open Corresponding Test File and Run Suite",
                 "command": "grabBag.openCorrespondingTestFile"
+            },
+            {
+                "title": "Open Corresponding Test File and Copy Jest Test Path",
+                "command": "grabBag.openCorrespondingTestFileCopyOnly"
             },
             {
                 "title": "Open Corresponding Snapshot",
@@ -103,6 +107,10 @@
             {
                 "title": "Remove Unused Variable Destructuring",
                 "command": "grabBag.removeUnusedVariableDestructuring"
+            },
+            {
+                "title": "Move Cursor After Token",
+                "command": "grabBag.moveCursorAfterToken"
             }
         ],
         "configuration": {
