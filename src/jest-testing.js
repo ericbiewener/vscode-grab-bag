@@ -4,7 +4,6 @@ const _ = require("lodash");
 const makeDir = require("make-dir");
 const path = require("path");
 const { commands, window } = require("vscode");
-const { toggleTests } = require("./settings");
 const {
   executeWorkspaceTerminalCmd,
   getCorrespondingPathForSnapshot,
@@ -38,7 +37,6 @@ async function openCorrespondingTestFile(copyOnly) {
 
   await showTextDocument(noFileCreation ? jsxSwappedPath : newFilePath, true);
   clipboardy.writeSync(`jw ${isTest ? filePath : newFilePath}`);
-  await toggleTests(false);
   if (!copyOnly) await jestActiveFile("jw");
 }
 
