@@ -17,18 +17,6 @@
     "contributes": {
         "commands": [
             {
-                "title": "Hide Tests",
-                "command": "grabBag.hideTests"
-            },
-            {
-                "title": "Show Tests",
-                "command": "grabBag.showTests"
-            },
-            {
-                "title": "Toggle Light/Dark Theme",
-                "command": "grabBag.toggleLightDarkTheme"
-            },
-            {
                 "title": "Go to Symbol in File (Grouped)...",
                 "command": "grabBag.gotoSymbolGrouped"
             },
@@ -112,23 +100,7 @@
                 "title": "Move Cursor After Token",
                 "command": "grabBag.moveCursorAfterToken"
             }
-        ],
-        "configuration": {
-            "type": "object",
-            "title": "Grab Bag",
-            "properties": {
-                "grabBag.lightTheme": {
-                    "type": "string",
-                    "default": null,
-                    "title": "Light Theme"
-                },
-                "grabBag.darkTheme": {
-                    "type": "string",
-                    "default": null,
-                    "title": "Dark Theme"
-                }
-            }
-        }
+        ]
     },
     "scripts": {
         "postinstall": "node ./node_modules/vscode/bin/install",

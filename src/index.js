@@ -24,19 +24,12 @@ const {
   copyPythonTestPath,
   pythonTestActiveFunction
 } = require("./python-testing");
-const { toggleLightDarkTheme, toggleTests } = require("./settings");
 const { repeatLastTerminalCmd } = require("./utils");
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 function activate(context) {
   context.subscriptions.push(
-    commands.registerCommand("grabBag.hideTests", () => toggleTests(true)),
-    commands.registerCommand("grabBag.showTests", () => toggleTests()),
-    commands.registerCommand(
-      "grabBag.toggleLightDarkTheme",
-      toggleLightDarkTheme
-    ),
     commands.registerCommand("grabBag.gotoSymbolGrouped", gotoSymbolGrouped),
     commands.registerCommand("grabBag.openCorrespondingTestFile", () =>
       openCorrespondingTestFile()
