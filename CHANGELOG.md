@@ -1,7 +1,5 @@
-# Change Log
-All notable changes to the "grab-bag" extension will be documented in this file.
+### Version 1.0.1
+- Excluded unneeded files from extension
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-- Initial release
+### Version 1.0.0
+- 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
