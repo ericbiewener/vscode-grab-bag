@@ -14,7 +14,7 @@ export async function runJestTestInIterm(rootDir: string, filepath: string) {
       const iTerm = Application('iTerm2')
       iTerm.includeStandardAdditions = true
       iTerm.activate()
-      delay(0.5)
+      delay(0.25)
 
       const window = iTerm.currentWindow()
       let session
