@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { Uri, window } from 'vscode'
+import { Uri, window, workspace, commands } from 'vscode'
 
 export function isFile(filepath: string) {
   try {
@@ -10,20 +10,35 @@ export function isFile(filepath: string) {
   }
 }
 
-export function showTextDocument(
+export async function showTextDocument(
   filepath: string,
   moveToOtherColumn = false,
   preserveFocus = false
 ) {
-  if (!window.activeTextEditor) return
+  if (!isFile(filepath)) return
 
-  let { viewColumn } = window.activeTextEditor
-  if (viewColumn == null) return
+  let viewColumn = 1
+  const editor = window.activeTextEditor
 
-  if (moveToOtherColumn) viewColumn += viewColumn > 1 ? -1 : 1
-  return window.showTextDocument(Uri.file(filepath), {
-    viewColumn,
+  if (moveToOtherColumn && editor && editor.viewColumn) {
+    viewColumn = editor.viewColumn + (editor.viewColumn > 1 ? -1 : 1)
+  }
+
+  const newEditor = await window.showTextDocument(Uri.file(filepath), {
     preserveFocus,
     preview: false,
   })
+
+  if (newEditor.viewColumn !== viewColumn) moveEditorToOtherGroup()
+}
+
+function moveEditorToOtherGroup() {
+  const editor = window.activeTextEditor
+  if (!editor || !editor.viewColumn) return
+
+  if (editor.viewColumn > 1) {
+    commands.executeCommand('workbench.action.moveEditorToPreviousGroup')
+  } else {
+    commands.executeCommand('workbench.action.moveEditorToNextGroup')
+  }
 }
