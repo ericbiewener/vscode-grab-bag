@@ -4059,13 +4059,14 @@ function wrappy (fn, cb) {
 /*!************************************!*\
   !*** ./src/editor-manipulation.ts ***!
   \************************************/
-/*! exports provided: closeAllPanels, moveEditorToOtherGroup */
+/*! exports provided: closeAllPanels, moveEditorToOtherGroup, moveCaret */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "closeAllPanels", function() { return closeAllPanels; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "moveEditorToOtherGroup", function() { return moveEditorToOtherGroup; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "moveCaret", function() { return moveCaret; });
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
 
@@ -4083,6 +4084,19 @@ function moveEditorToOtherGroup() {
   } else {
     vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToNextGroup');
   }
+}
+async function moveCaret(down = true) {
+  const editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
+  if (!editor) return;
+  const position = editor.selection.active;
+  const change = down ? 10 : -10;
+  const newLine = Math.min(editor.document.lineCount, Math.max(0, position.line + change));
+  var newPosition = position.with(newLine, position.character);
+  var newSelection = new vscode__WEBPACK_IMPORTED_MODULE_0__["Selection"](newPosition, newPosition);
+  editor.selection = newSelection;
+  vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('revealLine', {
+    lineNumber: newLine
+  });
 }
 
 /***/ }),
@@ -4105,7 +4119,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const activate = async function activate(context) {
-  context.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["moveEditorToOtherGroup"]));
+  context.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretDown', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["moveCaret"])()), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretUp', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["moveCaret"])(false)));
 };
 
 /***/ }),

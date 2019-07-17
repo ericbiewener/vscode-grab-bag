@@ -53,6 +53,14 @@
       {
         "title": "Move Editor to Other Group",
         "command": "grabBag.moveEditorToOtherGroup"
+      },
+      {
+        "title": "Move Caret Down",
+        "command": "grabBag.moveCaretDown"
+      },
+      {
+        "title": "Move Caret Up",
+        "command": "grabBag.moveCaretUp"
       }
     ]
   },
