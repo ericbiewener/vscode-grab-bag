@@ -49,6 +49,10 @@
       {
         "title": "Close All Panels",
         "command": "grabBag.closeAllPanels"
+      },
+      {
+        "title": "Move Editor to Other Group",
+        "command": "grabBag.moveEditorToOtherGroup"
       }
     ]
   },

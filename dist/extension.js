@@ -4059,12 +4059,13 @@ function wrappy (fn, cb) {
 /*!************************************!*\
   !*** ./src/editor-manipulation.ts ***!
   \************************************/
-/*! exports provided: closeAllPanels */
+/*! exports provided: closeAllPanels, moveEditorToOtherGroup */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "closeAllPanels", function() { return closeAllPanels; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "moveEditorToOtherGroup", function() { return moveEditorToOtherGroup; });
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
 
@@ -4072,6 +4073,16 @@ async function closeAllPanels() {
   vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.closePanel');
   await vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.maximizeEditor');
   vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.evenEditorWidths');
+}
+function moveEditorToOtherGroup() {
+  const editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
+  if (!editor) return;
+
+  if (editor.viewColumn > 1) {
+    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToPreviousGroup');
+  } else {
+    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToNextGroup');
+  }
 }
 
 /***/ }),
@@ -4094,7 +4105,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const activate = async function activate(context) {
-  context.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["closeAllPanels"]));
+  context.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_2__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_1__["moveEditorToOtherGroup"]));
 };
 
 /***/ }),
@@ -4112,38 +4123,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var run_jxa__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! run-jxa */ "./node_modules/run-jxa/index.js");
 /* harmony import */ var run_jxa__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(run_jxa__WEBPACK_IMPORTED_MODULE_0__);
 
-let Application;
-let delay;
-let jestItermId = 'null';
-async function runJestTestInIterm(rootDir, filepath) {
-  jestItermId = await run_jxa__WEBPACK_IMPORTED_MODULE_0___default()((cmd, getSessions, jestItermId, rootDir, filepath) => {
-    eval(cmd);
-    eval(getSessions);
-    const iTerm = Application('iTerm2');
-    iTerm.includeStandardAdditions = true;
-    iTerm.activate();
-    delay(0.25);
-    const window = iTerm.currentWindow();
-    let session;
-
-    if (jestItermId) {
-      session = getSessions(window).find(s => s.id() === jestItermId);
-    }
-
-    if (!session) {
-      session = window.createTabWithDefaultProfile().currentSession();
-      jestItermId = session.id();
-    }
-
-    session.select();
-    Application('System Events').keystroke('c', {
-      using: 'control down'
-    });
-    cmd(session, `cd ${rootDir}`);
-    cmd(session, `npm run jest:watch ${filepath}`);
-    return jestItermId;
-  }, [cmd, getSessions, jestItermId, rootDir, filepath]);
-}
 const cmd = `
   function cmd(session, text) {
     session.write({ text, newline: true });
@@ -4154,6 +4133,41 @@ const getSessions = `
     for (const tab of window.tabs()) sessions.push(...tab.sessions())
     return sessions
   }`;
+let Application;
+let delay;
+let jestItermId = 'null';
+async function runJestTestInIterm(rootDir, filepath) {
+  // eslint-disable-next-line require-atomic-updates
+  jestItermId = await run_jxa__WEBPACK_IMPORTED_MODULE_0___default()((cmd, getSessions, jestItermId, rootDir, filepath) => {
+    eval(cmd);
+    eval(getSessions);
+    const iTerm = Application('iTerm2');
+    iTerm.includeStandardAdditions = true;
+    iTerm.activate();
+    delay(0.1);
+    const window = iTerm.currentWindow();
+    let session;
+    let newJestItermId = jestItermId;
+
+    if (jestItermId) {
+      session = getSessions(window).find(s => s.id() === jestItermId);
+      session.select();
+      Application('System Events').keystroke('c', {
+        using: 'control down'
+      });
+      delay(0.1);
+    }
+
+    if (!session) {
+      session = window.createTabWithDefaultProfile().currentSession();
+      newJestItermId = session.id();
+    }
+
+    cmd(session, `cd ${rootDir}`);
+    cmd(session, `npm run jest:watch ${filepath}`);
+    return newJestItermId;
+  }, [cmd, getSessions, jestItermId, rootDir, filepath]);
+}
 
 /***/ }),
 
