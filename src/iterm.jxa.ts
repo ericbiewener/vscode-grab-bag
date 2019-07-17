@@ -35,9 +35,11 @@ export async function runJestTestInIterm(rootDir: string, filepath: string): Pro
 
       if (jestItermId) {
         session = getSessions(window).find((s: any) => s.id() === jestItermId)
-        session.select()
-        Application('System Events').keystroke('c', { using: 'control down' })
-        delay(0.1)
+        if (session) {
+          session.select()
+          Application('System Events').keystroke('c', { using: 'control down' })
+          delay(0.1)
+        }
       }
 
       if (!session) {
