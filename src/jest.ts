@@ -1,16 +1,16 @@
 import path from 'path'
 import { window, workspace } from 'vscode'
 import _ from 'lodash'
-import makeDir from 'make-dir'
-import { runJestTestInIterm } from './iterm.jxa'
-import { showTextDocument } from './utils'
+import { runJestTestInIterm } from './iterm'
+import { isFile, showTextDocument } from './utils'
+import fs from 'fs'
 
 export async function openCorrespondingTestFile() {
   const editor = window.activeTextEditor
   if (!editor) return
 
   const filepath = editor.document.fileName
-  const filenameParts = path.basename(filepath).split('.')
+  const filenameParts = getFilenameParts(filepath)
   if (filenameParts.length === 1) return
 
   const dir = path.dirname(filepath)
@@ -28,12 +28,10 @@ export async function openCorrespondingTestFile() {
     testFilepath = filepath
   } else {
     // Production Code
-    filenameParts.splice(-1, 0, 'test')
-    filepathToShow = path.join(dir, '__tests__', filenameParts.join('.'))
+    filepathToShow = getCorrespondingTestFilepath(filepath)
     testFilepath = filepathToShow
   }
 
-  console.log(workspace.workspaceFolders![0].uri.fsPath)
   return Promise.all([
     showTextDocument(filepathToShow, true),
     runJestTestInIterm(workspace.workspaceFolders![0].uri.fsPath, testFilepath),
@@ -51,4 +49,26 @@ export function openCorrespondingSnapshot() {
     `${path.basename(filepath)}.snap`
   )
   return showTextDocument(snapshot, true)
+}
+
+export function createCorrespondingTestFile() {
+  const editor = window.activeTextEditor
+  if (!editor) return
+
+  const testFilepath = getCorrespondingTestFilepath(editor.document.fileName)
+  if (!isFile(testFilepath)) {
+    fs.mkdirSync(path.dirname(testFilepath), { recursive: true })
+    fs.writeFileSync(testFilepath, '')
+  }
+  showTextDocument(testFilepath)
+}
+
+export function getFilenameParts(filepath: string) {
+  return path.basename(filepath).split('.')
+}
+
+function getCorrespondingTestFilepath(filepath: string) {
+  const filenameParts = getFilenameParts(filepath)
+  filenameParts.splice(-1, 0, 'test')
+  return path.join(path.dirname(filepath), '__tests__', filenameParts.join('.'))
 }

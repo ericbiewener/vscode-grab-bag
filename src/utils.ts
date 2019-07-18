@@ -1,5 +1,11 @@
 import fs from 'fs'
-import { Uri, window, workspace, commands } from 'vscode'
+import { Uri, window, workspace, commands, ExtensionContext } from 'vscode'
+
+export let CTX: ExtensionContext
+
+export function setExtCtx(ctx: ExtensionContext) {
+  CTX = ctx
+}
 
 export function isFile(filepath: string) {
   try {

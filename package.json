@@ -47,6 +47,10 @@
         "command": "grabBag.openCorrespondingSnapshot"
       },
       {
+        "title": "Create Corresponding Test File",
+        "command": "grabBag.createCorrespondingTestFile"
+      },
+      {
         "title": "Close All Panels",
         "command": "grabBag.closeAllPanels"
       },
@@ -111,7 +115,6 @@
   },
   "dependencies": {
     "lodash": "4.17.14",
-    "make-dir": "3.0.0",
     "run-jxa": "2.0.0"
   }
 }
