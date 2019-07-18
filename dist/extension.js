@@ -87,37 +87,6 @@ module.exports =
 /************************************************************************/
 /******/ ({
 
-/***/ "./node_modules/lodash/last.js":
-/*!*************************************!*\
-  !*** ./node_modules/lodash/last.js ***!
-  \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-/**
- * Gets the last element of `array`.
- *
- * @static
- * @memberOf _
- * @since 0.1.0
- * @category Array
- * @param {Array} array The array to query.
- * @returns {*} Returns the last element of `array`.
- * @example
- *
- * _.last([1, 2, 3]);
- * // => 3
- */
-function last(array) {
-  var length = array == null ? 0 : array.length;
-  return length ? array[length - 1] : undefined;
-}
-
-module.exports = last;
-
-
-/***/ }),
-
 /***/ "./src/editor-manipulation.ts":
 /*!************************************!*\
   !*** ./src/editor-manipulation.ts ***!
@@ -239,40 +208,37 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingSnapshot", function() { return openCorrespondingSnapshot; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createCorrespondingTestFile", function() { return createCorrespondingTestFile; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFilenameParts", function() { return getFilenameParts; });
-/* harmony import */ var lodash_last__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash/last */ "./node_modules/lodash/last.js");
-/* harmony import */ var lodash_last__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash_last__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! path */ "path");
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! vscode */ "vscode");
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _iterm__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./iterm */ "./src/iterm.ts");
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! fs */ "fs");
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_5__);
-
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _iterm__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./iterm */ "./src/iterm.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! fs */ "fs");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_4__);
 
 
 
 
 
 async function openCorrespondingTestFile() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_2__["window"].activeTextEditor;
+  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
   const filepath = editor.document.fileName;
   const filenameParts = getFilenameParts(filepath);
   if (filenameParts.length === 1) return;
-  const dir = path__WEBPACK_IMPORTED_MODULE_1___default.a.dirname(filepath);
+  const dir = path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath);
   let filepathToShow;
   let testFilepath;
 
-  if (lodash_last__WEBPACK_IMPORTED_MODULE_0___default()(filenameParts) === 'snap') {
+  if (filenameParts[filenameParts.length - 1] === 'snap') {
     // Snapshot
-    filepathToShow = path__WEBPACK_IMPORTED_MODULE_1___default.a.join(dir, '..', path__WEBPACK_IMPORTED_MODULE_1___default.a.basename(filepath, '.snap'));
+    filepathToShow = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(dir, '..', path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath, '.snap'));
     testFilepath = filepathToShow;
   } else if (filenameParts[filenameParts.length - 2] === 'test') {
     // Test file
     filenameParts.splice(-2, 1);
-    filepathToShow = path__WEBPACK_IMPORTED_MODULE_1___default.a.join(dir, '..', filenameParts.join('.'));
+    filepathToShow = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(dir, '..', filenameParts.join('.'));
     testFilepath = filepath;
   } else {
     // Production Code
@@ -280,37 +246,37 @@ async function openCorrespondingTestFile() {
     testFilepath = filepathToShow;
   }
 
-  return Promise.all([Object(_utils__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(filepathToShow, true), Object(_iterm__WEBPACK_IMPORTED_MODULE_3__["runJestTestInIterm"])(vscode__WEBPACK_IMPORTED_MODULE_2__["workspace"].workspaceFolders[0].uri.fsPath, testFilepath)]);
+  return Promise.all([Object(_utils__WEBPACK_IMPORTED_MODULE_3__["showTextDocument"])(filepathToShow, true), Object(_iterm__WEBPACK_IMPORTED_MODULE_2__["runJestTestInIterm"])(vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].workspaceFolders[0].uri.fsPath, testFilepath)]);
 }
 function openCorrespondingSnapshot() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_2__["window"].activeTextEditor;
+  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
   const filepath = editor.document.fileName;
-  const snapshot = path__WEBPACK_IMPORTED_MODULE_1___default.a.join(path__WEBPACK_IMPORTED_MODULE_1___default.a.dirname(filepath), '__snapshots__', `${path__WEBPACK_IMPORTED_MODULE_1___default.a.basename(filepath)}.snap`);
-  return Object(_utils__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(snapshot, true);
+  const snapshot = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__snapshots__', `${path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath)}.snap`);
+  return Object(_utils__WEBPACK_IMPORTED_MODULE_3__["showTextDocument"])(snapshot, true);
 }
 function createCorrespondingTestFile() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_2__["window"].activeTextEditor;
+  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
   const testFilepath = getCorrespondingTestFilepath(editor.document.fileName);
 
-  if (!Object(_utils__WEBPACK_IMPORTED_MODULE_4__["isFile"])(testFilepath)) {
-    fs__WEBPACK_IMPORTED_MODULE_5___default.a.mkdirSync(path__WEBPACK_IMPORTED_MODULE_1___default.a.dirname(testFilepath), {
+  if (!Object(_utils__WEBPACK_IMPORTED_MODULE_3__["isFile"])(testFilepath)) {
+    fs__WEBPACK_IMPORTED_MODULE_4___default.a.mkdirSync(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(testFilepath), {
       recursive: true
     });
-    fs__WEBPACK_IMPORTED_MODULE_5___default.a.writeFileSync(testFilepath, '');
+    fs__WEBPACK_IMPORTED_MODULE_4___default.a.writeFileSync(testFilepath, '');
   }
 
-  Object(_utils__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(testFilepath);
+  Object(_utils__WEBPACK_IMPORTED_MODULE_3__["showTextDocument"])(testFilepath);
 }
 function getFilenameParts(filepath) {
-  return path__WEBPACK_IMPORTED_MODULE_1___default.a.basename(filepath).split('.');
+  return path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
 }
 
 function getCorrespondingTestFilepath(filepath) {
   const filenameParts = getFilenameParts(filepath);
   filenameParts.splice(-1, 0, 'test');
-  return path__WEBPACK_IMPORTED_MODULE_1___default.a.join(path__WEBPACK_IMPORTED_MODULE_1___default.a.dirname(filepath), '__tests__', filenameParts.join('.'));
+  return path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__tests__', filenameParts.join('.'));
 }
 
 /***/ }),

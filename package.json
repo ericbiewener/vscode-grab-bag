@@ -118,7 +118,6 @@
     }
   },
   "dependencies": {
-    "lodash": "4.17.14",
     "run-jxa": "2.0.0"
   }
 }

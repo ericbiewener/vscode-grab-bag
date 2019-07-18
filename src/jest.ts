@@ -1,6 +1,5 @@
 import path from 'path'
 import { window, workspace } from 'vscode'
-import _ from 'lodash'
 import { runJestTestInIterm } from './iterm'
 import { isFile, showTextDocument } from './utils'
 import fs from 'fs'
@@ -17,7 +16,7 @@ export async function openCorrespondingTestFile() {
   let filepathToShow: string
   let testFilepath: string
 
-  if (_.last(filenameParts) === 'snap') {
+  if (filenameParts[filenameParts.length - 1] === 'snap') {
     // Snapshot
     filepathToShow = path.join(dir, '..', path.basename(filepath, '.snap'))
     testFilepath = filepathToShow
