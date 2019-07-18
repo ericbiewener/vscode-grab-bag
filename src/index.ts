@@ -5,6 +5,7 @@ import {
   openCorrespondingSnapshot,
   openCorrespondingTestFile,
 } from './jest'
+import { gotoSymbolGrouped } from './misc'
 import { setExtCtx } from './utils'
 
 export const activate = async function activate(ctx: ExtensionContext) {
@@ -17,6 +18,7 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.closeAllPanels', closeAllPanels),
     commands.registerCommand('grabBag.moveEditorToOtherGroup', moveEditorToOtherGroup),
     commands.registerCommand('grabBag.moveCaretDown', () => moveCaret()),
-    commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false))
+    commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false)),
+    commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped)
   )
 }

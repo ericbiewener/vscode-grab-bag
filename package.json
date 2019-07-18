@@ -65,6 +65,10 @@
       {
         "title": "Move Caret Up",
         "command": "grabBag.moveCaretUp"
+      },
+      {
+        "title": "Go to Symbol in File (Grouped)...",
+        "command": "grabBag.gotoSymbolGrouped"
       }
     ]
   },
