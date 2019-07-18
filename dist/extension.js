@@ -220,7 +220,7 @@ async function runJestTestInIterm(rootDir, filepath) {
   } = Object(child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])(getScriptPath(), ['Jest', runJestTestInIterm.sessionId, cmd]);
   runJestTestInIterm.sessionId = stdout.toString().trim();
 }
-runJestTestInIterm.sessionId = "";
+runJestTestInIterm.sessionId = '';
 
 /***/ }),
 
