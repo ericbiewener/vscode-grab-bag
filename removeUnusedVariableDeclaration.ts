@@ -1,19 +1,13 @@
-const { languages, window, Range, Position } = require('vscode')
+import { window, languages } from 'vscode'
 
-function getPos(r) {
-  return new Position(r.line, r.character)
-}
-
-async function removeUnusedVariableDestructuring() {
+export async function removeUnusedVariableDestructuring(): Promise<void> {
   const editor = window.activeTextEditor
   if (!editor) return
 
   const { document } = editor
   const diagnostics = languages
     .getDiagnostics(document.uri)
-    .filter(
-      ({ code, source }) => source === 'eslint' && code === 'no-unused-vars'
-    )
+    .filter(({ code, source }) => source === 'eslint' && code === 'no-unused-vars')
     .map(d => ({
       start: console.log(d.range[0]) || document.offsetAt(getPos(d.range[0])),
       end: console.log(d.range[1]) || document.offsetAt(getPos(d.range[1])),
@@ -43,24 +37,15 @@ async function removeUnusedVariableDestructuring() {
     if (isDestructure) editRanges.push(d.range)
   }
 
-  return await editor.edit(builder => {
+  await editor.edit(builder => {
     for (const r of editRanges) {
       const start = r[0]
       const end = r[1]
       const endOffset = document.offsetAt(getPos(end))
       const endOffsetModifier = text[endOffset + 1] === ',' ? 1 : 0
       builder.delete(
-        new Range(
-          start.line,
-          start.character,
-          end.line,
-          end.character + endOffsetModifier
-        )
+        new Range(start.line, start.character, end.line, end.character + endOffsetModifier)
       )
     }
   })
-}
-
-module.exports = {
-  removeUnusedVariableDestructuring,
 }

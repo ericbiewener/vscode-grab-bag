@@ -1,136 +1,123 @@
 {
-    "name": "grab-bag",
-    "displayName": "Grab Bag",
-    "description": "Misc",
-    "version": "0.0.1",
-    "publisher": "edb",
-    "engines": {
-        "vscode": "^1.21.0"
-    },
-    "categories": [
-        "Other"
-    ],
-    "activationEvents": [
-        "*"
-    ],
-    "main": "./src/index.js",
-    "contributes": {
-        "commands": [
-            {
-                "title": "Go to Symbol in File (Grouped)...",
-                "command": "grabBag.gotoSymbolGrouped"
-            },
-            {
-                "title": "Open Corresponding Test File and Run Suite",
-                "command": "grabBag.openCorrespondingTestFile"
-            },
-            {
-                "title": "Open Corresponding Test File and Copy Jest Test Path",
-                "command": "grabBag.openCorrespondingTestFileCopyOnly"
-            },
-            {
-                "title": "Open Corresponding Snapshot",
-                "command": "grabBag.openCorrespondingSnapshot"
-            },
-            {
-                "title": "Jest Watch Active File",
-                "command": "grabBag.jestWatchActiveFile"
-            },
-            {
-                "title": "Jest Update Active File",
-                "command": "grabBag.jestUpdateActiveFile"
-            },
-            {
-                "title": "Copy Jest Watch Path",
-                "command": "grabBag.copyJestWatchPath"
-            },
-            {
-                "title": "Python Test Active Function",
-                "command": "grabBag.pythonTestActiveFunction"
-            },
-            {
-                "title": "Move Editor to Other Group",
-                "command": "grabBag.moveEditorToOtherGroup"
-            },
-            {
-                "title": "Toggle Editor Max Width",
-                "command": "grabBag.toggleEditorMaxWidth"
-            },
-            {
-                "title": "Move Caret Down 10 Lines",
-                "command": "grabBag.moveCaretDown"
-            },
-            {
-                "title": "Move Caret Up 10 Lines",
-                "command": "grabBag.moveCaretUp"
-            },
-            {
-                "title": "Copy Escaped File Path",
-                "command": "grabBag.copyEscapedFilePath"
-            },
-            {
-                "title": "Copy Python Test Path",
-                "command": "grabBag.copyPythonTestPath"
-            },
-            {
-                "title": "Close All Panels",
-                "command": "grabBag.closeAllPanels"
-            },
-            {
-                "title": "Focus Open Editor",
-                "command": "grabBag.focusOpenEditor"
-            },
-            {
-                "title": "Repeat Last Terminal Command",
-                "command": "grabBag.repeatLastTerminalCmd"
-            },
-            {
-                "title": "Mirror File",
-                "command": "grabBag.mirrorFile"
-            },
-            {
-                "title": "Better Go To Symbol",
-                "command": "grabBag.betterGoToSymbol"
-            },
-            {
-                "title": "Remove Unused Variable Destructuring",
-                "command": "grabBag.removeUnusedVariableDestructuring"
-            },
-            {
-                "title": "Move Cursor After Token",
-                "command": "grabBag.moveCursorAfterToken"
-            }
-        ]
-    },
-    "scripts": {
-        "postinstall": "node ./node_modules/vscode/bin/install",
-        "prettier": "prettier-eslint --prettier-last --write \"**/*.js\"",
-        "test": "node ./node_modules/vscode/bin/test"
-    },
-    "devDependencies": {
-        "@types/mocha": "5.2.6",
-        "@types/node": "12.0.1",
-        "eslint": "5.16.0",
-        "eslint-config-ericbiewener": "3.6.1",
-        "husky": "2.3.0",
-        "lint-staged": "8.1.6",
-        "prettier-eslint-cli": "^4.7.1",
-        "vscode": "1.1.34"
-    },
-    "dependencies": {
-        "clipboardy": "2.0.0",
-        "lodash": "^4.17.5",
-        "make-dir": "3.0.0"
-    },
-    "lint-staged": {
-        "**/*.js": [
-            "prettier-eslint --prettier-last --write",
-            "git add"
-        ]
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "lint-staged"
-        }
+  "name": "grab-bag",
+  "displayName": "Grab Bag",
+  "description": "A collection of useful commands",
+  "version": "1.0.0",
+  "publisher": "edb",
+  "author": "Eric Biewener",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ericbiewener/vscode-grab-bag"
+  },
+  "homepage": "https://github.com/ericbiewener/vscode-grab-bag/blob/master/README.md",
+  "bugs": {
+    "url": "https://github.com/ericbiewener/vscode-grab-bag/issues"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "settings",
+    "commands",
+    "utilities",
+    "jest",
+    "texas brisket"
+  ],
+  "icon": "logo.png",
+  "galleryBanner": {
+    "color": "#111111",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "engines": {
+    "vscode": "^1.31.0"
+  },
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "title": "Open Corresponding Test File",
+        "command": "grabBag.openCorrespondingTestFile"
+      },
+      {
+        "title": "Open Corresponding Snapshot",
+        "command": "grabBag.openCorrespondingSnapshot"
+      },
+      {
+        "title": "Create Corresponding Test File",
+        "command": "grabBag.createCorrespondingTestFile"
+      },
+      {
+        "title": "Close All Panels",
+        "command": "grabBag.closeAllPanels"
+      },
+      {
+        "title": "Move Editor to Other Group",
+        "command": "grabBag.moveEditorToOtherGroup"
+      },
+      {
+        "title": "Move Caret Down",
+        "command": "grabBag.moveCaretDown"
+      },
+      {
+        "title": "Move Caret Up",
+        "command": "grabBag.moveCaretUp"
+      },
+      {
+        "title": "Go to Symbol in File (Grouped)...",
+        "command": "grabBag.gotoSymbolGrouped"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run build",
+    "start": "NODE_ENV=development webpack -w",
+    "build": "NODE_ENV=production webpack",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "prettier": "prettier-eslint --write \"**/*.ts\"",
+    "package": "vsce package --yarn",
+    "ext": "rm -rf ~/.vscode/extensions/edb.grab-bag-[0-9]* && rm -f *.vsix && yarn run package && code --install-extension *.vsix",
+    "vsce": "vsce publish --yarn"
+  },
+  "devDependencies": {
+    "@babel/core": "7.5.4",
+    "@babel/plugin-proposal-class-properties": "7.5.0",
+    "@babel/plugin-proposal-object-rest-spread": "7.5.4",
+    "@babel/preset-typescript": "7.3.3",
+    "@types/lodash": "4.14.136",
+    "@types/node": "12.6.2",
+    "@types/vscode": "1.36.0",
+    "@types/webpack": "4.4.35",
+    "@typescript-eslint/eslint-plugin": "1.12.0",
+    "@typescript-eslint/parser": "1.12.0",
+    "babel-loader": "8.0.6",
+    "babel-plugin-lodash": "3.3.4",
+    "eslint": "6.0.1",
+    "eslint-config-ericbiewener-typescript": "4.0.0",
+    "husky": "3.0.0",
+    "lint-staged": "9.2.0",
+    "prettier-eslint-cli": "5.0.0",
+    "ts-node": "8.3.0",
+    "typescript": "3.5.3",
+    "vscode": "1.1.35",
+    "webpack": "4.35.3",
+    "webpack-cli": "3.3.6"
+  },
+  "lint-staged": {
+    "**/*.ts": [
+      "prettier-eslint --prettier-last --write",
+      "git add"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
     }
+  },
+  "dependencies": {
+    "run-jxa": "2.0.0"
+  }
 }
