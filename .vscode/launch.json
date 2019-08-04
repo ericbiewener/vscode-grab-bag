@@ -11,7 +11,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "${workspaceFolder}/../_test_workspaces/rise",
+        "/Users/vn0dimt/Repos/rise",
         "--extensionDevelopmentPath=${workspaceFolder}"
       ]
     }

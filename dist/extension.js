@@ -109,7 +109,7 @@ async function closeAllPanels() {
 }
 function moveEditorToOtherGroup() {
   const editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
-  if (!editor) return;
+  if (!editor || !editor.viewColumn) return;
 
   if (editor.viewColumn > 1) {
     vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToPreviousGroup');
@@ -175,20 +175,28 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! child_process */ "child_process");
 /* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(child_process__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
 
 
 
-
-function getScriptPath() {
-  return path__WEBPACK_IMPORTED_MODULE_0___default.a.join(_utils__WEBPACK_IMPORTED_MODULE_2__["CTX"].extensionPath, 'scripts/run-in-iterm.py');
-}
 
 async function runJestTestInIterm(rootDir, filepath) {
   const cmd = [`cd ${rootDir}`, `npm run jest:watch ${filepath}`].join('&&');
+  const scriptPath = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(_utils__WEBPACK_IMPORTED_MODULE_3__["CTX"].extensionPath, 'scripts/run-in-iterm.py');
   const {
-    stdout
-  } = Object(child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])(getScriptPath(), ['Jest', runJestTestInIterm.sessionId, cmd]);
+    stdout,
+    stderr
+  } = Object(child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])(scriptPath, ['Jest', runJestTestInIterm.sessionId, cmd]);
+  const error = stderr.toString();
+
+  if (error) {
+    console.error(error);
+    vscode__WEBPACK_IMPORTED_MODULE_2__["window"].showErrorMessage('Error when trying to execute shell command. Toggle developer tools for details.');
+    return;
+  }
+
   runJestTestInIterm.sessionId = stdout.toString().trim();
 }
 runJestTestInIterm.sessionId = '';

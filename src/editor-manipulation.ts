@@ -8,7 +8,7 @@ export async function closeAllPanels() {
 
 export function moveEditorToOtherGroup() {
   const editor = window.activeTextEditor
-  if (!editor) return
+  if (!editor || !editor.viewColumn) return
 
   if (editor.viewColumn > 1) {
     commands.executeCommand('workbench.action.moveEditorToPreviousGroup')

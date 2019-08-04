@@ -21,11 +21,10 @@ async def main(connection):
         tab = await window.async_create_tab()
         session = tab.current_session
         await session.async_set_name(TITLE)
-        # await session.async_send_text('kill process')
     else:
         await session.async_activate()
-
-    await session.async_send_text('{}\n'.format(session.session_id))
+        # Ctrl+C
+        await session.async_send_text('\003')
 
     await session.async_send_text('{}\n'.format(CMD))
     print(session.session_id)
