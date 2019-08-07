@@ -4444,7 +4444,7 @@ run-async@^2.2.0:
 
 run-jxa@2.0.0:
   version "2.0.0"
-  resolved "http://npme.walmart.com/run-jxa/-/run-jxa-2.0.0.tgz#1634ba52f0d2e58ffc19673f41c4b63259ee2ec7"
+  resolved "https://registry.yarnpkg.com/run-jxa/-/run-jxa-2.0.0.tgz#1634ba52f0d2e58ffc19673f41c4b63259ee2ec7"
   integrity sha512-Akg84ifyii3HeKKBHKH3pYBB7olSGJV47tMGMvcNceV8kO6MzPGNmTNA/YGSrJgfzvPwsGZihQ7H/RNFPWbtZA==
   dependencies:
     execa "^1.0.0"

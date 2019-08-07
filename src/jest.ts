@@ -1,6 +1,6 @@
 import path from 'path'
 import { window, workspace } from 'vscode'
-import { runJestTestInIterm } from './iterm'
+import { runJestTestInIterm } from './iterm.jxa'
 import { isFile, showTextDocument } from './utils'
 import fs from 'fs'
 
