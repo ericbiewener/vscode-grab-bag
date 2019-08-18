@@ -234,13 +234,13 @@ function createCorrespondingTestFile() {
   const testFilepath = getCorrespondingTestFilepath(editor.document.fileName);
 
   if (!Object(_utils__WEBPACK_IMPORTED_MODULE_2__["isFile"])(testFilepath)) {
-    fs__WEBPACK_IMPORTED_MODULE_3___default.a.mkdirSync(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(testFilepath), {
+    Object(_utils__WEBPACK_IMPORTED_MODULE_2__["mkdirSync"])(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(testFilepath), {
       recursive: true
     });
     fs__WEBPACK_IMPORTED_MODULE_3___default.a.writeFileSync(testFilepath, '');
   }
 
-  Object(_utils__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(testFilepath);
+  Object(_utils__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(testFilepath, true);
 }
 function getFilenameParts(filepath) {
   return path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
@@ -277,7 +277,7 @@ function gotoSymbolGrouped() {
 /*!**********************!*\
   !*** ./src/utils.ts ***!
   \**********************/
-/*! exports provided: CTX, setExtCtx, isFile, showTextDocument, getConfiguration */
+/*! exports provided: CTX, setExtCtx, isFile, mkdirSync, showTextDocument, getConfiguration */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -285,6 +285,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CTX", function() { return CTX; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setExtCtx", function() { return setExtCtx; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isFile", function() { return isFile; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "mkdirSync", function() { return mkdirSync; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "showTextDocument", function() { return showTextDocument; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getConfiguration", function() { return getConfiguration; });
 /* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! fs */ "fs");
@@ -304,6 +305,13 @@ function isFile(filepath) {
     if (e.code !== 'ENOENT') throw e; // File might exist, but something else went wrong (e.g. permissions error)
 
     return false;
+  }
+}
+function mkdirSync(dir, options) {
+  try {
+    fs__WEBPACK_IMPORTED_MODULE_0___default.a.mkdirSync(dir, options);
+  } catch (e) {
+    if (e.code !== 'EEXIST') throw e;
   }
 }
 async function showTextDocument(filepath, moveToOtherColumn = false, preserveFocus = false) {

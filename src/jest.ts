@@ -1,6 +1,6 @@
 import path from 'path'
 import { window, workspace, env } from 'vscode'
-import { getConfiguration, isFile, showTextDocument } from './utils'
+import { getConfiguration, isFile, mkdirSync, showTextDocument } from './utils'
 import fs from 'fs'
 
 export async function openCorrespondingTestFile() {
@@ -58,10 +58,10 @@ export function createCorrespondingTestFile() {
 
   const testFilepath = getCorrespondingTestFilepath(editor.document.fileName)
   if (!isFile(testFilepath)) {
-    fs.mkdirSync(path.dirname(testFilepath), { recursive: true })
+    mkdirSync(path.dirname(testFilepath), { recursive: true })
     fs.writeFileSync(testFilepath, '')
   }
-  showTextDocument(testFilepath)
+  showTextDocument(testFilepath, true)
 }
 
 export function getFilenameParts(filepath: string) {
