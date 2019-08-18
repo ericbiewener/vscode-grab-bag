@@ -70,7 +70,17 @@
         "title": "Go to Symbol in File (Grouped)...",
         "command": "grabBag.gotoSymbolGrouped"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Grab Bag Configuration",
+      "properties": {
+        "grabBag.testCommand": {
+          "type": "string",
+          "description": "Test command that should be used for active file."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run build",

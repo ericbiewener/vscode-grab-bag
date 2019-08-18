@@ -48,3 +48,7 @@ function moveEditorToOtherGroup() {
     commands.executeCommand('workbench.action.moveEditorToNextGroup')
   }
 }
+
+export function getConfiguration(resource?: Uri) {
+  return workspace.getConfiguration('grabBag', resource)
+}

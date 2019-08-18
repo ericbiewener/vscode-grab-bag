@@ -1,7 +1,6 @@
 import path from 'path'
-import { window, workspace } from 'vscode'
-import { runJestTestInIterm } from './iterm.jxa'
-import { isFile, showTextDocument } from './utils'
+import { window, workspace, env } from 'vscode'
+import { getConfiguration, isFile, showTextDocument } from './utils'
 import fs from 'fs'
 
 export async function openCorrespondingTestFile() {
@@ -31,10 +30,13 @@ export async function openCorrespondingTestFile() {
     testFilepath = filepathToShow
   }
 
-  return Promise.all([
-    showTextDocument(filepathToShow, true),
-    runJestTestInIterm(workspace.workspaceFolders![0].uri.fsPath, testFilepath),
-  ])
+  const { testCommand } = await getConfiguration()
+  if (testCommand) {
+    const relativePath = workspace.asRelativePath(testFilepath)
+    await env.clipboard.writeText(`${testCommand} ${relativePath}`)
+  }
+
+  return showTextDocument(filepathToShow, true)
 }
 
 export function openCorrespondingSnapshot() {
