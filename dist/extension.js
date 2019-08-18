@@ -240,7 +240,7 @@ function createCorrespondingTestFile() {
     fs__WEBPACK_IMPORTED_MODULE_3___default.a.writeFileSync(testFilepath, '');
   }
 
-  Object(_utils__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(testFilepath, true);
+  openCorrespondingTestFile();
 }
 function getFilenameParts(filepath) {
   return path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');

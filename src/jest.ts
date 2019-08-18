@@ -61,7 +61,7 @@ export function createCorrespondingTestFile() {
     mkdirSync(path.dirname(testFilepath), { recursive: true })
     fs.writeFileSync(testFilepath, '')
   }
-  showTextDocument(testFilepath, true)
+  openCorrespondingTestFile()
 }
 
 export function getFilenameParts(filepath: string) {
