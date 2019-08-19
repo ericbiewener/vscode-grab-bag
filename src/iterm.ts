@@ -1,7 +1,7 @@
 import path from 'path'
 import { spawnSync } from 'child_process'
 import { window } from 'vscode'
-import { CTX } from './utils'
+import { CTX } from './utils/misc'
 
 export async function runJestTestInIterm(rootDir: string, filepath: string): Promise<void> {
   const cmd = [`cd ${rootDir}`, `npm run jest:watch ${filepath}`].join('&&')

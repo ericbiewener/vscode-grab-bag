@@ -1,5 +1,7 @@
 import fs from 'fs'
-import { Uri, window, workspace, commands, ExtensionContext } from 'vscode'
+import path from 'path';
+import { commands, Uri, window, workspace } from 'vscode';
+import { maybeSwapExtension } from './swapExtension';
 
 export let CTX: ExtensionContext
 
@@ -29,6 +31,7 @@ export async function showTextDocument(
   moveToOtherColumn = false,
   preserveFocus = false
 ) {
+  filepath = maybeSwapExtension(filepath)
   if (!isFile(filepath)) return
 
   let viewColumn = 1
@@ -44,6 +47,7 @@ export async function showTextDocument(
   })
 
   if (newEditor.viewColumn !== viewColumn) moveEditorToOtherGroup()
+  return filepath
 }
 
 function moveEditorToOtherGroup() {

@@ -6,7 +6,7 @@ import {
   openCorrespondingTestFile,
 } from './jest'
 import { gotoSymbolGrouped } from './misc'
-import { setExtCtx } from './utils'
+import { setExtCtx } from './utils/misc'
 
 export const activate = async function activate(ctx: ExtensionContext) {
   setExtCtx(ctx)

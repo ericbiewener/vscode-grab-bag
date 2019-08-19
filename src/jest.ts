@@ -1,7 +1,8 @@
 import path from 'path'
 import { window, workspace, env } from 'vscode'
-import { getConfiguration, isFile, mkdirSync, showTextDocument } from './utils'
+import { getConfiguration, isFile, mkdirSync, showTextDocument } from './utils/misc'
 import fs from 'fs'
+import { maybeSwapExtension } from './utils/swapExtension'
 
 export async function openCorrespondingTestFile() {
   const editor = window.activeTextEditor
@@ -32,7 +33,7 @@ export async function openCorrespondingTestFile() {
 
   const { testCommand } = await getConfiguration()
   if (testCommand) {
-    const relativePath = workspace.asRelativePath(testFilepath)
+    const relativePath = workspace.asRelativePath(maybeSwapExtension(testFilepath))
     await env.clipboard.writeText(`${testCommand} ${relativePath}`)
   }
 
@@ -61,7 +62,7 @@ export function createCorrespondingTestFile() {
     mkdirSync(path.dirname(testFilepath), { recursive: true })
     fs.writeFileSync(testFilepath, '')
   }
-  openCorrespondingTestFile()
+  showTextDocument(testFilepath, true)
 }
 
 export function getFilenameParts(filepath: string) {
