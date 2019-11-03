@@ -101,18 +101,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "moveCaret", function() { return moveCaret; });
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+
 
 async function closeAllPanels() {
   vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.closePanel');
   await vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.maximizeEditor');
   vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.evenEditorWidths');
 }
-function moveEditorToOtherGroup() {
+async function moveEditorToOtherGroup() {
   const editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
   if (!editor || !editor.viewColumn) return;
+  const {
+    maxEditorGroups
+  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["getConfiguration"])();
 
-  if (editor.viewColumn > 1) {
-    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToPreviousGroup');
+  if (editor.viewColumn >= maxEditorGroups) {
+    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToFirstGroup');
   } else {
     vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToNextGroup');
   }
@@ -123,8 +128,8 @@ async function moveCaret(down = true) {
   const position = editor.selection.active;
   const change = down ? 10 : -10;
   const newLine = Math.min(editor.document.lineCount, Math.max(0, position.line + change));
-  var newPosition = position.with(newLine, position.character);
-  var newSelection = new vscode__WEBPACK_IMPORTED_MODULE_0__["Selection"](newPosition, newPosition);
+  const newPosition = position.with(newLine, position.character);
+  const newSelection = new vscode__WEBPACK_IMPORTED_MODULE_0__["Selection"](newPosition, newPosition);
   editor.selection = newSelection;
   vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('revealLine', {
     lineNumber: newLine
