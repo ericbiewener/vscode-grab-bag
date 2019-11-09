@@ -1,6 +1,6 @@
 import fs from 'fs'
 import { commands, Uri, window, workspace, ExtensionContext } from 'vscode'
-import { maybeSwapExtension } from './swapExtension'
+import { maybeSwapExtension } from './filepaths'
 
 export let CTX: ExtensionContext
 
@@ -27,7 +27,7 @@ export function mkdirSync(dir: string, options: fs.MakeDirectoryOptions) {
 
 export async function showTextDocument(
   filepath: string,
-  moveToOtherColumn = false,
+  moveToOtherColumn = true,
   preserveFocus = false,
 ) {
   filepath = maybeSwapExtension(filepath)

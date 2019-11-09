@@ -6,6 +6,8 @@ const EXTENSION_MAP: Record<string, string> = {
   jsx: 'js',
   ts: 'tsx',
   tsx: 'ts',
+  css: 'pcss',
+  pcss: 'css',
 }
 
 export function maybeSwapExtension(filepath: string) {
@@ -15,5 +17,13 @@ export function maybeSwapExtension(filepath: string) {
   const newExt = EXTENSION_MAP[ext]
   if (!newExt) return filepath
 
-  return `${filepath.slice(0, filepath.length - ext.length)}${newExt}`
+  return `${filepath.slice(0, filepath.lastIndexOf('.'))}${newExt}`
+}
+
+export function findFileForExtensions(filepath: string, extensions: string[]) {
+  const filepathRoot = filepath.slice(0, filepath.lastIndexOf('.'))
+  for (const ext of extensions) {
+    const newPath = `${filepathRoot}.${ext}`
+    if (isFile(newPath)) return newPath
+  }
 }

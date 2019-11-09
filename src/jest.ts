@@ -2,7 +2,7 @@ import path from 'path'
 import { window, workspace, env } from 'vscode'
 import { getConfiguration, isFile, mkdirSync, showTextDocument } from './utils/misc'
 import fs from 'fs'
-import { maybeSwapExtension } from './utils/swapExtension'
+import { maybeSwapExtension } from './utils/filepaths'
 
 export async function openCorrespondingTestFile() {
   const editor = window.activeTextEditor
@@ -37,7 +37,7 @@ export async function openCorrespondingTestFile() {
     await env.clipboard.writeText(`${testCommand} ${relativePath}`)
   }
 
-  return showTextDocument(filepathToShow, true)
+  return showTextDocument(filepathToShow)
 }
 
 export function openCorrespondingSnapshot() {
@@ -48,9 +48,9 @@ export function openCorrespondingSnapshot() {
   const snapshot = path.join(
     path.dirname(filepath),
     '__snapshots__',
-    `${path.basename(filepath)}.snap`
+    `${path.basename(filepath)}.snap`,
   )
-  return showTextDocument(snapshot, true)
+  return showTextDocument(snapshot)
 }
 
 export function createCorrespondingTestFile() {
@@ -62,7 +62,7 @@ export function createCorrespondingTestFile() {
     mkdirSync(path.dirname(testFilepath), { recursive: true })
     fs.writeFileSync(testFilepath, '')
   }
-  showTextDocument(testFilepath, true)
+  showTextDocument(testFilepath)
 }
 
 export function getFilenameParts(filepath: string) {

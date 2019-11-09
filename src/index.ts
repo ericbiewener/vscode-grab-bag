@@ -6,12 +6,14 @@ import {
   openCorrespondingTestFile,
 } from './jest'
 import { gotoSymbolGrouped } from './misc'
+import { openCorrespondingCssModule } from './openCorrespondingCssModule'
 import { setExtCtx } from './utils/misc'
 
 export const activate = async function activate(ctx: ExtensionContext) {
   setExtCtx(ctx)
 
   ctx.subscriptions.push(
+    commands.registerCommand('grabBag.openCorrespondingCssModule', openCorrespondingCssModule),
     commands.registerCommand('grabBag.openCorrespondingTestFile', openCorrespondingTestFile),
     commands.registerCommand('grabBag.openCorrespondingSnapshot', openCorrespondingSnapshot),
     commands.registerCommand('grabBag.createCorrespondingTestFile', createCorrespondingTestFile),
@@ -19,6 +21,6 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.moveEditorToOtherGroup', moveEditorToOtherGroup),
     commands.registerCommand('grabBag.moveCaretDown', () => moveCaret()),
     commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false)),
-    commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped)
+    commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped),
   )
 }

@@ -39,6 +39,10 @@
   "contributes": {
     "commands": [
       {
+        "title": "Open Corresponding CSS Module",
+        "command": "grabBag.openCorrespondingCssModule"
+      },
+      {
         "title": "Open Corresponding Test File",
         "command": "grabBag.openCorrespondingTestFile"
       },
