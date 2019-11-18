@@ -20,6 +20,11 @@ export async function moveEditorToOtherGroup() {
   }
 }
 
+export async function consolidateToTwoEditors() {
+  const e = window.visibleTextEditors
+  console.log(e)
+}
+
 export async function moveCaret(down = true) {
   const editor = window.activeTextEditor
   if (!editor) return

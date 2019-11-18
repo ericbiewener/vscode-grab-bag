@@ -1,5 +1,10 @@
 import { commands, ExtensionContext } from 'vscode'
-import { closeAllPanels, moveCaret, moveEditorToOtherGroup } from './editor-manipulation'
+import {
+  closeAllPanels,
+  consolidateToTwoEditors,
+  moveCaret,
+  moveEditorToOtherGroup,
+} from './editor-manipulation'
 import {
   createCorrespondingTestFile,
   openCorrespondingSnapshot,
@@ -19,6 +24,7 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.createCorrespondingTestFile', createCorrespondingTestFile),
     commands.registerCommand('grabBag.closeAllPanels', closeAllPanels),
     commands.registerCommand('grabBag.moveEditorToOtherGroup', moveEditorToOtherGroup),
+    commands.registerCommand('grabBag.consolidateToTwoEditors', consolidateToTwoEditors),
     commands.registerCommand('grabBag.moveCaretDown', () => moveCaret()),
     commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false)),
     commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped),
