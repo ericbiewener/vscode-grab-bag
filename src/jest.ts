@@ -31,12 +31,7 @@ export async function openCorrespondingTestFile() {
     testFilepath = filepathToShow
   }
 
-  const { testCommand } = await getConfiguration()
-  if (testCommand) {
-    const relativePath = workspace.asRelativePath(maybeSwapExtension(testFilepath))
-    await env.clipboard.writeText(`${testCommand} ${relativePath}`)
-  }
-
+  copyTestCommand(testFilepath)
   return showTextDocument(filepathToShow)
 }
 
@@ -62,6 +57,8 @@ export function createCorrespondingTestFile() {
     mkdirSync(path.dirname(testFilepath), { recursive: true })
     fs.writeFileSync(testFilepath, '')
   }
+
+  copyTestCommand(testFilepath)
   showTextDocument(testFilepath)
 }
 
@@ -73,4 +70,12 @@ function getCorrespondingTestFilepath(filepath: string) {
   const filenameParts = getFilenameParts(filepath)
   filenameParts.splice(-1, 0, 'test')
   return path.join(path.dirname(filepath), '__tests__', filenameParts.join('.'))
+}
+
+async function copyTestCommand(filepath: string) {
+  const { testCommand } = await getConfiguration()
+  if (testCommand) {
+    const relativePath = workspace.asRelativePath(maybeSwapExtension(filepath))
+    await env.clipboard.writeText(`${testCommand} ${relativePath}`)
+  }
 }
