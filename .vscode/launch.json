@@ -6,14 +6,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Rise",
+      "name": "Test Workspace",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
-      "args": [
-        "/Users/vn0dimt/Repos/rise",
-        "--extensionDevelopmentPath=${workspaceFolder}"
-      ]
+      "args": ["${workspaceFolder}/test-workspace", "--extensionDevelopmentPath=${workspaceFolder}"]
     }
   ]
 }

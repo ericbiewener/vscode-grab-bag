@@ -124,8 +124,14 @@ async function moveEditorToOtherGroup() {
   }
 }
 async function consolidateToTwoEditors() {
-  const e = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].visibleTextEditors;
-  console.log(e);
+  console.log('here');
+  let editor;
+
+  while (editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].visibleTextEditors.find(e => e.viewColumn && e.viewColumn > 2)) {
+    console.log(editor);
+    vscode__WEBPACK_IMPORTED_MODULE_0__["window"].showTextDocument(editor.document.uri);
+    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToPreviousGroup');
+  }
 }
 async function moveCaret(down = true) {
   const editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
@@ -224,15 +230,7 @@ async function openCorrespondingTestFile() {
     testFilepath = filepathToShow;
   }
 
-  const {
-    testCommand
-  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["getConfiguration"])();
-
-  if (testCommand) {
-    const relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_4__["maybeSwapExtension"])(testFilepath));
-    await vscode__WEBPACK_IMPORTED_MODULE_1__["env"].clipboard.writeText(`${testCommand} ${relativePath}`);
-  }
-
+  copyTestCommand(testFilepath);
   return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(filepathToShow);
 }
 function openCorrespondingSnapshot() {
@@ -254,6 +252,7 @@ function createCorrespondingTestFile() {
     fs__WEBPACK_IMPORTED_MODULE_3___default.a.writeFileSync(testFilepath, '');
   }
 
+  copyTestCommand(testFilepath);
   Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(testFilepath);
 }
 function getFilenameParts(filepath) {
@@ -264,6 +263,17 @@ function getCorrespondingTestFilepath(filepath) {
   const filenameParts = getFilenameParts(filepath);
   filenameParts.splice(-1, 0, 'test');
   return path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__tests__', filenameParts.join('.'));
+}
+
+async function copyTestCommand(filepath) {
+  const {
+    testCommand
+  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["getConfiguration"])();
+
+  if (testCommand) {
+    const relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_4__["maybeSwapExtension"])(filepath));
+    await vscode__WEBPACK_IMPORTED_MODULE_1__["env"].clipboard.writeText(`${testCommand} ${relativePath}`);
+  }
 }
 
 /***/ }),

@@ -21,8 +21,13 @@ export async function moveEditorToOtherGroup() {
 }
 
 export async function consolidateToTwoEditors() {
-  const e = window.visibleTextEditors
-  console.log(e)
+  console.log('here')
+  let editor
+  while ((editor = window.visibleTextEditors.find(e => e.viewColumn && e.viewColumn > 2))) {
+    console.log(editor)
+    window.showTextDocument(editor.document.uri)
+    commands.executeCommand('workbench.action.moveEditorToPreviousGroup')
+  }
 }
 
 export async function moveCaret(down = true) {
