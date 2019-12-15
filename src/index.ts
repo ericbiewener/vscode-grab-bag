@@ -1,4 +1,5 @@
 import { commands, ExtensionContext } from 'vscode'
+import { addReturnToArrowFunction } from './codemods/addReturnToArrowFunction'
 import {
   closeAllPanels,
   consolidateToTwoEditors,
@@ -28,5 +29,6 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.moveCaretDown', () => moveCaret()),
     commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false)),
     commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped),
+    commands.registerCommand('grabBag.addReturnToArrowFunction', addReturnToArrowFunction),
   )
 }

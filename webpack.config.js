@@ -1,8 +1,7 @@
 const path = require('path')
-import { Configuration } from 'webpack'
 
-const config: Configuration = {
-  mode: process.env.NODE_ENV as 'development' | 'production',
+module.exports = {
+  mode: process.env.NODE_ENV,
   target: 'node',
   entry: './src/index.ts',
   output: {
@@ -14,6 +13,7 @@ const config: Configuration = {
   devtool: 'source-map',
   externals: {
     vscode: 'commonjs vscode', // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
+    '@microsoft/typescript-etw': 'FakeModule', // https://github.com/microsoft/monaco-editor/issues/1623#issuecomment-546583647
   },
   resolve: {
     extensions: ['.ts', '.js'],
@@ -32,5 +32,3 @@ const config: Configuration = {
     ],
   },
 }
-
-module.exports = config

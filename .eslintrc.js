@@ -4,5 +4,6 @@ module.exports = {
     browser: false,
     es6: true,
     node: true,
-  }
+  },
+  ignorePatterns: ["test-workspace"]
 };
