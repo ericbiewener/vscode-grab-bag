@@ -12586,7 +12586,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _jest__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./jest */ "./src/jest.ts");
 /* harmony import */ var _misc__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./misc */ "./src/misc.ts");
 /* harmony import */ var _openCorrespondingCssModule__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./openCorrespondingCssModule */ "./src/openCorrespondingCssModule.ts");
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./openCorrespondingReduxContainer */ "./src/openCorrespondingReduxContainer.ts");
+/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+
 
 
 
@@ -12595,8 +12597,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const activate = async function activate(ctx) {
-  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_6__["setExtCtx"])(ctx);
-  ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _openCorrespondingCssModule__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretDown', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])()), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretUp', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false)), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_1__["addReturnToArrowFunction"]));
+  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_7__["setExtCtx"])(ctx);
+  ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _openCorrespondingCssModule__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_6__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretDown', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])()), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretUp', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false)), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_1__["addReturnToArrowFunction"]));
 };
 
 /***/ }),
@@ -12748,6 +12750,43 @@ function openCorrespondingCssModule() {
   const ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath);
   const correspondingFile = CSS_EXTENSIONS.includes(ext) ? Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_2__["findFileForExtensions"])(filepath, JS_EXTENSIONS) : Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_2__["findFileForExtensions"])(filepath, CSS_EXTENSIONS);
   if (correspondingFile) Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["showTextDocument"])(correspondingFile);
+}
+
+/***/ }),
+
+/***/ "./src/openCorrespondingReduxContainer.ts":
+/*!************************************************!*\
+  !*** ./src/openCorrespondingReduxContainer.ts ***!
+  \************************************************/
+/*! exports provided: openCorrespondingReduxContainer */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingReduxContainer", function() { return openCorrespondingReduxContainer; });
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+
+
+
+const SUFFIX = 'connect';
+function openCorrespondingReduxContainer() {
+  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+  if (!editor) return;
+  const filepath = editor.document.fileName;
+  const parts = path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
+  const containerIndex = parts.length - 2;
+
+  if (parts[containerIndex] === SUFFIX) {
+    parts.splice(containerIndex, 1);
+  } else {
+    parts.splice(parts.length - 1, 0, SUFFIX);
+  }
+
+  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), parts.join('.')));
 }
 
 /***/ }),

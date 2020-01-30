@@ -55,6 +55,10 @@
         "command": "grabBag.createCorrespondingTestFile"
       },
       {
+        "title": "Open Corresponding Redux Container",
+        "command": "grabBag.openCorrespondingReduxContainer"
+      },
+      {
         "title": "Close All Panels",
         "command": "grabBag.closeAllPanels"
       },
