@@ -11,6 +11,16 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": ["${workspaceFolder}/test-workspace", "--extensionDevelopmentPath=${workspaceFolder}"]
+    },
+    {
+      "name": "SL Workspace",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "${workspaceFolder}/linked-workspaces/sl",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ]
     }
   ]
 }

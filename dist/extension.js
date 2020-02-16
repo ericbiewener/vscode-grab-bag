@@ -12623,8 +12623,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
 /* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! fs */ "fs");
 /* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var _utils_filepaths__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/filepaths */ "./src/utils/filepaths.ts");
-
 
 
 
@@ -12695,7 +12693,7 @@ async function copyTestCommand(filepath) {
   } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["getConfiguration"])();
 
   if (testCommand) {
-    const relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_4__["maybeSwapExtension"])(filepath));
+    const relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(maybeSwapExtension(filepath));
     await vscode__WEBPACK_IMPORTED_MODULE_1__["env"].clipboard.writeText(`${testCommand} ${relativePath}`);
   }
 }
@@ -12820,7 +12818,7 @@ function maybeSwapExtension(filepath) {
   const ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath).slice(1);
   const newExt = EXTENSION_MAP[ext];
   if (!newExt) return filepath;
-  return `${filepath.slice(0, filepath.lastIndexOf('.'))}${newExt}`;
+  return `${filepath.slice(0, filepath.lastIndexOf('.'))}.${newExt}`;
 }
 function findFileForExtensions(filepath, extensions) {
   const filepathRoot = filepath.slice(0, filepath.lastIndexOf('.'));

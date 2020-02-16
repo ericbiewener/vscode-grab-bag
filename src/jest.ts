@@ -1,8 +1,8 @@
 import path from 'path'
 import { window, workspace, env } from 'vscode'
+import { maybeSwapExtension } from './utils/filepaths'
 import { getConfiguration, isFile, mkdirSync, showTextDocument } from './utils/misc'
 import fs from 'fs'
-import { maybeSwapExtension } from './utils/filepaths'
 
 export async function openCorrespondingTestFile() {
   const editor = window.activeTextEditor

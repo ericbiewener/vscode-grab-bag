@@ -17,7 +17,7 @@ export function maybeSwapExtension(filepath: string) {
   const newExt = EXTENSION_MAP[ext]
   if (!newExt) return filepath
 
-  return `${filepath.slice(0, filepath.lastIndexOf('.'))}${newExt}`
+  return `${filepath.slice(0, filepath.lastIndexOf('.'))}.${newExt}`
 }
 
 export function findFileForExtensions(filepath: string, extensions: string[]) {

@@ -40,51 +40,63 @@
     "commands": [
       {
         "title": "Open Corresponding CSS Module",
-        "command": "grabBag.openCorrespondingCssModule"
+        "command": "grabBag.openCorrespondingCssModule",
+        "category": "Grab Bag"
       },
       {
         "title": "Open Corresponding Test File",
-        "command": "grabBag.openCorrespondingTestFile"
+        "command": "grabBag.openCorrespondingTestFile",
+        "category": "Grab Bag"
       },
       {
         "title": "Open Corresponding Snapshot",
-        "command": "grabBag.openCorrespondingSnapshot"
+        "command": "grabBag.openCorrespondingSnapshot",
+        "category": "Grab Bag"
       },
       {
         "title": "Create Corresponding Test File",
-        "command": "grabBag.createCorrespondingTestFile"
+        "command": "grabBag.createCorrespondingTestFile",
+        "category": "Grab Bag"
       },
       {
         "title": "Open Corresponding Redux Container",
-        "command": "grabBag.openCorrespondingReduxContainer"
+        "command": "grabBag.openCorrespondingReduxContainer",
+        "category": "Grab Bag"
       },
       {
         "title": "Close All Panels",
-        "command": "grabBag.closeAllPanels"
+        "command": "grabBag.closeAllPanels",
+        "category": "Grab Bag"
       },
       {
         "title": "Move Editor to Other Group",
-        "command": "grabBag.moveEditorToOtherGroup"
+        "command": "grabBag.moveEditorToOtherGroup",
+        "category": "Grab Bag"
       },
       {
         "title": "Consolidate to Two Editor Groups",
-        "command": "grabBag.consolidateToTwoEditors"
+        "command": "grabBag.consolidateToTwoEditors",
+        "category": "Grab Bag"
       },
       {
         "title": "Move Caret Down",
-        "command": "grabBag.moveCaretDown"
+        "command": "grabBag.moveCaretDown",
+        "category": "Grab Bag"
       },
       {
         "title": "Move Caret Up",
-        "command": "grabBag.moveCaretUp"
+        "command": "grabBag.moveCaretUp",
+        "category": "Grab Bag"
       },
       {
         "title": "Go to Symbol in File (Grouped)...",
-        "command": "grabBag.gotoSymbolGrouped"
+        "command": "grabBag.gotoSymbolGrouped",
+        "category": "Grab Bag"
       },
       {
         "title": "Add return statement to arrow function",
-        "command": "grabBag.addReturnToArrowFunction"
+        "command": "grabBag.addReturnToArrowFunction",
+        "category": "Grab Bag"
       }
     ],
     "configuration": {

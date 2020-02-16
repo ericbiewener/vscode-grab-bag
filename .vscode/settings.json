@@ -1,5 +1,6 @@
 {
   "files.exclude": {
-    "artwork": true
+    "artwork": true,
+    "linked-workspaces": true
   }
 }
