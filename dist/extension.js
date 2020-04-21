@@ -12620,9 +12620,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! fs */ "fs");
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _utils_filepaths__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/filepaths */ "./src/utils/filepaths.ts");
+/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! fs */ "fs");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_4__);
+
 
 
 
@@ -12653,29 +12655,29 @@ async function openCorrespondingTestFile() {
   }
 
   copyTestCommand(testFilepath);
-  return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(filepathToShow);
+  return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["showTextDocument"])(filepathToShow);
 }
 function openCorrespondingSnapshot() {
   const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
   const filepath = editor.document.fileName;
   const snapshot = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__snapshots__', `${path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath)}.snap`);
-  return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(snapshot);
+  return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["showTextDocument"])(snapshot);
 }
 function createCorrespondingTestFile() {
   const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
   const testFilepath = getCorrespondingTestFilepath(editor.document.fileName);
 
-  if (!Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["isFile"])(testFilepath)) {
-    Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["mkdirSync"])(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(testFilepath), {
+  if (!Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["isFile"])(testFilepath)) {
+    Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["mkdirSync"])(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(testFilepath), {
       recursive: true
     });
-    fs__WEBPACK_IMPORTED_MODULE_3___default.a.writeFileSync(testFilepath, '');
+    fs__WEBPACK_IMPORTED_MODULE_4___default.a.writeFileSync(testFilepath, '');
   }
 
   copyTestCommand(testFilepath);
-  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(testFilepath);
+  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["showTextDocument"])(testFilepath);
 }
 function getFilenameParts(filepath) {
   return path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
@@ -12690,10 +12692,10 @@ function getCorrespondingTestFilepath(filepath) {
 async function copyTestCommand(filepath) {
   const {
     testCommand
-  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["getConfiguration"])();
+  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["getConfiguration"])();
 
   if (testCommand) {
-    const relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(maybeSwapExtension(filepath));
+    const relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_2__["maybeSwapExtension"])(filepath));
     await vscode__WEBPACK_IMPORTED_MODULE_1__["env"].clipboard.writeText(`${testCommand} ${relativePath}`);
   }
 }
