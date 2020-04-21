@@ -97,6 +97,11 @@
         "title": "Add return statement to arrow function",
         "command": "grabBag.addReturnToArrowFunction",
         "category": "Grab Bag"
+      },
+      {
+        "title": "Open all files listed in document",
+        "command": "grabBag.openAllFilesListedInDocument",
+        "category": "Grab Bag"
       }
     ],
     "configuration": {
@@ -126,29 +131,33 @@
     "vsce": "vsce publish --yarn"
   },
   "devDependencies": {
-    "@babel/core": "7.7.5",
-    "@babel/plugin-proposal-class-properties": "7.7.4",
-    "@babel/plugin-proposal-object-rest-spread": "7.7.4",
-    "@babel/preset-typescript": "7.7.4",
-    "@babel/types": "7.7.4",
-    "@types/lodash": "4.14.149",
-    "@types/node": "12.12.17",
-    "@types/vscode": "1.41.0",
-    "@types/webpack": "4.41.0",
-    "@typescript-eslint/eslint-plugin": "2.11.0",
-    "@typescript-eslint/parser": "2.11.0",
-    "babel-loader": "8.0.6",
+    "@babel/core": "7.9.0",
+    "@babel/plugin-proposal-class-properties": "7.8.3",
+    "@babel/plugin-proposal-object-rest-spread": "7.9.5",
+    "@babel/preset-typescript": "7.9.0",
+    "@babel/types": "7.9.5",
+    "@types/lodash": "4.14.150",
+    "@types/node": "13.13.1",
+    "@types/vscode": "1.44.0",
+    "@types/webpack": "4.41.12",
+    "@typescript-eslint/eslint-plugin": "2.29.0",
+    "@typescript-eslint/parser": "2.29.0",
+    "babel-eslint": "11.0.0-beta.2",
+    "babel-loader": "8.1.0",
     "babel-plugin-lodash": "3.3.4",
-    "eslint": "6.7.2",
-    "eslint-config-ericbiewener-typescript": "5.6.0",
-    "husky": "3.1.0",
-    "lint-staged": "9.5.0",
-    "prettier": "1.19.1",
-    "ts-node": "8.5.4",
-    "typescript": "3.7.3",
+    "eslint": "6.8.0",
+    "eslint-config-ericbiewener-typescript": "5.13.1",
+    "eslint-config-prettier": "6.10.1",
+    "eslint-plugin-react": "7.19.0",
+    "eslint-plugin-react-hooks": "3.0.0",
+    "husky": "4.2.5",
+    "lint-staged": "10.1.6",
+    "prettier": "2.0.4",
+    "ts-node": "8.9.0",
+    "typescript": "3.8.3",
     "vscode": "1.1.36",
-    "webpack": "4.41.2",
-    "webpack-cli": "3.3.10"
+    "webpack": "4.42.1",
+    "webpack-cli": "3.3.11"
   },
   "lint-staged": {
     "**/*.{json,yml}": [
@@ -167,9 +176,9 @@
     }
   },
   "dependencies": {
-    "@babel/parser": "7.7.5",
-    "@typescript-eslint/typescript-estree": "2.11.0",
-    "estraverse": "4.3.0",
+    "@babel/parser": "7.9.4",
+    "@typescript-eslint/typescript-estree": "2.29.0",
+    "estraverse": "5.1.0",
     "run-jxa": "2.0.0"
   }
 }

@@ -1,0 +1,3 @@
+./file1.ts
+/Users/e0b02rp/Repos/Personal/vscode-grab-bag/test-workspace/file3.tsx
+./file2.ts
