@@ -17,14 +17,6 @@ export function isFile(filepath: string) {
   }
 }
 
-export function mkdirSync(dir: string, options: fs.MakeDirectoryOptions) {
-  try {
-    fs.mkdirSync(dir, options)
-  } catch (e) {
-    if (e.code !== 'EEXIST') throw e
-  }
-}
-
 export async function showTextDocument(
   filepath: string,
   moveToOtherColumn = true,
@@ -60,6 +52,4 @@ function moveEditorToOtherGroup() {
   }
 }
 
-export function getConfiguration(resource?: Uri) {
-  return workspace.getConfiguration('grabBag', resource)
-}
+export const getConfiguration = (resource?: Uri) => workspace.getConfiguration('grabBag', resource)

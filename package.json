@@ -44,6 +44,11 @@
         "category": "Grab Bag"
       },
       {
+        "title": "Create Corresponding CSS Module",
+        "command": "grabBag.createCorrespondingCssModule",
+        "category": "Grab Bag"
+      },
+      {
         "title": "Open Corresponding Test File",
         "command": "grabBag.openCorrespondingTestFile",
         "category": "Grab Bag"
@@ -116,6 +121,11 @@
           "type": "number",
           "description": "Maximum number of editor groups allowed.",
           "default": 2
+        },
+        "grabBag.cssModuleFileExtension": {
+          "type": "string",
+          "description": "File extension to use when creating corresponding CSS Module files.",
+          "default": "css"
         }
       }
     }
@@ -177,6 +187,7 @@
     "@babel/parser": "7.9.4",
     "@typescript-eslint/typescript-estree": "2.29.0",
     "estraverse": "5.1.0",
-    "run-jxa": "2.0.0"
+    "run-jxa": "2.0.0",
+    "utlz": "3.0.0"
   }
 }

@@ -1,8 +1,8 @@
 import path from 'path'
 import { window, workspace, env } from 'vscode'
+import { writeFileIfNew } from 'utlz'
 import { maybeSwapExtension } from './utils/filepaths'
-import { getConfiguration, isFile, mkdirSync, showTextDocument } from './utils/misc'
-import fs from 'fs'
+import { getConfiguration, showTextDocument } from './utils/misc'
 
 export async function openCorrespondingTestFile() {
   const editor = window.activeTextEditor
@@ -53,11 +53,7 @@ export function createCorrespondingTestFile() {
   if (!editor) return
 
   const testFilepath = getCorrespondingTestFilepath(editor.document.fileName)
-  if (!isFile(testFilepath)) {
-    mkdirSync(path.dirname(testFilepath), { recursive: true })
-    fs.writeFileSync(testFilepath, '')
-  }
-
+  writeFileIfNew(testFilepath)
   copyTestCommand(testFilepath)
   showTextDocument(testFilepath)
 }

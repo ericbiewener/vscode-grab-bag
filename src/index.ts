@@ -12,7 +12,7 @@ import {
   openCorrespondingTestFile,
 } from './jest'
 import { gotoSymbolGrouped, openAllFilesListedInDocument } from './misc'
-import { openCorrespondingCssModule } from './openCorrespondingCssModule'
+import { openCorrespondingCssModule, createCorrespondingCssModule } from './correspondingCssModule'
 import { openCorrespondingReduxContainer } from './openCorrespondingReduxContainer'
 import { setExtCtx } from './utils/misc'
 
@@ -21,6 +21,7 @@ export const activate = async function activate(ctx: ExtensionContext) {
 
   ctx.subscriptions.push(
     commands.registerCommand('grabBag.openCorrespondingCssModule', openCorrespondingCssModule),
+    commands.registerCommand('grabBag.createCorrespondingCssModule', createCorrespondingCssModule),
     commands.registerCommand('grabBag.openCorrespondingTestFile', openCorrespondingTestFile),
     commands.registerCommand('grabBag.openCorrespondingSnapshot', openCorrespondingSnapshot),
     commands.registerCommand('grabBag.createCorrespondingTestFile', createCorrespondingTestFile),
