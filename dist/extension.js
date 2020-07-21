@@ -677,7 +677,14 @@ class CommentsParser extends BaseParser {
       if (trailingComments.length && trailingComments[0].start >= node.start && last(trailingComments).end <= node.end) {
         node.innerComments = trailingComments;
       } else {
-        node.trailingComments = trailingComments;
+        const firstTrailingCommentIndex = trailingComments.findIndex(comment => comment.end >= node.end);
+
+        if (firstTrailingCommentIndex > 0) {
+          node.innerComments = trailingComments.slice(0, firstTrailingCommentIndex);
+          node.trailingComments = trailingComments.slice(firstTrailingCommentIndex);
+        } else {
+          node.trailingComments = trailingComments;
+        }
       }
     }
 
@@ -686,7 +693,7 @@ class CommentsParser extends BaseParser {
 
 }
 
-const Errors = Object.freeze({
+const ErrorMessages = Object.freeze({
   ArgumentsDisallowedInInitializer: "'arguments' is not allowed in class field initializer",
   AsyncFunctionInSingleStatementContext: "Async functions can only be declared at the top level or inside a block",
   AwaitBindingIdentifier: "Can not use 'await' as identifier inside an async function",
@@ -714,18 +721,19 @@ const Errors = Object.freeze({
   DuplicateRegExpFlags: "Duplicate regular expression flag",
   ElementAfterRest: "Rest element must be last element",
   EscapedCharNotAnIdentifier: "Invalid Unicode escape",
+  ExportDefaultFromAsIdentifier: "'from' is not allowed as an identifier after 'export default'",
   ForInOfLoopInitializer: "%0 loop variable declaration may not have an initializer",
   GeneratorInSingleStatementContext: "Generators can only be declared at the top level or inside a block",
   IllegalBreakContinue: "Unsyntactic %0",
   IllegalLanguageModeDirective: "Illegal 'use strict' directive in function with non-simple parameter list",
   IllegalReturn: "'return' outside of function",
   ImportCallArgumentTrailingComma: "Trailing comma is disallowed inside import(...) arguments",
-  ImportCallArity: "import() requires exactly one argument",
-  ImportCallArityLtOne: "Dynamic imports require a parameter: import('a.js')",
+  ImportCallArity: "import() requires exactly %0",
   ImportCallNotNewExpression: "Cannot use new with import(...)",
   ImportCallSpreadArgument: "... is not allowed in import()",
   ImportMetaOutsideModule: `import.meta may appear only with 'sourceType: "module"'`,
   ImportOutsideModule: `'import' and 'export' may appear only with 'sourceType: "module"'`,
+  InvalidBigIntLiteral: "Invalid BigIntLiteral",
   InvalidCodePoint: "Code point out of bounds",
   InvalidDigit: "Expected number in radix %0",
   InvalidEscapeSequence: "Bad character escape sequence",
@@ -739,6 +747,7 @@ const Errors = Object.freeze({
   InvalidParenthesizedAssignment: "Invalid parenthesized assignment pattern",
   InvalidPrivateFieldResolution: "Private name #%0 is not defined",
   InvalidPropertyBindingPattern: "Binding member expression",
+  InvalidRecordProperty: "Only properties and spread elements are allowed in record definitions",
   InvalidRestAssignmentPattern: "Invalid rest operator's argument",
   LabelRedeclaration: "Label '%0' is already declared",
   LetInLexicalBinding: "'let' is not allowed to be used as a name in 'let' or 'const' declarations.",
@@ -747,6 +756,9 @@ const Errors = Object.freeze({
   MissingEqInAssignment: "Only '=' operator can be used for specifying default value.",
   MissingUnicodeEscape: "Expecting Unicode escape sequence \\uXXXX",
   MixingCoalesceWithLogical: "Nullish coalescing operator(??) requires parens when mixing with logical operators",
+  ModuleAttributeDifferentFromType: "The only accepted module attribute is `type`",
+  ModuleAttributeInvalidValue: "Only string literals are allowed as module attribute values",
+  ModuleAttributesWithDuplicateKeys: 'Duplicate key "%0" is not allowed in module attributes',
   ModuleExportUndefined: "Export '%0' is not defined",
   MultipleDefaultsInSwitch: "Multiple default clauses",
   NewlineAfterThrow: "Illegal newline after throw",
@@ -765,10 +777,12 @@ const Errors = Object.freeze({
   PipelineTopicUnused: "Pipeline is in topic style but does not use topic reference",
   PrimaryTopicNotAllowed: "Topic reference was used in a lexical context without topic binding",
   PrimaryTopicRequiresSmartPipeline: "Primary Topic Reference found but pipelineOperator not passed 'smart' for 'proposal' option.",
+  PrivateInExpectedIn: "Private names are only allowed in property accesses (`obj.#%0`) or in `in` expressions (`#%0 in obj`)",
   PrivateNameRedeclaration: "Duplicate private name #%0",
   RecordExpressionBarIncorrectEndSyntaxType: "Record expressions ending with '|}' are only allowed when the 'syntaxType' option of the 'recordAndTuple' plugin is set to 'bar'",
   RecordExpressionBarIncorrectStartSyntaxType: "Record expressions starting with '{|' are only allowed when the 'syntaxType' option of the 'recordAndTuple' plugin is set to 'bar'",
   RecordExpressionHashIncorrectStartSyntaxType: "Record expressions starting with '#{' are only allowed when the 'syntaxType' option of the 'recordAndTuple' plugin is set to 'hash'",
+  RecordNoProto: "'__proto__' is not allowed in Record expressions",
   RestTrailingComma: "Unexpected trailing comma after rest element",
   SloppyFunction: "In non-strict mode code, functions can only be declared at top level, inside a block, or as the body of an if statement",
   StaticPrototype: "Classes may not have static property named prototype",
@@ -796,7 +810,7 @@ const Errors = Object.freeze({
   UnexpectedPrivateField: "Private names can only be used as the name of a class element (i.e. class C { #p = 42; #m() {} } )\n or a property of member expression (i.e. this.#p).",
   UnexpectedReservedWord: "Unexpected reserved word '%0'",
   UnexpectedSuper: "super is only allowed in object methods and classes",
-  UnexpectedToken: "Unexpected token '%'",
+  UnexpectedToken: "Unexpected token '%0'",
   UnexpectedTokenUnaryExponentiation: "Illegal expression. Wrap left hand side or entire exponentiation in parentheses.",
   UnsupportedBind: "Binding should be performed on object property.",
   UnsupportedDecoratorExport: "A decorated export must export a class declaration",
@@ -815,7 +829,8 @@ const Errors = Object.freeze({
   YieldInParameter: "yield is not allowed in generator parameters",
   ZeroDigitNumericSeparator: "Numeric separator can not be used after leading 0"
 });
-class LocationParser extends CommentsParser {
+
+class ParserError extends CommentsParser {
   getLocationForPosition(pos) {
     let loc;
     if (pos === this.state.start) loc = this.state.startLoc;else if (pos === this.state.lastTokStart) loc = this.state.lastTokStartLoc;else if (pos === this.state.end) loc = this.state.endLoc;else if (pos === this.state.lastTokEnd) loc = this.state.lastTokEndLoc;else loc = getLineInfo(this.input, pos);
@@ -914,12 +929,12 @@ var estree = (superClass => class extends superClass {
 
     if (prop.value.params.length !== paramCount) {
       if (method.kind === "get") {
-        this.raise(start, Errors.BadGetterArity);
+        this.raise(start, ErrorMessages.BadGetterArity);
       } else {
-        this.raise(start, Errors.BadSetterArity);
+        this.raise(start, ErrorMessages.BadSetterArity);
       }
     } else if (prop.kind === "set" && prop.value.params[0].type === "RestElement") {
-      this.raise(start, Errors.BadSetterRestParameter);
+      this.raise(start, ErrorMessages.BadSetterRestParameter);
     }
   }
 
@@ -936,29 +951,18 @@ var estree = (superClass => class extends superClass {
     }
   }
 
-  checkDuplicatedProto(prop, protoRef, refExpressionErrors) {
-    if (prop.type === "SpreadElement" || prop.computed || prop.method || prop.shorthand) {
+  checkProto(prop, isRecord, protoRef, refExpressionErrors) {
+    if (prop.method) {
       return;
     }
 
-    const key = prop.key;
-    const name = key.type === "Identifier" ? key.name : String(key.value);
-
-    if (name === "__proto__" && prop.kind === "init") {
-      if (protoRef.used) {
-        if (refExpressionErrors && refExpressionErrors.doubleProto === -1) {
-          refExpressionErrors.doubleProto = key.start;
-        } else {
-          this.raise(key.start, Errors.DuplicateProto);
-        }
-      }
-
-      protoRef.used = true;
-    }
+    super.checkProto(prop, isRecord, protoRef, refExpressionErrors);
   }
 
   isValidDirective(stmt) {
-    return stmt.type === "ExpressionStatement" && stmt.expression.type === "Literal" && typeof stmt.expression.value === "string" && (!stmt.expression.extra || !stmt.expression.extra.parenthesized);
+    var _stmt$expression$extr;
+
+    return stmt.type === "ExpressionStatement" && stmt.expression.type === "Literal" && typeof stmt.expression.value === "string" && !((_stmt$expression$extr = stmt.expression.extra) == null ? void 0 : _stmt$expression$extr.parenthesized);
   }
 
   stmtToDirective(stmt) {
@@ -1069,9 +1073,9 @@ var estree = (superClass => class extends superClass {
 
   toAssignableObjectExpressionProp(prop, isLast) {
     if (prop.kind === "get" || prop.kind === "set") {
-      throw this.raise(prop.key.start, Errors.PatternHasAccessor);
+      throw this.raise(prop.key.start, ErrorMessages.PatternHasAccessor);
     } else if (prop.method) {
-      throw this.raise(prop.key.start, Errors.PatternHasMethod);
+      throw this.raise(prop.key.start, ErrorMessages.PatternHasMethod);
     } else {
       super.toAssignableObjectExpressionProp(prop, isLast);
     }
@@ -1085,6 +1089,8 @@ var estree = (superClass => class extends superClass {
       node.source = node.arguments[0];
       delete node.arguments;
       delete node.callee;
+    } else if (node.type === "CallExpression") {
+      node.optional = false;
     }
 
     return node;
@@ -1114,6 +1120,16 @@ var estree = (superClass => class extends superClass {
         }
 
         break;
+    }
+
+    return node;
+  }
+
+  parseSubscript(...args) {
+    const node = super.parseSubscript(...args);
+
+    if (node.type === "MemberExpression") {
+      node.optional = false;
     }
 
     return node;
@@ -1160,7 +1176,7 @@ types.name.updateContext = function (prevType) {
   let allowed = false;
 
   if (prevType !== types.dot) {
-    if (this.state.value === "of" && !this.state.exprAllowed || this.state.value === "yield" && this.prodParam.hasYield) {
+    if (this.state.value === "of" && !this.state.exprAllowed && prevType !== types._function && prevType !== types._class || this.state.value === "yield" && this.prodParam.hasYield) {
       allowed = true;
     }
   }
@@ -1191,7 +1207,7 @@ types.parenL.updateContext = function (prevType) {
 types.incDec.updateContext = function () {};
 
 types._function.updateContext = types._class.updateContext = function (prevType) {
-  if (prevType.beforeExpr && prevType !== types.semi && prevType !== types._else && !(prevType === types._return && lineBreak.test(this.input.slice(this.state.lastTokEnd, this.state.start))) && !((prevType === types.colon || prevType === types.braceL) && this.curContext() === types$1.b_stat)) {
+  if (prevType === types.dot || prevType === types.questionDot) ; else if (prevType.beforeExpr && prevType !== types.semi && prevType !== types._else && !(prevType === types._return && lineBreak.test(this.input.slice(this.state.lastTokEnd, this.state.start))) && !((prevType === types.colon || prevType === types.braceL) && this.curContext() === types$1.b_stat)) {
     this.state.context.push(types$1.functionExpression);
   } else {
     this.state.context.push(types$1.functionStatement);
@@ -1207,6 +1223,10 @@ types.backQuote.updateContext = function () {
     this.state.context.push(types$1.template);
   }
 
+  this.state.exprAllowed = false;
+};
+
+types.star.updateContext = function () {
   this.state.exprAllowed = false;
 };
 
@@ -2169,14 +2189,14 @@ var flow = (superClass => class extends superClass {
 
     if (length !== paramCount) {
       if (property.kind === "get") {
-        this.raise(start, Errors.BadGetterArity);
+        this.raise(start, ErrorMessages.BadGetterArity);
       } else {
-        this.raise(start, Errors.BadSetterArity);
+        this.raise(start, ErrorMessages.BadSetterArity);
       }
     }
 
     if (property.kind === "set" && property.value.rest) {
-      this.raise(start, Errors.BadSetterRestParameter);
+      this.raise(start, ErrorMessages.BadSetterRestParameter);
     }
   }
 
@@ -3006,7 +3026,7 @@ var flow = (superClass => class extends superClass {
     for (let i = 0; i < exprList.length; i++) {
       const expr = exprList[i];
 
-      if (expr && expr.type === "TypeCastExpression") {
+      if ((expr == null ? void 0 : expr.type) === "TypeCastExpression") {
         exprList[i] = this.typeCastToParameter(expr);
       }
     }
@@ -3016,9 +3036,11 @@ var flow = (superClass => class extends superClass {
 
   toReferencedList(exprList, isParenthesizedExpr) {
     for (let i = 0; i < exprList.length; i++) {
+      var _expr$extra;
+
       const expr = exprList[i];
 
-      if (expr && expr.type === "TypeCastExpression" && (!expr.extra || !expr.extra.parenthesized) && (exprList.length > 1 || !isParenthesizedExpr)) {
+      if (expr && expr.type === "TypeCastExpression" && !((_expr$extra = expr.extra) == null ? void 0 : _expr$extra.parenthesized) && (exprList.length > 1 || !isParenthesizedExpr)) {
         this.raise(expr.typeAnnotation.start, FlowErrors.TypeCastInPattern);
       }
     }
@@ -3305,6 +3327,8 @@ var flow = (superClass => class extends superClass {
   }
 
   parseMaybeAssign(noIn, refExpressionErrors, afterLeftParse, refNeedsArrowPos) {
+    var _jsx;
+
     let state = null;
     let jsx;
 
@@ -3323,7 +3347,9 @@ var flow = (superClass => class extends superClass {
       }
     }
 
-    if (jsx && jsx.error || this.isRelational("<")) {
+    if (((_jsx = jsx) == null ? void 0 : _jsx.error) || this.isRelational("<")) {
+      var _arrow$node, _jsx2, _jsx3;
+
       state = state || this.state.clone();
       let typeParameters;
       const arrow = this.tryParse(() => {
@@ -3333,10 +3359,10 @@ var flow = (superClass => class extends superClass {
         this.resetStartLocationFromNode(arrowExpression, typeParameters);
         return arrowExpression;
       }, state);
-      const arrowExpression = arrow.node && arrow.node.type === "ArrowFunctionExpression" ? arrow.node : null;
+      const arrowExpression = ((_arrow$node = arrow.node) == null ? void 0 : _arrow$node.type) === "ArrowFunctionExpression" ? arrow.node : null;
       if (!arrow.error && arrowExpression) return arrowExpression;
 
-      if (jsx && jsx.node) {
+      if ((_jsx2 = jsx) == null ? void 0 : _jsx2.node) {
         this.state = jsx.failState;
         return jsx.node;
       }
@@ -3346,7 +3372,7 @@ var flow = (superClass => class extends superClass {
         return arrowExpression;
       }
 
-      if (jsx && jsx.thrown) throw jsx.error;
+      if ((_jsx3 = jsx) == null ? void 0 : _jsx3.thrown) throw jsx.error;
       if (arrow.thrown) throw arrow.error;
       throw this.raise(typeParameters.start, FlowErrors.UnexpectedTokenAfterTypeParameter);
     }
@@ -3533,7 +3559,7 @@ var flow = (superClass => class extends superClass {
       const end = this.input.indexOf("*-/", this.state.pos += 2);
 
       if (end === -1) {
-        throw this.raise(this.state.pos - 2, Errors.UnterminatedComment);
+        throw this.raise(this.state.pos - 2, ErrorMessages.UnterminatedComment);
       }
 
       this.state.pos = end + 3;
@@ -3575,7 +3601,7 @@ var flow = (superClass => class extends superClass {
     const end = this.input.indexOf("*/", this.state.pos);
 
     if (end === -1) {
-      throw this.raise(this.state.pos, Errors.UnterminatedComment);
+      throw this.raise(this.state.pos, ErrorMessages.UnterminatedComment);
     }
   }
 
@@ -4011,6 +4037,14 @@ var flow = (superClass => class extends superClass {
     return this.finishNode(node, "EnumDeclaration");
   }
 
+  updateContext(prevType) {
+    if (this.match(types.name) && this.state.value === "of" && prevType === types.name && this.input.slice(this.state.lastTokStart, this.state.lastTokEnd) === "interface") {
+      this.state.exprAllowed = false;
+    } else {
+      super.updateContext(prevType);
+    }
+  }
+
 });
 
 const entities = {
@@ -4397,7 +4431,7 @@ var jsx = (superClass => class extends superClass {
 
     for (;;) {
       if (this.state.pos >= this.length) {
-        throw this.raise(this.state.start, Errors.UnterminatedString);
+        throw this.raise(this.state.start, ErrorMessages.UnterminatedString);
       }
 
       const ch = this.input.charCodeAt(this.state.pos);
@@ -4863,7 +4897,7 @@ class ScopeHandler {
 
   checkRedeclarationInScope(scope, name, bindingType, pos) {
     if (this.isRedeclaredInScope(scope, name, bindingType)) {
-      this.raise(pos, Errors.VarRedeclaration, name);
+      this.raise(pos, ErrorMessages.VarRedeclaration, name);
     }
   }
 
@@ -5585,6 +5619,7 @@ var typescript = (superClass => class extends superClass {
     node.literal = (() => {
       switch (this.state.type) {
         case types.num:
+        case types.bigint:
         case types.string:
         case types._true:
         case types._false:
@@ -5639,6 +5674,7 @@ var typescript = (superClass => class extends superClass {
 
       case types.string:
       case types.num:
+      case types.bigint:
       case types._true:
       case types._false:
         return this.tsParseLiteralTypeNode();
@@ -5646,8 +5682,9 @@ var typescript = (superClass => class extends superClass {
       case types.plusMin:
         if (this.state.value === "-") {
           const node = this.startNode();
+          const nextToken = this.lookahead();
 
-          if (this.lookahead().type !== types.num) {
+          if (nextToken.type !== types.num && nextToken.type !== types.bigint) {
             throw this.unexpected();
           }
 
@@ -5923,7 +5960,7 @@ var typescript = (superClass => class extends superClass {
     }
 
     if (containsEsc) {
-      this.raise(this.state.lastTokStart, Errors.InvalidEscapedReservedWord, "asserts");
+      this.raise(this.state.lastTokStart, ErrorMessages.InvalidEscapedReservedWord, "asserts");
     }
 
     return true;
@@ -6867,6 +6904,8 @@ var typescript = (superClass => class extends superClass {
   }
 
   parseMaybeAssign(...args) {
+    var _jsx, _jsx2, _typeCast, _jsx3, _typeCast2, _jsx4, _typeCast3;
+
     let state;
     let jsx;
     let typeCast;
@@ -6886,13 +6925,15 @@ var typescript = (superClass => class extends superClass {
       }
     }
 
-    if (!(jsx && jsx.error) && !this.isRelational("<")) {
+    if (!((_jsx = jsx) == null ? void 0 : _jsx.error) && !this.isRelational("<")) {
       return super.parseMaybeAssign(...args);
     }
 
     let typeParameters;
     state = state || this.state.clone();
     const arrow = this.tryParse(abort => {
+      var _typeParameters;
+
       typeParameters = this.tsParseTypeParameters();
       const expr = super.parseMaybeAssign(...args);
 
@@ -6900,7 +6941,7 @@ var typescript = (superClass => class extends superClass {
         abort();
       }
 
-      if (typeParameters && typeParameters.params.length !== 0) {
+      if (((_typeParameters = typeParameters) == null ? void 0 : _typeParameters.params.length) !== 0) {
         this.resetStartLocationFromNode(expr, typeParameters);
       }
 
@@ -6915,7 +6956,7 @@ var typescript = (superClass => class extends superClass {
       if (!typeCast.error) return typeCast.node;
     }
 
-    if (jsx && jsx.node) {
+    if ((_jsx2 = jsx) == null ? void 0 : _jsx2.node) {
       this.state = jsx.failState;
       return jsx.node;
     }
@@ -6925,15 +6966,15 @@ var typescript = (superClass => class extends superClass {
       return arrow.node;
     }
 
-    if (typeCast && typeCast.node) {
+    if ((_typeCast = typeCast) == null ? void 0 : _typeCast.node) {
       this.state = typeCast.failState;
       return typeCast.node;
     }
 
-    if (jsx && jsx.thrown) throw jsx.error;
+    if ((_jsx3 = jsx) == null ? void 0 : _jsx3.thrown) throw jsx.error;
     if (arrow.thrown) throw arrow.error;
-    if (typeCast && typeCast.thrown) throw typeCast.error;
-    throw jsx && jsx.error || arrow.error || typeCast && typeCast.error;
+    if ((_typeCast2 = typeCast) == null ? void 0 : _typeCast2.thrown) throw typeCast.error;
+    throw ((_jsx4 = jsx) == null ? void 0 : _jsx4.error) || arrow.error || ((_typeCast3 = typeCast) == null ? void 0 : _typeCast3.error);
   }
 
   parseMaybeUnary(refExpressionErrors) {
@@ -7104,7 +7145,7 @@ var typescript = (superClass => class extends superClass {
     for (let i = 0; i < exprList.length; i++) {
       const expr = exprList[i];
 
-      if (expr && expr.type === "TSTypeCastExpression") {
+      if ((expr == null ? void 0 : expr.type) === "TSTypeCastExpression") {
         this.raise(expr.start, TSErrors.UnexpectedTypeAnnotation);
       }
     }
@@ -7275,6 +7316,20 @@ var placeholders = (superClass => class extends superClass {
     return super.parseExport(node);
   }
 
+  isExportDefaultSpecifier() {
+    if (this.match(types._default)) {
+      const next = this.nextTokenStart();
+
+      if (this.isUnparsedContextual(next, "from")) {
+        if (this.input.startsWith(types.placeholder.label, this.nextTokenStartSince(next + 4))) {
+          return true;
+        }
+      }
+    }
+
+    return super.isExportDefaultSpecifier();
+  }
+
   maybeParseExportDefaultSpecifier(node) {
     if (node.specifiers && node.specifiers.length > 0) {
       return true;
@@ -7288,7 +7343,7 @@ var placeholders = (superClass => class extends superClass {
       specifiers
     } = node;
 
-    if (specifiers && specifiers.length) {
+    if (specifiers == null ? void 0 : specifiers.length) {
       node.specifiers = specifiers.filter(node => node.exported.type === "Placeholder");
     }
 
@@ -7407,6 +7462,14 @@ function validatePlugins(plugins) {
 
   if (hasPlugin(plugins, "pipelineOperator") && !PIPELINE_PROPOSALS.includes(getPluginOption(plugins, "pipelineOperator", "proposal"))) {
     throw new Error("'pipelineOperator' requires 'proposal' option whose value should be one of: " + PIPELINE_PROPOSALS.map(p => `'${p}'`).join(", "));
+  }
+
+  if (hasPlugin(plugins, "moduleAttributes")) {
+    const moduleAttributesVerionPluginOption = getPluginOption(plugins, "moduleAttributes", "version");
+
+    if (moduleAttributesVerionPluginOption !== "may-2020") {
+      throw new Error("The 'moduleAttributes' plugin requires a 'version' option," + " representing the last proposal update. Currently, the" + " only supported value is 'may-2020'.");
+    }
   }
 
   if (hasPlugin(plugins, "recordAndTuple") && !RECORD_AND_TUPLE_SYNTAX_TYPES.includes(getPluginOption(plugins, "recordAndTuple", "syntaxType"))) {
@@ -7551,7 +7614,7 @@ class Token {
   }
 
 }
-class Tokenizer extends LocationParser {
+class Tokenizer extends ParserError {
   constructor(options, input) {
     super();
     this.tokens = [];
@@ -7609,10 +7672,13 @@ class Tokenizer extends LocationParser {
   }
 
   nextTokenStart() {
-    const thisTokEnd = this.state.pos;
-    skipWhiteSpace.lastIndex = thisTokEnd;
+    return this.nextTokenStartSince(this.state.pos);
+  }
+
+  nextTokenStartSince(pos) {
+    skipWhiteSpace.lastIndex = pos;
     const skip = skipWhiteSpace.exec(this.input);
-    return thisTokEnd + skip[0].length;
+    return pos + skip[0].length;
   }
 
   lookaheadCharCode() {
@@ -7638,7 +7704,7 @@ class Tokenizer extends LocationParser {
 
   nextToken() {
     const curContext = this.curContext();
-    if (!curContext || !curContext.preserveSpace) this.skipSpace();
+    if (!(curContext == null ? void 0 : curContext.preserveSpace)) this.skipSpace();
     this.state.octalPositions = [];
     this.state.start = this.state.pos;
     this.state.startLoc = this.state.curPosition();
@@ -7674,7 +7740,7 @@ class Tokenizer extends LocationParser {
     const startLoc = this.state.curPosition();
     const start = this.state.pos;
     const end = this.input.indexOf("*/", this.state.pos + 2);
-    if (end === -1) throw this.raise(start, Errors.UnterminatedComment);
+    if (end === -1) throw this.raise(start, ErrorMessages.UnterminatedComment);
     this.state.pos = end + 2;
     lineBreakG.lastIndex = start;
     let match;
@@ -7772,12 +7838,14 @@ class Tokenizer extends LocationParser {
     const next = this.input.charCodeAt(nextPos);
 
     if (next >= 48 && next <= 57) {
-      throw this.raise(this.state.pos, Errors.UnexpectedDigitAfterHash);
+      throw this.raise(this.state.pos, ErrorMessages.UnexpectedDigitAfterHash);
     }
 
-    if (this.hasPlugin("recordAndTuple") && (next === 123 || next === 91)) {
+    if (next === 123 || next === 91 && this.hasPlugin("recordAndTuple")) {
+      this.expectPlugin("recordAndTuple");
+
       if (this.getPluginOption("recordAndTuple", "syntaxType") !== "hash") {
-        throw this.raise(this.state.pos, next === 123 ? Errors.RecordExpressionHashIncorrectStartSyntaxType : Errors.TupleExpressionHashIncorrectStartSyntaxType);
+        throw this.raise(this.state.pos, next === 123 ? ErrorMessages.RecordExpressionHashIncorrectStartSyntaxType : ErrorMessages.TupleExpressionHashIncorrectStartSyntaxType);
       }
 
       if (next === 123) {
@@ -7787,10 +7855,8 @@ class Tokenizer extends LocationParser {
       }
 
       this.state.pos += 2;
-    } else if (this.hasPlugin("classPrivateProperties") || this.hasPlugin("classPrivateMethods") || this.getPluginOption("pipelineOperator", "proposal") === "smart") {
-      this.finishOp(types.hash, 1);
     } else {
-      throw this.raise(this.state.pos, Errors.InvalidOrUnexpectedToken, "#");
+      this.finishOp(types.hash, 1);
     }
   }
 
@@ -7884,7 +7950,7 @@ class Tokenizer extends LocationParser {
 
       if (this.hasPlugin("recordAndTuple") && next === 125) {
         if (this.getPluginOption("recordAndTuple", "syntaxType") !== "bar") {
-          throw this.raise(this.state.pos, Errors.RecordExpressionBarIncorrectEndSyntaxType);
+          throw this.raise(this.state.pos, ErrorMessages.RecordExpressionBarIncorrectEndSyntaxType);
         }
 
         this.finishOp(types.braceBarR, 2);
@@ -7893,7 +7959,7 @@ class Tokenizer extends LocationParser {
 
       if (this.hasPlugin("recordAndTuple") && next === 93) {
         if (this.getPluginOption("recordAndTuple", "syntaxType") !== "bar") {
-          throw this.raise(this.state.pos, Errors.TupleExpressionBarIncorrectEndSyntaxType);
+          throw this.raise(this.state.pos, ErrorMessages.TupleExpressionBarIncorrectEndSyntaxType);
         }
 
         this.finishOp(types.bracketBarR, 2);
@@ -8036,7 +8102,7 @@ class Tokenizer extends LocationParser {
       case 91:
         if (this.hasPlugin("recordAndTuple") && this.input.charCodeAt(this.state.pos + 1) === 124) {
           if (this.getPluginOption("recordAndTuple", "syntaxType") !== "bar") {
-            throw this.raise(this.state.pos, Errors.TupleExpressionBarIncorrectStartSyntaxType);
+            throw this.raise(this.state.pos, ErrorMessages.TupleExpressionBarIncorrectStartSyntaxType);
           }
 
           this.finishToken(types.bracketBarL);
@@ -8056,7 +8122,7 @@ class Tokenizer extends LocationParser {
       case 123:
         if (this.hasPlugin("recordAndTuple") && this.input.charCodeAt(this.state.pos + 1) === 124) {
           if (this.getPluginOption("recordAndTuple", "syntaxType") !== "bar") {
-            throw this.raise(this.state.pos, Errors.RecordExpressionBarIncorrectStartSyntaxType);
+            throw this.raise(this.state.pos, ErrorMessages.RecordExpressionBarIncorrectStartSyntaxType);
           }
 
           this.finishToken(types.braceBarL);
@@ -8187,7 +8253,7 @@ class Tokenizer extends LocationParser {
 
     }
 
-    throw this.raise(this.state.pos, Errors.InvalidOrUnexpectedToken, String.fromCodePoint(code));
+    throw this.raise(this.state.pos, ErrorMessages.InvalidOrUnexpectedToken, String.fromCodePoint(code));
   }
 
   finishOp(type, size) {
@@ -8202,13 +8268,13 @@ class Tokenizer extends LocationParser {
 
     for (;;) {
       if (this.state.pos >= this.length) {
-        throw this.raise(start, Errors.UnterminatedRegExp);
+        throw this.raise(start, ErrorMessages.UnterminatedRegExp);
       }
 
       const ch = this.input.charAt(this.state.pos);
 
       if (lineBreak.test(ch)) {
-        throw this.raise(start, Errors.UnterminatedRegExp);
+        throw this.raise(start, ErrorMessages.UnterminatedRegExp);
       }
 
       if (escaped) {
@@ -8238,10 +8304,10 @@ class Tokenizer extends LocationParser {
 
       if (VALID_REGEX_FLAGS.has(char)) {
         if (mods.indexOf(char) > -1) {
-          this.raise(this.state.pos + 1, Errors.DuplicateRegExpFlags);
+          this.raise(this.state.pos + 1, ErrorMessages.DuplicateRegExpFlags);
         }
       } else if (isIdentifierChar(charCode) || charCode === 92) {
-        this.raise(this.state.pos + 1, Errors.MalformedRegExpFlags);
+        this.raise(this.state.pos + 1, ErrorMessages.MalformedRegExpFlags);
       } else {
         break;
       }
@@ -8273,13 +8339,13 @@ class Tokenizer extends LocationParser {
           const next = this.input.charCodeAt(this.state.pos + 1);
 
           if (allowedSiblings.indexOf(next) === -1) {
-            this.raise(this.state.pos, Errors.UnexpectedNumericSeparator);
+            this.raise(this.state.pos, ErrorMessages.UnexpectedNumericSeparator);
           } else if (forbiddenSiblings.indexOf(prev) > -1 || forbiddenSiblings.indexOf(next) > -1 || Number.isNaN(next)) {
-            this.raise(this.state.pos, Errors.UnexpectedNumericSeparator);
+            this.raise(this.state.pos, ErrorMessages.UnexpectedNumericSeparator);
           }
 
           if (!allowNumSeparator) {
-            this.raise(this.state.pos, Errors.NumericSeparatorInEscapeSequence);
+            this.raise(this.state.pos, ErrorMessages.NumericSeparatorInEscapeSequence);
           }
 
           ++this.state.pos;
@@ -8300,7 +8366,7 @@ class Tokenizer extends LocationParser {
       if (val >= radix) {
         if (this.options.errorRecovery && val <= 9) {
           val = 0;
-          this.raise(this.state.start + i + 2, Errors.InvalidDigit, radix);
+          this.raise(this.state.start + i + 2, ErrorMessages.InvalidDigit, radix);
         } else if (forceLen) {
           val = 0;
           invalid = true;
@@ -8327,16 +8393,22 @@ class Tokenizer extends LocationParser {
     const val = this.readInt(radix);
 
     if (val == null) {
-      this.raise(this.state.start + 2, Errors.InvalidDigit, radix);
+      this.raise(this.state.start + 2, ErrorMessages.InvalidDigit, radix);
     }
 
-    if (this.input.charCodeAt(this.state.pos) === 110) {
+    const next = this.input.charCodeAt(this.state.pos);
+
+    if (next === 95) {
+      this.expectPlugin("numericSeparator", this.state.pos);
+    }
+
+    if (next === 110) {
       ++this.state.pos;
       isBigInt = true;
     }
 
     if (isIdentifierStart(this.input.codePointAt(this.state.pos))) {
-      throw this.raise(this.state.pos, Errors.NumberIdentifier);
+      throw this.raise(this.state.pos, ErrorMessages.NumberIdentifier);
     }
 
     if (isBigInt) {
@@ -8355,14 +8427,14 @@ class Tokenizer extends LocationParser {
     let isNonOctalDecimalInt = false;
 
     if (!startsWithDot && this.readInt(10) === null) {
-      this.raise(start, Errors.InvalidNumber);
+      this.raise(start, ErrorMessages.InvalidNumber);
     }
 
     let octal = this.state.pos - start >= 2 && this.input.charCodeAt(start) === 48;
 
     if (octal) {
       if (this.state.strict) {
-        this.raise(start, Errors.StrictOctalLiteral);
+        this.raise(start, ErrorMessages.StrictOctalLiteral);
       }
 
       if (/[89]/.test(this.input.slice(start, this.state.pos))) {
@@ -8387,7 +8459,7 @@ class Tokenizer extends LocationParser {
         ++this.state.pos;
       }
 
-      if (this.readInt(10) === null) this.raise(start, "Invalid number");
+      if (this.readInt(10) === null) this.raise(start, ErrorMessages.InvalidNumber);
       isFloat = true;
       next = this.input.charCodeAt(this.state.pos);
     }
@@ -8396,13 +8468,17 @@ class Tokenizer extends LocationParser {
       const underscorePos = this.input.slice(start, this.state.pos).indexOf("_");
 
       if (underscorePos > 0) {
-        this.raise(underscorePos + start, Errors.ZeroDigitNumericSeparator);
+        this.raise(underscorePos + start, ErrorMessages.ZeroDigitNumericSeparator);
       }
+    }
+
+    if (next === 95) {
+      this.expectPlugin("numericSeparator", this.state.pos);
     }
 
     if (next === 110) {
       if (isFloat || octal || isNonOctalDecimalInt) {
-        this.raise(start, "Invalid BigIntLiteral");
+        this.raise(start, ErrorMessages.InvalidBigIntLiteral);
       }
 
       ++this.state.pos;
@@ -8410,7 +8486,7 @@ class Tokenizer extends LocationParser {
     }
 
     if (isIdentifierStart(this.input.codePointAt(this.state.pos))) {
-      throw this.raise(this.state.pos, Errors.NumberIdentifier);
+      throw this.raise(this.state.pos, ErrorMessages.NumberIdentifier);
     }
 
     const str = this.input.slice(start, this.state.pos).replace(/[_n]/g, "");
@@ -8435,7 +8511,7 @@ class Tokenizer extends LocationParser {
 
       if (code !== null && code > 0x10ffff) {
         if (throwOnInvalid) {
-          this.raise(codePos, Errors.InvalidCodePoint);
+          this.raise(codePos, ErrorMessages.InvalidCodePoint);
         } else {
           return null;
         }
@@ -8453,7 +8529,7 @@ class Tokenizer extends LocationParser {
 
     for (;;) {
       if (this.state.pos >= this.length) {
-        throw this.raise(this.state.start, Errors.UnterminatedString);
+        throw this.raise(this.state.start, ErrorMessages.UnterminatedString);
       }
 
       const ch = this.input.charCodeAt(this.state.pos);
@@ -8468,7 +8544,7 @@ class Tokenizer extends LocationParser {
         ++this.state.curLine;
         this.state.lineStart = this.state.pos;
       } else if (isNewLine(ch)) {
-        throw this.raise(this.state.start, Errors.UnterminatedString);
+        throw this.raise(this.state.start, ErrorMessages.UnterminatedString);
       } else {
         ++this.state.pos;
       }
@@ -8485,7 +8561,7 @@ class Tokenizer extends LocationParser {
 
     for (;;) {
       if (this.state.pos >= this.length) {
-        throw this.raise(this.state.start, Errors.UnterminatedTemplate);
+        throw this.raise(this.state.start, ErrorMessages.UnterminatedTemplate);
       }
 
       const ch = this.input.charCodeAt(this.state.pos);
@@ -8605,7 +8681,8 @@ class Tokenizer extends LocationParser {
       default:
         if (ch >= 48 && ch <= 55) {
           const codePos = this.state.pos - 1;
-          let octalStr = this.input.substr(this.state.pos - 1, 3).match(/^[0-7]+/)[0];
+          const match = this.input.substr(this.state.pos - 1, 3).match(/^[0-7]+/);
+          let octalStr = match[0];
           let octal = parseInt(octalStr, 8);
 
           if (octal > 255) {
@@ -8620,7 +8697,7 @@ class Tokenizer extends LocationParser {
             if (inTemplate) {
               return null;
             } else if (this.state.strict) {
-              this.raise(codePos, Errors.StrictOctalLiteral);
+              this.raise(codePos, ErrorMessages.StrictOctalLiteral);
             } else {
               this.state.octalPositions.push(codePos);
             }
@@ -8639,7 +8716,7 @@ class Tokenizer extends LocationParser {
 
     if (n === null) {
       if (throwOnInvalid) {
-        this.raise(codePos, Errors.InvalidEscapeSequence);
+        this.raise(codePos, ErrorMessages.InvalidEscapeSequence);
       } else {
         this.state.pos = codePos - 1;
       }
@@ -8668,7 +8745,7 @@ class Tokenizer extends LocationParser {
         const identifierCheck = this.state.pos === start ? isIdentifierStart : isIdentifierChar;
 
         if (this.input.charCodeAt(++this.state.pos) !== 117) {
-          this.raise(this.state.pos, Errors.MissingUnicodeEscape);
+          this.raise(this.state.pos, ErrorMessages.MissingUnicodeEscape);
           continue;
         }
 
@@ -8677,7 +8754,7 @@ class Tokenizer extends LocationParser {
 
         if (esc !== null) {
           if (!identifierCheck(esc)) {
-            this.raise(escStart, Errors.EscapedCharNotAnIdentifier);
+            this.raise(escStart, ErrorMessages.EscapedCharNotAnIdentifier);
           }
 
           word += String.fromCodePoint(esc);
@@ -8701,7 +8778,7 @@ class Tokenizer extends LocationParser {
     const type = keywords.get(word) || types.name;
 
     if (this.state.isIterator && (!this.isIterator(word) || !this.state.inType)) {
-      this.raise(this.state.pos, Errors.InvalidIdentifier, word);
+      this.raise(this.state.pos, ErrorMessages.InvalidIdentifier, word);
     }
 
     this.finishToken(type, word);
@@ -8711,7 +8788,7 @@ class Tokenizer extends LocationParser {
     const kw = this.state.type.keyword;
 
     if (kw && this.state.containsEsc) {
-      this.raise(this.state.start, Errors.InvalidEscapedReservedWord, kw);
+      this.raise(this.state.start, ErrorMessages.InvalidEscapedReservedWord, kw);
     }
   }
 
@@ -8874,11 +8951,11 @@ class UtilParser extends Tokenizer {
 
   checkYieldAwaitInDefaultParams() {
     if (this.state.yieldPos !== -1 && (this.state.awaitPos === -1 || this.state.yieldPos < this.state.awaitPos)) {
-      this.raise(this.state.yieldPos, "Yield cannot be used as name inside a generator function");
+      this.raise(this.state.yieldPos, ErrorMessages.YieldBindingIdentifier);
     }
 
     if (this.state.awaitPos !== -1) {
-      this.raise(this.state.awaitPos, "Await cannot be used as name inside an async function");
+      this.raise(this.state.awaitPos, ErrorMessages.AwaitBindingIdentifier);
     }
   }
 
@@ -8953,8 +9030,12 @@ class UtilParser extends Tokenizer {
     }
 
     if (doubleProto >= 0) {
-      this.raise(doubleProto, Errors.DuplicateProto);
+      this.raise(doubleProto, ErrorMessages.DuplicateProto);
     }
+  }
+
+  isLiteralPropertyName() {
+    return this.match(types.name) || !!this.state.type.keyword || this.match(types.string) || this.match(types.num) || this.match(types.bigint);
   }
 
 }
@@ -8972,8 +9053,8 @@ class Node {
     this.start = pos;
     this.end = 0;
     this.loc = new SourceLocation(loc);
-    if (parser && parser.options.ranges) this.range = [pos, 0];
-    if (parser && parser.filename) this.loc.filename = parser.filename;
+    if (parser == null ? void 0 : parser.options.ranges) this.range = [pos, 0];
+    if (parser == null ? void 0 : parser.filename) this.loc.filename = parser.filename;
   }
 
   __clone() {
@@ -9052,7 +9133,7 @@ class LValParser extends NodeUtils {
       parenthesized = unwrapParenthesizedExpression(node);
 
       if (parenthesized.type !== "Identifier" && parenthesized.type !== "MemberExpression") {
-        this.raise(node.start, Errors.InvalidParenthesizedAssignment);
+        this.raise(node.start, ErrorMessages.InvalidParenthesizedAssignment);
       }
     }
 
@@ -9100,7 +9181,7 @@ class LValParser extends NodeUtils {
 
       case "AssignmentExpression":
         if (node.operator !== "=") {
-          this.raise(node.left.end, Errors.MissingEqInAssignment);
+          this.raise(node.left.end, ErrorMessages.MissingEqInAssignment);
         }
 
         node.type = "AssignmentPattern";
@@ -9118,7 +9199,7 @@ class LValParser extends NodeUtils {
 
   toAssignableObjectExpressionProp(prop, isLast) {
     if (prop.type === "ObjectMethod") {
-      const error = prop.kind === "get" || prop.kind === "set" ? Errors.PatternHasAccessor : Errors.PatternHasMethod;
+      const error = prop.kind === "get" || prop.kind === "set" ? ErrorMessages.PatternHasAccessor : ErrorMessages.PatternHasMethod;
       this.raise(prop.key.start, error);
     } else if (prop.type === "SpreadElement" && !isLast) {
       this.raiseRestNotLast(prop.start);
@@ -9133,9 +9214,9 @@ class LValParser extends NodeUtils {
     if (end) {
       const last = exprList[end - 1];
 
-      if (last && last.type === "RestElement") {
+      if ((last == null ? void 0 : last.type) === "RestElement") {
         --end;
-      } else if (last && last.type === "SpreadElement") {
+      } else if ((last == null ? void 0 : last.type) === "SpreadElement") {
         last.type = "RestElement";
         const arg = last.argument;
         this.toAssignable(arg);
@@ -9177,7 +9258,7 @@ class LValParser extends NodeUtils {
     for (let _i = 0; _i < exprList.length; _i++) {
       const expr = exprList[_i];
 
-      if (expr && expr.type === "ArrayExpression") {
+      if ((expr == null ? void 0 : expr.type) === "ArrayExpression") {
         this.toReferencedListDeep(expr.elements);
       }
     }
@@ -9238,7 +9319,7 @@ class LValParser extends NodeUtils {
         const decorators = [];
 
         if (this.match(types.at) && this.hasPlugin("decorators")) {
-          this.raise(this.state.start, Errors.UnsupportedParameterDecorator);
+          this.raise(this.state.start, ErrorMessages.UnsupportedParameterDecorator);
         }
 
         while (this.match(types.at)) {
@@ -9283,21 +9364,21 @@ class LValParser extends NodeUtils {
     switch (expr.type) {
       case "Identifier":
         if (this.state.strict && (strictModeChanged ? isStrictBindReservedWord(expr.name, this.inModule) : isStrictBindOnlyReservedWord(expr.name))) {
-          this.raise(expr.start, bindingType === BIND_NONE ? Errors.StrictEvalArguments : Errors.StrictEvalArgumentsBinding, expr.name);
+          this.raise(expr.start, bindingType === BIND_NONE ? ErrorMessages.StrictEvalArguments : ErrorMessages.StrictEvalArgumentsBinding, expr.name);
         }
 
         if (checkClashes) {
           const key = `_${expr.name}`;
 
           if (checkClashes[key]) {
-            this.raise(expr.start, Errors.ParamDupe);
+            this.raise(expr.start, ErrorMessages.ParamDupe);
           } else {
             checkClashes[key] = true;
           }
         }
 
         if (disallowLetBinding && expr.name === "let") {
-          this.raise(expr.start, Errors.LetInLexicalBinding);
+          this.raise(expr.start, ErrorMessages.LetInLexicalBinding);
         }
 
         if (!(bindingType & BIND_NONE)) {
@@ -9308,7 +9389,7 @@ class LValParser extends NodeUtils {
 
       case "MemberExpression":
         if (bindingType !== BIND_NONE) {
-          this.raise(expr.start, Errors.InvalidPropertyBindingPattern);
+          this.raise(expr.start, ErrorMessages.InvalidPropertyBindingPattern);
         }
 
         break;
@@ -9347,14 +9428,14 @@ class LValParser extends NodeUtils {
 
       default:
         {
-          this.raise(expr.start, bindingType === BIND_NONE ? Errors.InvalidLhs : Errors.InvalidLhsBinding, contextDescription);
+          this.raise(expr.start, bindingType === BIND_NONE ? ErrorMessages.InvalidLhs : ErrorMessages.InvalidLhsBinding, contextDescription);
         }
     }
   }
 
   checkToRestConversion(node) {
     if (node.argument.type !== "Identifier" && node.argument.type !== "MemberExpression") {
-      this.raise(node.argument.start, Errors.InvalidRestAssignmentPattern);
+      this.raise(node.argument.start, ErrorMessages.InvalidRestAssignmentPattern);
     }
   }
 
@@ -9369,32 +9450,37 @@ class LValParser extends NodeUtils {
   }
 
   raiseRestNotLast(pos) {
-    throw this.raise(pos, Errors.ElementAfterRest);
+    throw this.raise(pos, ErrorMessages.ElementAfterRest);
   }
 
   raiseTrailingCommaAfterRest(pos) {
-    this.raise(pos, Errors.RestTrailingComma);
+    this.raise(pos, ErrorMessages.RestTrailingComma);
   }
 
 }
 
 class ExpressionParser extends LValParser {
-  checkDuplicatedProto(prop, protoRef, refExpressionErrors) {
-    if (prop.type === "SpreadElement" || prop.computed || prop.kind || prop.shorthand) {
+  checkProto(prop, isRecord, protoRef, refExpressionErrors) {
+    if (prop.type === "SpreadElement" || prop.type === "ObjectMethod" || prop.computed || prop.shorthand) {
       return;
     }
 
     const key = prop.key;
-    const name = key.type === "Identifier" ? key.name : String(key.value);
+    const name = key.type === "Identifier" ? key.name : key.value;
 
     if (name === "__proto__") {
+      if (isRecord) {
+        this.raise(key.start, ErrorMessages.RecordNoProto);
+        return;
+      }
+
       if (protoRef.used) {
         if (refExpressionErrors) {
           if (refExpressionErrors.doubleProto === -1) {
             refExpressionErrors.doubleProto = key.start;
           }
         } else {
-          this.raise(key.start, Errors.DuplicateProto);
+          this.raise(key.start, ErrorMessages.DuplicateProto);
         }
       }
 
@@ -9575,7 +9661,7 @@ class ExpressionParser extends LValParser {
         node.operator = operator;
 
         if (operator === "**" && left.type === "UnaryExpression" && (this.options.createParenthesizedExpressions || !(left.extra && left.extra.parenthesized))) {
-          this.raise(left.argument.start, Errors.UnexpectedTokenUnaryExponentiation);
+          this.raise(left.argument.start, ErrorMessages.UnexpectedTokenUnaryExponentiation);
         }
 
         const op = this.state.type;
@@ -9594,7 +9680,7 @@ class ExpressionParser extends LValParser {
 
         if (op === types.pipeline && this.getPluginOption("pipelineOperator", "proposal") === "minimal") {
           if (this.match(types.name) && this.state.value === "await" && this.prodParam.hasAwait) {
-            throw this.raise(this.state.start, Errors.UnexpectedAwaitAfterPipelineBody);
+            throw this.raise(this.state.start, ErrorMessages.UnexpectedAwaitAfterPipelineBody);
           }
         }
 
@@ -9603,7 +9689,7 @@ class ExpressionParser extends LValParser {
         const nextOp = this.state.type;
 
         if (coalesce && (nextOp === types.logicalOR || nextOp === types.logicalAND) || logical && nextOp === types.nullishCoalescing) {
-          throw this.raise(this.state.start, Errors.MixingCoalesceWithLogical);
+          throw this.raise(this.state.start, ErrorMessages.MixingCoalesceWithLogical);
         }
 
         return this.parseExprOp(node, leftStartPos, leftStartLoc, minPrec, noIn);
@@ -9665,9 +9751,9 @@ class ExpressionParser extends LValParser {
         const arg = node.argument;
 
         if (arg.type === "Identifier") {
-          this.raise(node.start, Errors.StrictDelete);
-        } else if (arg.type === "MemberExpression" && arg.property.type === "PrivateName") {
-          this.raise(node.start, Errors.DeletePrivateField);
+          this.raise(node.start, ErrorMessages.StrictDelete);
+        } else if ((arg.type === "MemberExpression" || arg.type === "OptionalMemberExpression") && arg.property.type === "PrivateName") {
+          this.raise(node.start, ErrorMessages.DeletePrivateField);
         }
       }
 
@@ -9754,12 +9840,12 @@ class ExpressionParser extends LValParser {
     if (optional && !this.match(types.parenL) && !this.match(types.backQuote) || computed || this.eat(types.dot)) {
       const node = this.startNodeAt(startPos, startLoc);
       node.object = base;
-      node.property = computed ? this.parseExpression() : optional ? this.parseIdentifier(true) : this.parseMaybePrivateName(true);
+      node.property = computed ? this.parseExpression() : this.parseMaybePrivateName(true);
       node.computed = computed;
 
       if (node.property.type === "PrivateName") {
         if (node.object.type === "Super") {
-          this.raise(startPos, Errors.SuperPrivateField);
+          this.raise(startPos, ErrorMessages.SuperPrivateField);
         }
 
         this.classScope.usePrivateName(node.property.id.name, node.property.start);
@@ -9786,8 +9872,11 @@ class ExpressionParser extends LValParser {
       let node = this.startNodeAt(startPos, startLoc);
       node.callee = base;
 
+      if (state.optionalChainMember) {
+        node.optional = optional;
+      }
+
       if (optional) {
-        node.optional = true;
         node.arguments = this.parseCallExpressionArguments(types.parenR, false);
       } else {
         node.arguments = this.parseCallExpressionArguments(types.parenR, state.maybeAsyncArrow, base.type === "Import", base.type !== "Super", node);
@@ -9827,7 +9916,7 @@ class ExpressionParser extends LValParser {
     if (typeArguments) node.typeParameters = typeArguments;
 
     if (state.optionalChainMember) {
-      this.raise(startPos, Errors.OptionalChainingNoTemplate);
+      this.raise(startPos, ErrorMessages.OptionalChainingNoTemplate);
     }
 
     return this.finishNode(node, "TaggedTemplateExpression");
@@ -9839,13 +9928,19 @@ class ExpressionParser extends LValParser {
 
   finishCallExpression(node, optional) {
     if (node.callee.type === "Import") {
-      if (node.arguments.length !== 1) {
-        this.raise(node.start, Errors.ImportCallArity);
-      } else {
-        const importArg = node.arguments[0];
+      if (node.arguments.length === 2) {
+        this.expectPlugin("moduleAttributes");
+      }
 
-        if (importArg && importArg.type === "SpreadElement") {
-          this.raise(importArg.start, Errors.ImportCallSpreadArgument);
+      if (node.arguments.length === 0 || node.arguments.length > 2) {
+        this.raise(node.start, ErrorMessages.ImportCallArity, this.hasPlugin("moduleAttributes") ? "one or two arguments" : "one argument");
+      } else {
+        for (let _i = 0, _node$arguments = node.arguments; _i < _node$arguments.length; _i++) {
+          const arg = _node$arguments[_i];
+
+          if (arg.type === "SpreadElement") {
+            this.raise(arg.start, ErrorMessages.ImportCallSpreadArgument);
+          }
         }
       }
     }
@@ -9867,8 +9962,8 @@ class ExpressionParser extends LValParser {
         this.expect(types.comma);
 
         if (this.match(close)) {
-          if (dynamicImport) {
-            this.raise(this.state.lastTokStart, Errors.ImportCallArgumentTrailingComma);
+          if (dynamicImport && !this.hasPlugin("moduleAttributes")) {
+            this.raise(this.state.lastTokStart, ErrorMessages.ImportCallArgumentTrailingComma);
           }
 
           if (nodeForExtra) {
@@ -9926,13 +10021,13 @@ class ExpressionParser extends LValParser {
         this.next();
 
         if (this.match(types.parenL) && !this.scope.allowDirectSuper && !this.options.allowSuperOutsideMethod) {
-          this.raise(node.start, Errors.SuperNotAllowed);
+          this.raise(node.start, ErrorMessages.SuperNotAllowed);
         } else if (!this.scope.allowSuper && !this.options.allowSuperOutsideMethod) {
-          this.raise(node.start, Errors.UnexpectedSuper);
+          this.raise(node.start, ErrorMessages.UnexpectedSuper);
         }
 
         if (!this.match(types.parenL) && !this.match(types.bracketL) && !this.match(types.dot)) {
-          this.raise(node.start, Errors.UnsupportedSuper);
+          this.raise(node.start, ErrorMessages.UnsupportedSuper);
         }
 
         return this.finishNode(node, "Super");
@@ -9946,7 +10041,7 @@ class ExpressionParser extends LValParser {
         }
 
         if (!this.match(types.parenL)) {
-          this.raise(this.state.lastTokStart, Errors.UnsupportedImport);
+          this.raise(this.state.lastTokStart, ErrorMessages.UnsupportedImport);
         }
 
         return this.finishNode(node, "Import");
@@ -10052,7 +10147,7 @@ class ExpressionParser extends LValParser {
           this.state.inFSharpPipelineDirectBody = false;
           node = this.startNode();
           this.next();
-          node.elements = this.parseExprList(close, true, refExpressionErrors, node);
+          node.elements = this.parseExprList(close, false, refExpressionErrors, node);
           this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
           return this.finishNode(node, "TupleExpression");
         }
@@ -10121,7 +10216,7 @@ class ExpressionParser extends LValParser {
           if (callee.type === "MemberExpression") {
             return this.finishNode(node, "BindExpression");
           } else {
-            throw this.raise(callee.start, Errors.UnsupportedBind);
+            throw this.raise(callee.start, ErrorMessages.UnsupportedBind);
           }
         }
 
@@ -10131,17 +10226,46 @@ class ExpressionParser extends LValParser {
             node = this.startNode();
 
             if (this.getPluginOption("pipelineOperator", "proposal") !== "smart") {
-              this.raise(node.start, Errors.PrimaryTopicRequiresSmartPipeline);
+              this.raise(node.start, ErrorMessages.PrimaryTopicRequiresSmartPipeline);
             }
 
             this.next();
 
             if (!this.primaryTopicReferenceIsAllowedInCurrentTopicContext()) {
-              this.raise(node.start, Errors.PrimaryTopicNotAllowed);
+              this.raise(node.start, ErrorMessages.PrimaryTopicNotAllowed);
             }
 
             this.registerTopicReference();
             return this.finishNode(node, "PipelinePrimaryTopicReference");
+          }
+
+          const nextCh = this.input.codePointAt(this.state.end);
+
+          if (isIdentifierStart(nextCh) || nextCh === 92) {
+            const start = this.state.start;
+            node = this.parseMaybePrivateName(true);
+
+            if (this.match(types._in)) {
+              this.expectPlugin("privateIn");
+              this.classScope.usePrivateName(node.id.name, node.start);
+            } else if (this.hasPlugin("privateIn")) {
+              this.raise(this.state.start, ErrorMessages.PrivateInExpectedIn, node.id.name);
+            } else {
+              throw this.unexpected(start);
+            }
+
+            return node;
+          }
+        }
+
+      case types.relational:
+        {
+          if (this.state.value === "<") {
+            const lookaheadCh = this.input.codePointAt(this.nextTokenStart());
+
+            if (isIdentifierStart(lookaheadCh) || lookaheadCh === 62) {
+                this.expectOnePlugin(["jsx", "flow", "typescript"]);
+              }
           }
         }
 
@@ -10164,7 +10288,7 @@ class ExpressionParser extends LValParser {
       this.expectOnePlugin(["classPrivateProperties", "classPrivateMethods"]);
 
       if (!isPrivateNameAllowed) {
-        this.raise(this.state.pos, Errors.UnexpectedPrivateField);
+        this.raise(this.state.pos, ErrorMessages.UnexpectedPrivateField);
       }
 
       const node = this.startNode();
@@ -10205,7 +10329,7 @@ class ExpressionParser extends LValParser {
     node.property = this.parseIdentifier(true);
 
     if (node.property.name !== propertyName || containsEsc) {
-      this.raise(node.property.start, Errors.UnsupportedMetaProperty, meta.name, propertyName);
+      this.raise(node.property.start, ErrorMessages.UnsupportedMetaProperty, meta.name, propertyName);
     }
 
     return this.finishNode(node, "MetaProperty");
@@ -10216,17 +10340,13 @@ class ExpressionParser extends LValParser {
     this.expect(types.dot);
 
     if (this.isContextual("meta")) {
-      this.expectPlugin("importMeta");
-
       if (!this.inModule) {
         this.raiseWithData(id.start, {
           code: "BABEL_PARSER_SOURCETYPE_MODULE_REQUIRED"
-        }, Errors.ImportMetaOutsideModule);
+        }, ErrorMessages.ImportMetaOutsideModule);
       }
 
       this.sawUnambiguousESM = true;
-    } else if (!this.hasPlugin("importMeta")) {
-      this.raise(id.start, Errors.ImportCallArityLtOne);
     }
 
     return this.parseMetaProperty(node, id, "meta");
@@ -10307,8 +10427,8 @@ class ExpressionParser extends LValParser {
       this.state.yieldPos = oldYieldPos;
       this.state.awaitPos = oldAwaitPos;
 
-      for (let _i = 0; _i < exprList.length; _i++) {
-        const param = exprList[_i];
+      for (let _i2 = 0; _i2 < exprList.length; _i2++) {
+        const param = exprList[_i2];
 
         if (param.extra && param.extra.parenthesized) {
           this.unexpected(param.extra.parenStart);
@@ -10376,7 +10496,7 @@ class ExpressionParser extends LValParser {
       const metaProp = this.parseMetaProperty(node, meta, "target");
 
       if (!this.scope.inNonArrowFunction && !this.scope.inClass) {
-        let error = Errors.UnexpectedNewTarget;
+        let error = ErrorMessages.UnexpectedNewTarget;
 
         if (this.hasPlugin("classProperties")) {
           error += " or class properties";
@@ -10391,11 +10511,11 @@ class ExpressionParser extends LValParser {
     node.callee = this.parseNoCallExpr();
 
     if (node.callee.type === "Import") {
-      this.raise(node.callee.start, Errors.ImportCallNotNewExpression);
+      this.raise(node.callee.start, ErrorMessages.ImportCallNotNewExpression);
     } else if (node.callee.type === "OptionalMemberExpression" || node.callee.type === "OptionalCallExpression") {
-      this.raise(this.state.lastTokEnd, Errors.OptionalChainingNoNew);
+      this.raise(this.state.lastTokEnd, ErrorMessages.OptionalChainingNoNew);
     } else if (this.eat(types.questionDot)) {
-      this.raise(this.state.start, Errors.OptionalChainingNoNew);
+      this.raise(this.state.start, ErrorMessages.OptionalChainingNoNew);
     }
 
     this.parseNewArguments(node);
@@ -10417,7 +10537,7 @@ class ExpressionParser extends LValParser {
 
     if (this.state.value === null) {
       if (!isTagged) {
-        this.raise(this.state.start + 1, Errors.InvalidEscapeSequenceTemplate);
+        this.raise(this.state.start + 1, ErrorMessages.InvalidEscapeSequenceTemplate);
       }
     }
 
@@ -10471,7 +10591,11 @@ class ExpressionParser extends LValParser {
       const prop = this.parseObjectMember(isPattern, refExpressionErrors);
 
       if (!isPattern) {
-        this.checkDuplicatedProto(prop, propHash, refExpressionErrors);
+        this.checkProto(prop, isRecord, propHash, refExpressionErrors);
+      }
+
+      if (isRecord && prop.type !== "ObjectProperty" && prop.type !== "SpreadElement") {
+        this.raise(prop.start, ErrorMessages.InvalidRecordProperty);
       }
 
       if (prop.shorthand) {
@@ -10493,7 +10617,7 @@ class ExpressionParser extends LValParser {
   }
 
   isAsyncProp(prop) {
-    return !prop.computed && prop.key.type === "Identifier" && prop.key.name === "async" && (this.match(types.name) || this.match(types.num) || this.match(types.string) || this.match(types.bracketL) || this.state.type.keyword || this.match(types.star)) && !this.hasPrecedingLineBreak();
+    return !prop.computed && prop.key.type === "Identifier" && prop.key.name === "async" && (this.isLiteralPropertyName() || this.match(types.bracketL) || this.match(types.star)) && !this.hasPrecedingLineBreak();
   }
 
   parseObjectMember(isPattern, refExpressionErrors) {
@@ -10501,7 +10625,7 @@ class ExpressionParser extends LValParser {
 
     if (this.match(types.at)) {
       if (this.hasPlugin("decorators")) {
-        this.raise(this.state.start, Errors.UnsupportedPropertyDecorator);
+        this.raise(this.state.start, ErrorMessages.UnsupportedPropertyDecorator);
       }
 
       while (this.match(types.at)) {
@@ -10560,7 +10684,7 @@ class ExpressionParser extends LValParser {
   }
 
   isGetterOrSetterMethod(prop, isPattern) {
-    return !isPattern && !prop.computed && prop.key.type === "Identifier" && (prop.key.name === "get" || prop.key.name === "set") && (this.match(types.string) || this.match(types.num) || this.match(types.bracketL) || this.match(types.name) || !!this.state.type.keyword);
+    return !isPattern && !prop.computed && prop.key.type === "Identifier" && (prop.key.name === "get" || prop.key.name === "set") && (this.isLiteralPropertyName() || this.match(types.bracketL));
   }
 
   getGetterSetterExpectedParamCount(method) {
@@ -10573,14 +10697,14 @@ class ExpressionParser extends LValParser {
 
     if (method.params.length !== paramCount) {
       if (method.kind === "get") {
-        this.raise(start, Errors.BadGetterArity);
+        this.raise(start, ErrorMessages.BadGetterArity);
       } else {
-        this.raise(start, Errors.BadSetterArity);
+        this.raise(start, ErrorMessages.BadSetterArity);
       }
     }
 
     if (method.kind === "set" && method.params[method.params.length - 1].type === "RestElement") {
-      this.raise(start, Errors.BadSetterRestParameter);
+      this.raise(start, ErrorMessages.BadSetterRestParameter);
     }
   }
 
@@ -10733,7 +10857,7 @@ class ExpressionParser extends LValParser {
 
         if (hasStrictModeDirective && nonSimple) {
           const errorPos = (node.kind === "method" || node.kind === "constructor") && !!node.key ? node.key.end : node.start;
-          this.raise(errorPos, Errors.IllegalLanguageModeDirective);
+          this.raise(errorPos, ErrorMessages.IllegalLanguageModeDirective);
         }
 
         const strictModeChanged = !oldStrict && this.state.strict;
@@ -10795,7 +10919,11 @@ class ExpressionParser extends LValParser {
   parseExprListItem(allowEmpty, refExpressionErrors, refNeedsArrowPos, allowPlaceholder) {
     let elt;
 
-    if (allowEmpty && this.match(types.comma)) {
+    if (this.match(types.comma)) {
+      if (!allowEmpty) {
+        this.raise(this.state.pos, ErrorMessages.UnexpectedToken, ",");
+      }
+
       elt = null;
     } else if (this.match(types.ellipsis)) {
       const spreadNodeStartPos = this.state.start;
@@ -10805,7 +10933,7 @@ class ExpressionParser extends LValParser {
       this.expectPlugin("partialApplication");
 
       if (!allowPlaceholder) {
-        this.raise(this.state.start, Errors.UnexpectedArgumentPlaceholder);
+        this.raise(this.state.start, ErrorMessages.UnexpectedArgumentPlaceholder);
       }
 
       const node = this.startNode();
@@ -10837,9 +10965,10 @@ class ExpressionParser extends LValParser {
       name = this.state.value;
     } else if (this.state.type.keyword) {
       name = this.state.type.keyword;
+      const context = this.state.context;
 
-      if ((name === "class" || name === "function") && (this.state.lastTokEnd !== this.state.lastTokStart + 1 || this.input.charCodeAt(this.state.lastTokStart) !== 46)) {
-        this.state.context.pop();
+      if ((name === "class" || name === "function") && context[context.length - 1].token === "function") {
+        context.pop();
       }
     } else {
       throw this.unexpected();
@@ -10857,13 +10986,13 @@ class ExpressionParser extends LValParser {
 
   checkReservedWord(word, startLoc, checkKeywords, isBinding) {
     if (this.prodParam.hasYield && word === "yield") {
-      this.raise(startLoc, Errors.YieldBindingIdentifier);
+      this.raise(startLoc, ErrorMessages.YieldBindingIdentifier);
       return;
     }
 
     if (word === "await") {
       if (this.prodParam.hasAwait) {
-        this.raise(startLoc, Errors.AwaitBindingIdentifier);
+        this.raise(startLoc, ErrorMessages.AwaitBindingIdentifier);
         return;
       }
 
@@ -10873,12 +11002,12 @@ class ExpressionParser extends LValParser {
     }
 
     if (this.scope.inClass && !this.scope.inNonArrowFunction && word === "arguments") {
-      this.raise(startLoc, Errors.ArgumentsDisallowedInInitializer);
+      this.raise(startLoc, ErrorMessages.ArgumentsDisallowedInInitializer);
       return;
     }
 
     if (checkKeywords && isKeyword(word)) {
-      this.raise(startLoc, Errors.UnexpectedKeyword, word);
+      this.raise(startLoc, ErrorMessages.UnexpectedKeyword, word);
       return;
     }
 
@@ -10886,9 +11015,9 @@ class ExpressionParser extends LValParser {
 
     if (reservedTest(word, this.inModule)) {
       if (!this.prodParam.hasAwait && word === "await") {
-        this.raise(startLoc, Errors.AwaitNotInAsyncFunction);
+        this.raise(startLoc, ErrorMessages.AwaitNotInAsyncFunction);
       } else {
-        this.raise(startLoc, Errors.UnexpectedReservedWord, word);
+        this.raise(startLoc, ErrorMessages.UnexpectedReservedWord, word);
       }
     }
   }
@@ -10909,13 +11038,13 @@ class ExpressionParser extends LValParser {
     this.next();
 
     if (this.state.inParameters) {
-      this.raise(node.start, Errors.AwaitExpressionFormalParameter);
+      this.raise(node.start, ErrorMessages.AwaitExpressionFormalParameter);
     } else if (this.state.awaitPos === -1) {
       this.state.awaitPos = node.start;
     }
 
     if (this.eat(types.star)) {
-      this.raise(node.start, Errors.ObsoleteAwaitStar);
+      this.raise(node.start, ErrorMessages.ObsoleteAwaitStar);
     }
 
     if (!this.scope.inFunction && !this.options.allowAwaitOutsideFunction) {
@@ -10937,7 +11066,7 @@ class ExpressionParser extends LValParser {
     const node = this.startNode();
 
     if (this.state.inParameters) {
-      this.raise(node.start, Errors.YieldInParameter);
+      this.raise(node.start, ErrorMessages.YieldInParameter);
     } else if (this.state.yieldPos === -1) {
       this.state.yieldPos = node.start;
     }
@@ -10958,7 +11087,7 @@ class ExpressionParser extends LValParser {
   checkPipelineAtInfixOperator(left, leftStartPos) {
     if (this.getPluginOption("pipelineOperator", "proposal") === "smart") {
       if (left.type === "SequenceExpression") {
-        this.raise(leftStartPos, Errors.PipelineHeadSequenceExpression);
+        this.raise(leftStartPos, ErrorMessages.PipelineHeadSequenceExpression);
       }
     }
   }
@@ -10971,9 +11100,9 @@ class ExpressionParser extends LValParser {
 
   checkSmartPipelineBodyEarlyErrors(childExpression, pipelineStyle, startPos) {
     if (this.match(types.arrow)) {
-      throw this.raise(this.state.start, Errors.PipelineBodyNoArrow);
+      throw this.raise(this.state.start, ErrorMessages.PipelineBodyNoArrow);
     } else if (pipelineStyle === "PipelineTopicExpression" && childExpression.type === "SequenceExpression") {
-      this.raise(startPos, Errors.PipelineBodySequenceExpression);
+      this.raise(startPos, ErrorMessages.PipelineBodySequenceExpression);
     }
   }
 
@@ -10995,7 +11124,7 @@ class ExpressionParser extends LValParser {
 
       case "PipelineTopicExpression":
         if (!this.topicReferenceWasUsedInCurrentTopicContext()) {
-          this.raise(startPos, Errors.PipelineTopicUnused);
+          this.raise(startPos, ErrorMessages.PipelineTopicUnused);
         }
 
         bodyNode.expression = childExpression;
@@ -11112,7 +11241,7 @@ class StatementParser extends ExpressionParser {
       for (let _i = 0, _Array$from = Array.from(this.scope.undefinedExports); _i < _Array$from.length; _i++) {
         const [name] = _Array$from[_i];
         const pos = this.scope.undefinedExports.get(name);
-        this.raise(pos, Errors.ModuleExportUndefined, name);
+        this.raise(pos, ErrorMessages.ModuleExportUndefined, name);
       }
     }
 
@@ -11207,9 +11336,9 @@ class StatementParser extends ExpressionParser {
 
         if (context) {
           if (this.state.strict) {
-            this.raise(this.state.start, Errors.StrictFunction);
+            this.raise(this.state.start, ErrorMessages.StrictFunction);
           } else if (context !== "if" && context !== "label") {
-            this.raise(this.state.start, Errors.SloppyFunction);
+            this.raise(this.state.start, ErrorMessages.SloppyFunction);
           }
         }
 
@@ -11239,7 +11368,7 @@ class StatementParser extends ExpressionParser {
         kind = kind || this.state.value;
 
         if (context && kind !== "var") {
-          this.raise(this.state.start, Errors.UnexpectedLexicalDeclaration);
+          this.raise(this.state.start, ErrorMessages.UnexpectedLexicalDeclaration);
         }
 
         return this.parseVarStatement(node, kind);
@@ -11266,7 +11395,7 @@ class StatementParser extends ExpressionParser {
           }
 
           if (!this.options.allowImportExportEverywhere && !topLevel) {
-            this.raise(this.state.start, Errors.UnexpectedImportExport);
+            this.raise(this.state.start, ErrorMessages.UnexpectedImportExport);
           }
 
           this.next();
@@ -11294,7 +11423,7 @@ class StatementParser extends ExpressionParser {
         {
           if (this.isAsyncFunction()) {
             if (context) {
-              this.raise(this.state.start, Errors.AsyncFunctionInSingleStatementContext);
+              this.raise(this.state.start, ErrorMessages.AsyncFunctionInSingleStatementContext);
             }
 
             this.next();
@@ -11317,7 +11446,7 @@ class StatementParser extends ExpressionParser {
     if (!this.options.allowImportExportEverywhere && !this.inModule) {
       this.raiseWithData(node.start, {
         code: "BABEL_PARSER_SOURCETYPE_MODULE_REQUIRED"
-      }, Errors.ImportOutsideModule);
+      }, ErrorMessages.ImportOutsideModule);
     }
   }
 
@@ -11349,10 +11478,10 @@ class StatementParser extends ExpressionParser {
       }
 
       if (this.hasPlugin("decorators") && !this.getPluginOption("decorators", "decoratorsBeforeExport")) {
-        this.raise(this.state.start, Errors.DecoratorExportClass);
+        this.raise(this.state.start, ErrorMessages.DecoratorExportClass);
       }
     } else if (!this.canHaveLeadingDecorator()) {
-      throw this.raise(this.state.start, Errors.UnexpectedLeadingDecorator);
+      throw this.raise(this.state.start, ErrorMessages.UnexpectedLeadingDecorator);
     }
   }
 
@@ -11432,7 +11561,7 @@ class StatementParser extends ExpressionParser {
     }
 
     if (i === this.state.labels.length) {
-      this.raise(node.start, Errors.IllegalBreakContinue, keyword);
+      this.raise(node.start, ErrorMessages.IllegalBreakContinue, keyword);
     }
   }
 
@@ -11534,7 +11663,7 @@ class StatementParser extends ExpressionParser {
 
   parseReturnStatement(node) {
     if (!this.prodParam.hasReturn && !this.options.allowReturnOutsideFunction) {
-      this.raise(this.state.start, Errors.IllegalReturn);
+      this.raise(this.state.start, ErrorMessages.IllegalReturn);
     }
 
     this.next();
@@ -11570,7 +11699,7 @@ class StatementParser extends ExpressionParser {
           cur.test = this.parseExpression();
         } else {
           if (sawDefault) {
-            this.raise(this.state.lastTokStart, Errors.MultipleDefaultsInSwitch);
+            this.raise(this.state.lastTokStart, ErrorMessages.MultipleDefaultsInSwitch);
           }
 
           sawDefault = true;
@@ -11598,7 +11727,7 @@ class StatementParser extends ExpressionParser {
     this.next();
 
     if (lineBreak.test(this.input.slice(this.state.lastTokEnd, this.state.start))) {
-      this.raise(this.state.lastTokEnd, Errors.NewlineAfterThrow);
+      this.raise(this.state.lastTokEnd, ErrorMessages.NewlineAfterThrow);
     }
 
     node.argument = this.parseExpression();
@@ -11635,7 +11764,7 @@ class StatementParser extends ExpressionParser {
     node.finalizer = this.eat(types._finally) ? this.parseBlock() : null;
 
     if (!node.handler && !node.finalizer) {
-      this.raise(node.start, Errors.NoCatchOrFinally);
+      this.raise(node.start, ErrorMessages.NoCatchOrFinally);
     }
 
     return this.finishNode(node, "TryStatement");
@@ -11659,7 +11788,7 @@ class StatementParser extends ExpressionParser {
 
   parseWithStatement(node) {
     if (this.state.strict) {
-      this.raise(this.state.start, Errors.StrictWith);
+      this.raise(this.state.start, ErrorMessages.StrictWith);
     }
 
     this.next();
@@ -11678,7 +11807,7 @@ class StatementParser extends ExpressionParser {
       const label = _this$state$labels[_i2];
 
       if (label.name === maybeName) {
-        this.raise(expr.start, Errors.LabelRedeclaration, maybeName);
+        this.raise(expr.start, ErrorMessages.LabelRedeclaration, maybeName);
       }
     }
 
@@ -11771,7 +11900,7 @@ class StatementParser extends ExpressionParser {
     if (this.state.strict && octalPositions.length) {
       for (let _i3 = 0; _i3 < octalPositions.length; _i3++) {
         const pos = octalPositions[_i3];
-        this.raise(pos, Errors.StrictOctalLiteral);
+        this.raise(pos, ErrorMessages.StrictOctalLiteral);
       }
     }
 
@@ -11810,9 +11939,9 @@ class StatementParser extends ExpressionParser {
     }
 
     if (init.type === "VariableDeclaration" && init.declarations[0].init != null && (!isForIn || this.state.strict || init.kind !== "var" || init.declarations[0].id.type !== "Identifier")) {
-      this.raise(init.start, Errors.ForInOfLoopInitializer, isForIn ? "for-in" : "for-of");
+      this.raise(init.start, ErrorMessages.ForInOfLoopInitializer, isForIn ? "for-in" : "for-of");
     } else if (init.type === "AssignmentPattern") {
-      this.raise(init.start, Errors.InvalidLhs, "for-loop");
+      this.raise(init.start, ErrorMessages.InvalidLhs, "for-loop");
     }
 
     node.left = init;
@@ -11841,7 +11970,7 @@ class StatementParser extends ExpressionParser {
             this.unexpected();
           }
         } else if (decl.id.type !== "Identifier" && !(isFor && (this.match(types._in) || this.isContextual("of")))) {
-          this.raise(this.state.lastTokEnd, Errors.DeclarationMissingInitializer, "Complex binding patterns");
+          this.raise(this.state.lastTokEnd, ErrorMessages.DeclarationMissingInitializer, "Complex binding patterns");
         }
 
         decl.init = null;
@@ -11866,7 +11995,7 @@ class StatementParser extends ExpressionParser {
     this.initFunction(node, isAsync);
 
     if (this.match(types.star) && isHangingStatement) {
-      this.raise(this.state.start, Errors.GeneratorInSingleStatementContext);
+      this.raise(this.state.start, ErrorMessages.GeneratorInSingleStatementContext);
     }
 
     node.generator = this.eat(types.star);
@@ -11960,7 +12089,7 @@ class StatementParser extends ExpressionParser {
       while (!this.match(types.braceR)) {
         if (this.eat(types.semi)) {
           if (decorators.length > 0) {
-            throw this.raise(this.state.lastTokEnd, Errors.DecoratorSemicolon);
+            throw this.raise(this.state.lastTokEnd, ErrorMessages.DecoratorSemicolon);
           }
 
           continue;
@@ -11982,7 +12111,7 @@ class StatementParser extends ExpressionParser {
         this.parseClassMember(classBody, member, state, constructorAllowsSuper);
 
         if (member.kind === "constructor" && member.decorators && member.decorators.length > 0) {
-          this.raise(member.start, Errors.DecoratorConstructor);
+          this.raise(member.start, ErrorMessages.DecoratorConstructor);
         }
       }
     });
@@ -11994,7 +12123,7 @@ class StatementParser extends ExpressionParser {
     this.next();
 
     if (decorators.length) {
-      throw this.raise(this.state.start, Errors.TrailingDecorator);
+      throw this.raise(this.state.start, ErrorMessages.TrailingDecorator);
     }
 
     this.classScope.exit();
@@ -12056,7 +12185,7 @@ class StatementParser extends ExpressionParser {
       }
 
       if (this.isNonstaticConstructor(publicMethod)) {
-        this.raise(publicMethod.key.start, Errors.ConstructorIsGenerator);
+        this.raise(publicMethod.key.start, ErrorMessages.ConstructorIsGenerator);
       }
 
       this.pushClassMethod(classBody, publicMethod, true, false, false, false);
@@ -12085,7 +12214,7 @@ class StatementParser extends ExpressionParser {
         publicMethod.kind = "constructor";
 
         if (state.hadConstructor && !this.hasPlugin("typescript")) {
-          this.raise(key.start, Errors.DuplicateConstructor);
+          this.raise(key.start, ErrorMessages.DuplicateConstructor);
         }
 
         state.hadConstructor = true;
@@ -12114,7 +12243,7 @@ class StatementParser extends ExpressionParser {
         this.pushClassPrivateMethod(classBody, privateMethod, isGenerator, true);
       } else {
         if (this.isNonstaticConstructor(publicMethod)) {
-          this.raise(publicMethod.key.start, Errors.ConstructorIsAsync);
+          this.raise(publicMethod.key.start, ErrorMessages.ConstructorIsAsync);
         }
 
         this.pushClassMethod(classBody, publicMethod, isGenerator, true, false, false);
@@ -12127,7 +12256,7 @@ class StatementParser extends ExpressionParser {
         this.pushClassPrivateMethod(classBody, privateMethod, false, false);
       } else {
         if (this.isNonstaticConstructor(publicMethod)) {
-          this.raise(publicMethod.key.start, Errors.ConstructorIsAccessor);
+          this.raise(publicMethod.key.start, ErrorMessages.ConstructorIsAccessor);
         }
 
         this.pushClassMethod(classBody, publicMethod, false, false, false, false);
@@ -12149,11 +12278,11 @@ class StatementParser extends ExpressionParser {
     const key = this.parsePropertyName(member, true);
 
     if (!member.computed && member.static && (key.name === "prototype" || key.value === "prototype")) {
-      this.raise(key.start, Errors.StaticPrototype);
+      this.raise(key.start, ErrorMessages.StaticPrototype);
     }
 
     if (key.type === "PrivateName" && key.id.name === "constructor") {
-      this.raise(key.start, Errors.ConstructorClassPrivateField);
+      this.raise(key.start, ErrorMessages.ConstructorClassPrivateField);
     }
 
     return key;
@@ -12161,7 +12290,7 @@ class StatementParser extends ExpressionParser {
 
   pushClassProperty(classBody, prop) {
     if (!prop.computed && (prop.key.name === "constructor" || prop.key.value === "constructor")) {
-      this.raise(prop.key.start, Errors.ConstructorClassField);
+      this.raise(prop.key.start, ErrorMessages.ConstructorClassField);
     }
 
     classBody.body.push(this.parseClassProperty(prop));
@@ -12235,7 +12364,7 @@ class StatementParser extends ExpressionParser {
       if (optionalId || !isStatement) {
         node.id = null;
       } else {
-        this.unexpected(null, Errors.MissingClassName);
+        this.unexpected(null, ErrorMessages.MissingClassName);
       }
     }
   }
@@ -12369,13 +12498,13 @@ class StatementParser extends ExpressionParser {
       return this.parseClass(expr, true, true);
     } else if (this.match(types.at)) {
       if (this.hasPlugin("decorators") && this.getPluginOption("decorators", "decoratorsBeforeExport")) {
-        this.raise(this.state.start, Errors.DecoratorBeforeExport);
+        this.raise(this.state.start, ErrorMessages.DecoratorBeforeExport);
       }
 
       this.parseDecorators(false);
       return this.parseClass(expr, true, true);
     } else if (this.match(types._const) || this.match(types._var) || this.isLet()) {
-      throw this.raise(this.state.start, Errors.UnsupportedDefaultExport);
+      throw this.raise(this.state.start, ErrorMessages.UnsupportedDefaultExport);
     } else {
       const res = this.parseMaybeAssign();
       this.semicolon();
@@ -12389,15 +12518,37 @@ class StatementParser extends ExpressionParser {
 
   isExportDefaultSpecifier() {
     if (this.match(types.name)) {
-      return this.state.value !== "async" && this.state.value !== "let";
-    }
+      const value = this.state.value;
 
-    if (!this.match(types._default)) {
+      if (value === "async" || value === "let") {
+        return false;
+      }
+
+      if ((value === "type" || value === "interface") && !this.state.containsEsc) {
+        const l = this.lookahead();
+
+        if (l.type === types.name && l.value !== "from" || l.type === types.braceL) {
+          this.expectOnePlugin(["flow", "typescript"]);
+          return false;
+        }
+      }
+    } else if (!this.match(types._default)) {
       return false;
     }
 
     const next = this.nextTokenStart();
-    return this.input.charCodeAt(next) === 44 || this.isUnparsedContextual(next, "from");
+    const hasFrom = this.isUnparsedContextual(next, "from");
+
+    if (this.input.charCodeAt(next) === 44 || this.match(types.name) && hasFrom) {
+      return true;
+    }
+
+    if (this.match(types._default) && hasFrom) {
+      const nextAfterFrom = this.input.charCodeAt(this.nextTokenStartSince(next + 4));
+      return nextAfterFrom === 34 || nextAfterFrom === 39;
+    }
+
+    return false;
   }
 
   parseExportFrom(node, expect) {
@@ -12421,7 +12572,7 @@ class StatementParser extends ExpressionParser {
 
       if (this.hasPlugin("decorators")) {
         if (this.getPluginOption("decorators", "decoratorsBeforeExport")) {
-          this.unexpected(this.state.start, Errors.DecoratorBeforeExport);
+          this.unexpected(this.state.start, ErrorMessages.DecoratorBeforeExport);
         } else {
           return true;
         }
@@ -12435,6 +12586,16 @@ class StatementParser extends ExpressionParser {
     if (checkNames) {
       if (isDefault) {
         this.checkDuplicateExports(node, "default");
+
+        if (this.hasPlugin("exportDefaultFrom")) {
+          var _declaration$extra;
+
+          const declaration = node.declaration;
+
+          if (declaration.type === "Identifier" && declaration.name === "from" && declaration.end - declaration.start === 4 && !((_declaration$extra = declaration.extra) == null ? void 0 : _declaration$extra.parenthesized)) {
+            this.raise(declaration.start, ErrorMessages.ExportDefaultFromAsIdentifier);
+          }
+        }
       } else if (node.specifiers && node.specifiers.length) {
         for (let _i4 = 0, _node$specifiers = node.specifiers; _i4 < _node$specifiers.length; _i4++) {
           const specifier = _node$specifiers[_i4];
@@ -12465,7 +12626,7 @@ class StatementParser extends ExpressionParser {
       const isClass = node.declaration && (node.declaration.type === "ClassDeclaration" || node.declaration.type === "ClassExpression");
 
       if (!node.declaration || !isClass) {
-        throw this.raise(node.start, Errors.UnsupportedDecoratorExport);
+        throw this.raise(node.start, ErrorMessages.UnsupportedDecoratorExport);
       }
 
       this.takeDecorators(node.declaration);
@@ -12499,7 +12660,7 @@ class StatementParser extends ExpressionParser {
 
   checkDuplicateExports(node, name) {
     if (this.state.exportedIdentifiers.indexOf(name) > -1) {
-      this.raise(node.start, name === "default" ? Errors.DuplicateDefaultExport : Errors.DuplicateExport, name);
+      this.raise(node.start, name === "default" ? ErrorMessages.DuplicateDefaultExport : ErrorMessages.DuplicateExport, name);
     }
 
     this.state.exportedIdentifiers.push(name);
@@ -12539,6 +12700,12 @@ class StatementParser extends ExpressionParser {
     }
 
     node.source = this.parseImportSource();
+    const attributes = this.maybeParseModuleAttributes();
+
+    if (attributes) {
+      node.attributes = attributes;
+    }
+
     this.semicolon();
     return this.finishNode(node, "ImportDeclaration");
   }
@@ -12556,6 +12723,45 @@ class StatementParser extends ExpressionParser {
     specifier.local = this.parseIdentifier();
     this.checkLVal(specifier.local, BIND_LEXICAL, undefined, contextDescription);
     node.specifiers.push(this.finishNode(specifier, type));
+  }
+
+  maybeParseModuleAttributes() {
+    if (this.match(types._with) && !this.hasPrecedingLineBreak()) {
+      this.expectPlugin("moduleAttributes");
+      this.next();
+    } else {
+      if (this.hasPlugin("moduleAttributes")) return [];
+      return null;
+    }
+
+    const attrs = [];
+    const attributes = new Set();
+
+    do {
+      const node = this.startNode();
+      node.key = this.parseIdentifier(true);
+
+      if (node.key.name !== "type") {
+        this.raise(node.key.start, ErrorMessages.ModuleAttributeDifferentFromType, node.key.name);
+      }
+
+      if (attributes.has(node.key.name)) {
+        this.raise(node.key.start, ErrorMessages.ModuleAttributesWithDuplicateKeys, node.key.name);
+      }
+
+      attributes.add(node.key.name);
+      this.expect(types.colon);
+
+      if (!this.match(types.string)) {
+        throw this.unexpected(this.state.start, ErrorMessages.ModuleAttributeInvalidValue);
+      }
+
+      node.value = this.parseLiteral(this.state.value, "StringLiteral");
+      this.finishNode(node, "ImportAttribute");
+      attrs.push(node);
+    } while (this.eat(types.comma));
+
+    return attrs;
   }
 
   maybeParseDefaultImportSpecifier(node) {
@@ -12588,7 +12794,7 @@ class StatementParser extends ExpressionParser {
         first = false;
       } else {
         if (this.eat(types.colon)) {
-          throw this.raise(this.state.start, Errors.DestructureNamedImport);
+          throw this.raise(this.state.start, ErrorMessages.DestructureNamedImport);
         }
 
         this.expect(types.comma);
@@ -12651,7 +12857,7 @@ class ClassScopeHandler {
           current.undefinedPrivateNames.set(name, pos);
         }
       } else {
-        this.raise(pos, Errors.InvalidPrivateFieldResolution, name);
+        this.raise(pos, ErrorMessages.InvalidPrivateFieldResolution, name);
       }
     }
   }
@@ -12676,7 +12882,7 @@ class ClassScopeHandler {
     }
 
     if (redefined) {
-      this.raise(pos, Errors.PrivateNameRedeclaration, name);
+      this.raise(pos, ErrorMessages.PrivateNameRedeclaration, name);
     }
 
     classScope.privateNames.add(name);
@@ -12694,7 +12900,7 @@ class ClassScopeHandler {
     if (classScope) {
       classScope.undefinedPrivateNames.set(name, pos);
     } else {
-      this.raise(pos, Errors.InvalidPrivateFieldResolution, name);
+      this.raise(pos, ErrorMessages.InvalidPrivateFieldResolution, name);
     }
   }
 
@@ -12751,7 +12957,9 @@ function pluginsMap(plugins) {
 }
 
 function parse(input, options) {
-  if (options && options.sourceType === "unambiguous") {
+  var _options;
+
+  if (((_options = options) == null ? void 0 : _options.sourceType) === "unambiguous") {
     options = Object.assign({}, options);
 
     try {
@@ -12798,7 +13006,7 @@ function parseExpression(input, options) {
 function getParser(options, input) {
   let cls = Parser;
 
-  if (options && options.plugins) {
+  if (options == null ? void 0 : options.plugins) {
     validatePlugins(options.plugins);
     cls = getParserClass(options.plugins);
   }
@@ -12936,6 +13144,1501 @@ var eos = function(stream, opts, callback) {
 };
 
 module.exports = eos;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/index.js":
+/*!*************************************!*\
+  !*** ./node_modules/execa/index.js ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const path = __webpack_require__(/*! path */ "path");
+const childProcess = __webpack_require__(/*! child_process */ "child_process");
+const crossSpawn = __webpack_require__(/*! cross-spawn */ "./node_modules/execa/node_modules/cross-spawn/index.js");
+const stripFinalNewline = __webpack_require__(/*! strip-final-newline */ "./node_modules/strip-final-newline/index.js");
+const npmRunPath = __webpack_require__(/*! npm-run-path */ "./node_modules/npm-run-path/index.js");
+const onetime = __webpack_require__(/*! onetime */ "./node_modules/onetime/index.js");
+const makeError = __webpack_require__(/*! ./lib/error */ "./node_modules/execa/lib/error.js");
+const normalizeStdio = __webpack_require__(/*! ./lib/stdio */ "./node_modules/execa/lib/stdio.js");
+const {spawnedKill, spawnedCancel, setupTimeout, setExitHandler} = __webpack_require__(/*! ./lib/kill */ "./node_modules/execa/lib/kill.js");
+const {handleInput, getSpawnedResult, makeAllStream, validateInputSync} = __webpack_require__(/*! ./lib/stream.js */ "./node_modules/execa/lib/stream.js");
+const {mergePromise, getSpawnedPromise} = __webpack_require__(/*! ./lib/promise.js */ "./node_modules/execa/lib/promise.js");
+const {joinCommand, parseCommand} = __webpack_require__(/*! ./lib/command.js */ "./node_modules/execa/lib/command.js");
+
+const DEFAULT_MAX_BUFFER = 1000 * 1000 * 100;
+
+const getEnv = ({env: envOption, extendEnv, preferLocal, localDir, execPath}) => {
+	const env = extendEnv ? {...process.env, ...envOption} : envOption;
+
+	if (preferLocal) {
+		return npmRunPath.env({env, cwd: localDir, execPath});
+	}
+
+	return env;
+};
+
+const handleArguments = (file, args, options = {}) => {
+	const parsed = crossSpawn._parse(file, args, options);
+	file = parsed.command;
+	args = parsed.args;
+	options = parsed.options;
+
+	options = {
+		maxBuffer: DEFAULT_MAX_BUFFER,
+		buffer: true,
+		stripFinalNewline: true,
+		extendEnv: true,
+		preferLocal: false,
+		localDir: options.cwd || process.cwd(),
+		execPath: process.execPath,
+		encoding: 'utf8',
+		reject: true,
+		cleanup: true,
+		all: false,
+		windowsHide: true,
+		...options
+	};
+
+	options.env = getEnv(options);
+
+	options.stdio = normalizeStdio(options);
+
+	if (process.platform === 'win32' && path.basename(file, '.exe') === 'cmd') {
+		// #116
+		args.unshift('/q');
+	}
+
+	return {file, args, options, parsed};
+};
+
+const handleOutput = (options, value, error) => {
+	if (typeof value !== 'string' && !Buffer.isBuffer(value)) {
+		// When `execa.sync()` errors, we normalize it to '' to mimic `execa()`
+		return error === undefined ? undefined : '';
+	}
+
+	if (options.stripFinalNewline) {
+		return stripFinalNewline(value);
+	}
+
+	return value;
+};
+
+const execa = (file, args, options) => {
+	const parsed = handleArguments(file, args, options);
+	const command = joinCommand(file, args);
+
+	let spawned;
+	try {
+		spawned = childProcess.spawn(parsed.file, parsed.args, parsed.options);
+	} catch (error) {
+		// Ensure the returned error is always both a promise and a child process
+		const dummySpawned = new childProcess.ChildProcess();
+		const errorPromise = Promise.reject(makeError({
+			error,
+			stdout: '',
+			stderr: '',
+			all: '',
+			command,
+			parsed,
+			timedOut: false,
+			isCanceled: false,
+			killed: false
+		}));
+		return mergePromise(dummySpawned, errorPromise);
+	}
+
+	const spawnedPromise = getSpawnedPromise(spawned);
+	const timedPromise = setupTimeout(spawned, parsed.options, spawnedPromise);
+	const processDone = setExitHandler(spawned, parsed.options, timedPromise);
+
+	const context = {isCanceled: false};
+
+	spawned.kill = spawnedKill.bind(null, spawned.kill.bind(spawned));
+	spawned.cancel = spawnedCancel.bind(null, spawned, context);
+
+	const handlePromise = async () => {
+		const [{error, exitCode, signal, timedOut}, stdoutResult, stderrResult, allResult] = await getSpawnedResult(spawned, parsed.options, processDone);
+		const stdout = handleOutput(parsed.options, stdoutResult);
+		const stderr = handleOutput(parsed.options, stderrResult);
+		const all = handleOutput(parsed.options, allResult);
+
+		if (error || exitCode !== 0 || signal !== null) {
+			const returnedError = makeError({
+				error,
+				exitCode,
+				signal,
+				stdout,
+				stderr,
+				all,
+				command,
+				parsed,
+				timedOut,
+				isCanceled: context.isCanceled,
+				killed: spawned.killed
+			});
+
+			if (!parsed.options.reject) {
+				return returnedError;
+			}
+
+			throw returnedError;
+		}
+
+		return {
+			command,
+			exitCode: 0,
+			stdout,
+			stderr,
+			all,
+			failed: false,
+			timedOut: false,
+			isCanceled: false,
+			killed: false
+		};
+	};
+
+	const handlePromiseOnce = onetime(handlePromise);
+
+	crossSpawn._enoent.hookChildProcess(spawned, parsed.parsed);
+
+	handleInput(spawned, parsed.options.input);
+
+	spawned.all = makeAllStream(spawned, parsed.options);
+
+	return mergePromise(spawned, handlePromiseOnce);
+};
+
+module.exports = execa;
+
+module.exports.sync = (file, args, options) => {
+	const parsed = handleArguments(file, args, options);
+	const command = joinCommand(file, args);
+
+	validateInputSync(parsed.options);
+
+	let result;
+	try {
+		result = childProcess.spawnSync(parsed.file, parsed.args, parsed.options);
+	} catch (error) {
+		throw makeError({
+			error,
+			stdout: '',
+			stderr: '',
+			all: '',
+			command,
+			parsed,
+			timedOut: false,
+			isCanceled: false,
+			killed: false
+		});
+	}
+
+	const stdout = handleOutput(parsed.options, result.stdout, result.error);
+	const stderr = handleOutput(parsed.options, result.stderr, result.error);
+
+	if (result.error || result.status !== 0 || result.signal !== null) {
+		const error = makeError({
+			stdout,
+			stderr,
+			error: result.error,
+			signal: result.signal,
+			exitCode: result.status,
+			command,
+			parsed,
+			timedOut: result.error && result.error.code === 'ETIMEDOUT',
+			isCanceled: false,
+			killed: result.signal !== null
+		});
+
+		if (!parsed.options.reject) {
+			return error;
+		}
+
+		throw error;
+	}
+
+	return {
+		command,
+		exitCode: 0,
+		stdout,
+		stderr,
+		failed: false,
+		timedOut: false,
+		isCanceled: false,
+		killed: false
+	};
+};
+
+module.exports.command = (command, options) => {
+	const [file, ...args] = parseCommand(command);
+	return execa(file, args, options);
+};
+
+module.exports.commandSync = (command, options) => {
+	const [file, ...args] = parseCommand(command);
+	return execa.sync(file, args, options);
+};
+
+module.exports.node = (scriptPath, args, options = {}) => {
+	if (args && !Array.isArray(args) && typeof args === 'object') {
+		options = args;
+		args = [];
+	}
+
+	const stdio = normalizeStdio.node(options);
+
+	const {nodePath = process.execPath, nodeOptions = process.execArgv} = options;
+
+	return execa(
+		nodePath,
+		[
+			...nodeOptions,
+			scriptPath,
+			...(Array.isArray(args) ? args : [])
+		],
+		{
+			...options,
+			stdin: undefined,
+			stdout: undefined,
+			stderr: undefined,
+			stdio,
+			shell: false
+		}
+	);
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/lib/command.js":
+/*!*******************************************!*\
+  !*** ./node_modules/execa/lib/command.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const SPACES_REGEXP = / +/g;
+
+const joinCommand = (file, args = []) => {
+	if (!Array.isArray(args)) {
+		return file;
+	}
+
+	return [file, ...args].join(' ');
+};
+
+// Allow spaces to be escaped by a backslash if not meant as a delimiter
+const handleEscaping = (tokens, token, index) => {
+	if (index === 0) {
+		return [token];
+	}
+
+	const previousToken = tokens[tokens.length - 1];
+
+	if (previousToken.endsWith('\\')) {
+		return [...tokens.slice(0, -1), `${previousToken.slice(0, -1)} ${token}`];
+	}
+
+	return [...tokens, token];
+};
+
+// Handle `execa.command()`
+const parseCommand = command => {
+	return command
+		.trim()
+		.split(SPACES_REGEXP)
+		.reduce(handleEscaping, []);
+};
+
+module.exports = {
+	joinCommand,
+	parseCommand
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/lib/error.js":
+/*!*****************************************!*\
+  !*** ./node_modules/execa/lib/error.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const {signalsByName} = __webpack_require__(/*! human-signals */ "./node_modules/human-signals/build/src/main.js");
+
+const getErrorPrefix = ({timedOut, timeout, errorCode, signal, signalDescription, exitCode, isCanceled}) => {
+	if (timedOut) {
+		return `timed out after ${timeout} milliseconds`;
+	}
+
+	if (isCanceled) {
+		return 'was canceled';
+	}
+
+	if (errorCode !== undefined) {
+		return `failed with ${errorCode}`;
+	}
+
+	if (signal !== undefined) {
+		return `was killed with ${signal} (${signalDescription})`;
+	}
+
+	if (exitCode !== undefined) {
+		return `failed with exit code ${exitCode}`;
+	}
+
+	return 'failed';
+};
+
+const makeError = ({
+	stdout,
+	stderr,
+	all,
+	error,
+	signal,
+	exitCode,
+	command,
+	timedOut,
+	isCanceled,
+	killed,
+	parsed: {options: {timeout}}
+}) => {
+	// `signal` and `exitCode` emitted on `spawned.on('exit')` event can be `null`.
+	// We normalize them to `undefined`
+	exitCode = exitCode === null ? undefined : exitCode;
+	signal = signal === null ? undefined : signal;
+	const signalDescription = signal === undefined ? undefined : signalsByName[signal].description;
+
+	const errorCode = error && error.code;
+
+	const prefix = getErrorPrefix({timedOut, timeout, errorCode, signal, signalDescription, exitCode, isCanceled});
+	const execaMessage = `Command ${prefix}: ${command}`;
+	const isError = Object.prototype.toString.call(error) === '[object Error]';
+	const shortMessage = isError ? `${execaMessage}\n${error.message}` : execaMessage;
+	const message = [shortMessage, stderr, stdout].filter(Boolean).join('\n');
+
+	if (isError) {
+		error.originalMessage = error.message;
+		error.message = message;
+	} else {
+		error = new Error(message);
+	}
+
+	error.shortMessage = shortMessage;
+	error.command = command;
+	error.exitCode = exitCode;
+	error.signal = signal;
+	error.signalDescription = signalDescription;
+	error.stdout = stdout;
+	error.stderr = stderr;
+
+	if (all !== undefined) {
+		error.all = all;
+	}
+
+	if ('bufferedData' in error) {
+		delete error.bufferedData;
+	}
+
+	error.failed = true;
+	error.timedOut = Boolean(timedOut);
+	error.isCanceled = isCanceled;
+	error.killed = killed && !timedOut;
+
+	return error;
+};
+
+module.exports = makeError;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/lib/kill.js":
+/*!****************************************!*\
+  !*** ./node_modules/execa/lib/kill.js ***!
+  \****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const os = __webpack_require__(/*! os */ "os");
+const onExit = __webpack_require__(/*! signal-exit */ "./node_modules/signal-exit/index.js");
+
+const DEFAULT_FORCE_KILL_TIMEOUT = 1000 * 5;
+
+// Monkey-patches `childProcess.kill()` to add `forceKillAfterTimeout` behavior
+const spawnedKill = (kill, signal = 'SIGTERM', options = {}) => {
+	const killResult = kill(signal);
+	setKillTimeout(kill, signal, options, killResult);
+	return killResult;
+};
+
+const setKillTimeout = (kill, signal, options, killResult) => {
+	if (!shouldForceKill(signal, options, killResult)) {
+		return;
+	}
+
+	const timeout = getForceKillAfterTimeout(options);
+	const t = setTimeout(() => {
+		kill('SIGKILL');
+	}, timeout);
+
+	// Guarded because there's no `.unref()` when `execa` is used in the renderer
+	// process in Electron. This cannot be tested since we don't run tests in
+	// Electron.
+	// istanbul ignore else
+	if (t.unref) {
+		t.unref();
+	}
+};
+
+const shouldForceKill = (signal, {forceKillAfterTimeout}, killResult) => {
+	return isSigterm(signal) && forceKillAfterTimeout !== false && killResult;
+};
+
+const isSigterm = signal => {
+	return signal === os.constants.signals.SIGTERM ||
+		(typeof signal === 'string' && signal.toUpperCase() === 'SIGTERM');
+};
+
+const getForceKillAfterTimeout = ({forceKillAfterTimeout = true}) => {
+	if (forceKillAfterTimeout === true) {
+		return DEFAULT_FORCE_KILL_TIMEOUT;
+	}
+
+	if (!Number.isFinite(forceKillAfterTimeout) || forceKillAfterTimeout < 0) {
+		throw new TypeError(`Expected the \`forceKillAfterTimeout\` option to be a non-negative integer, got \`${forceKillAfterTimeout}\` (${typeof forceKillAfterTimeout})`);
+	}
+
+	return forceKillAfterTimeout;
+};
+
+// `childProcess.cancel()`
+const spawnedCancel = (spawned, context) => {
+	const killResult = spawned.kill();
+
+	if (killResult) {
+		context.isCanceled = true;
+	}
+};
+
+const timeoutKill = (spawned, signal, reject) => {
+	spawned.kill(signal);
+	reject(Object.assign(new Error('Timed out'), {timedOut: true, signal}));
+};
+
+// `timeout` option handling
+const setupTimeout = (spawned, {timeout, killSignal = 'SIGTERM'}, spawnedPromise) => {
+	if (timeout === 0 || timeout === undefined) {
+		return spawnedPromise;
+	}
+
+	if (!Number.isFinite(timeout) || timeout < 0) {
+		throw new TypeError(`Expected the \`timeout\` option to be a non-negative integer, got \`${timeout}\` (${typeof timeout})`);
+	}
+
+	let timeoutId;
+	const timeoutPromise = new Promise((resolve, reject) => {
+		timeoutId = setTimeout(() => {
+			timeoutKill(spawned, killSignal, reject);
+		}, timeout);
+	});
+
+	const safeSpawnedPromise = spawnedPromise.finally(() => {
+		clearTimeout(timeoutId);
+	});
+
+	return Promise.race([timeoutPromise, safeSpawnedPromise]);
+};
+
+// `cleanup` option handling
+const setExitHandler = async (spawned, {cleanup, detached}, timedPromise) => {
+	if (!cleanup || detached) {
+		return timedPromise;
+	}
+
+	const removeExitHandler = onExit(() => {
+		spawned.kill();
+	});
+
+	return timedPromise.finally(() => {
+		removeExitHandler();
+	});
+};
+
+module.exports = {
+	spawnedKill,
+	spawnedCancel,
+	setupTimeout,
+	setExitHandler
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/lib/promise.js":
+/*!*******************************************!*\
+  !*** ./node_modules/execa/lib/promise.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const nativePromisePrototype = (async () => {})().constructor.prototype;
+const descriptors = ['then', 'catch', 'finally'].map(property => [
+	property,
+	Reflect.getOwnPropertyDescriptor(nativePromisePrototype, property)
+]);
+
+// The return value is a mixin of `childProcess` and `Promise`
+const mergePromise = (spawned, promise) => {
+	for (const [property, descriptor] of descriptors) {
+		// Starting the main `promise` is deferred to avoid consuming streams
+		const value = typeof promise === 'function' ?
+			(...args) => Reflect.apply(descriptor.value, promise(), args) :
+			descriptor.value.bind(promise);
+
+		Reflect.defineProperty(spawned, property, {...descriptor, value});
+	}
+
+	return spawned;
+};
+
+// Use promises instead of `child_process` events
+const getSpawnedPromise = spawned => {
+	return new Promise((resolve, reject) => {
+		spawned.on('exit', (exitCode, signal) => {
+			resolve({exitCode, signal});
+		});
+
+		spawned.on('error', error => {
+			reject(error);
+		});
+
+		if (spawned.stdin) {
+			spawned.stdin.on('error', error => {
+				reject(error);
+			});
+		}
+	});
+};
+
+module.exports = {
+	mergePromise,
+	getSpawnedPromise
+};
+
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/lib/stdio.js":
+/*!*****************************************!*\
+  !*** ./node_modules/execa/lib/stdio.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const aliases = ['stdin', 'stdout', 'stderr'];
+
+const hasAlias = opts => aliases.some(alias => opts[alias] !== undefined);
+
+const normalizeStdio = opts => {
+	if (!opts) {
+		return;
+	}
+
+	const {stdio} = opts;
+
+	if (stdio === undefined) {
+		return aliases.map(alias => opts[alias]);
+	}
+
+	if (hasAlias(opts)) {
+		throw new Error(`It's not possible to provide \`stdio\` in combination with one of ${aliases.map(alias => `\`${alias}\``).join(', ')}`);
+	}
+
+	if (typeof stdio === 'string') {
+		return stdio;
+	}
+
+	if (!Array.isArray(stdio)) {
+		throw new TypeError(`Expected \`stdio\` to be of type \`string\` or \`Array\`, got \`${typeof stdio}\``);
+	}
+
+	const length = Math.max(stdio.length, aliases.length);
+	return Array.from({length}, (value, index) => stdio[index]);
+};
+
+module.exports = normalizeStdio;
+
+// `ipc` is pushed unless it is already present
+module.exports.node = opts => {
+	const stdio = normalizeStdio(opts);
+
+	if (stdio === 'ipc') {
+		return 'ipc';
+	}
+
+	if (stdio === undefined || typeof stdio === 'string') {
+		return [stdio, stdio, stdio, 'ipc'];
+	}
+
+	if (stdio.includes('ipc')) {
+		return stdio;
+	}
+
+	return [...stdio, 'ipc'];
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/lib/stream.js":
+/*!******************************************!*\
+  !*** ./node_modules/execa/lib/stream.js ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const isStream = __webpack_require__(/*! is-stream */ "./node_modules/is-stream/index.js");
+const getStream = __webpack_require__(/*! get-stream */ "./node_modules/get-stream/index.js");
+const mergeStream = __webpack_require__(/*! merge-stream */ "./node_modules/merge-stream/index.js");
+
+// `input` option
+const handleInput = (spawned, input) => {
+	// Checking for stdin is workaround for https://github.com/nodejs/node/issues/26852
+	// TODO: Remove `|| spawned.stdin === undefined` once we drop support for Node.js <=12.2.0
+	if (input === undefined || spawned.stdin === undefined) {
+		return;
+	}
+
+	if (isStream(input)) {
+		input.pipe(spawned.stdin);
+	} else {
+		spawned.stdin.end(input);
+	}
+};
+
+// `all` interleaves `stdout` and `stderr`
+const makeAllStream = (spawned, {all}) => {
+	if (!all || (!spawned.stdout && !spawned.stderr)) {
+		return;
+	}
+
+	const mixed = mergeStream();
+
+	if (spawned.stdout) {
+		mixed.add(spawned.stdout);
+	}
+
+	if (spawned.stderr) {
+		mixed.add(spawned.stderr);
+	}
+
+	return mixed;
+};
+
+// On failure, `result.stdout|stderr|all` should contain the currently buffered stream
+const getBufferedData = async (stream, streamPromise) => {
+	if (!stream) {
+		return;
+	}
+
+	stream.destroy();
+
+	try {
+		return await streamPromise;
+	} catch (error) {
+		return error.bufferedData;
+	}
+};
+
+const getStreamPromise = (stream, {encoding, buffer, maxBuffer}) => {
+	if (!stream || !buffer) {
+		return;
+	}
+
+	if (encoding) {
+		return getStream(stream, {encoding, maxBuffer});
+	}
+
+	return getStream.buffer(stream, {maxBuffer});
+};
+
+// Retrieve result of child process: exit code, signal, error, streams (stdout/stderr/all)
+const getSpawnedResult = async ({stdout, stderr, all}, {encoding, buffer, maxBuffer}, processDone) => {
+	const stdoutPromise = getStreamPromise(stdout, {encoding, buffer, maxBuffer});
+	const stderrPromise = getStreamPromise(stderr, {encoding, buffer, maxBuffer});
+	const allPromise = getStreamPromise(all, {encoding, buffer, maxBuffer: maxBuffer * 2});
+
+	try {
+		return await Promise.all([processDone, stdoutPromise, stderrPromise, allPromise]);
+	} catch (error) {
+		return Promise.all([
+			{error, signal: error.signal, timedOut: error.timedOut},
+			getBufferedData(stdout, stdoutPromise),
+			getBufferedData(stderr, stderrPromise),
+			getBufferedData(all, allPromise)
+		]);
+	}
+};
+
+const validateInputSync = ({input}) => {
+	if (isStream(input)) {
+		throw new TypeError('The `input` option cannot be a stream in sync mode');
+	}
+};
+
+module.exports = {
+	handleInput,
+	makeAllStream,
+	getSpawnedResult,
+	validateInputSync
+};
+
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/cross-spawn/index.js":
+/*!**************************************************************!*\
+  !*** ./node_modules/execa/node_modules/cross-spawn/index.js ***!
+  \**************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const cp = __webpack_require__(/*! child_process */ "child_process");
+const parse = __webpack_require__(/*! ./lib/parse */ "./node_modules/execa/node_modules/cross-spawn/lib/parse.js");
+const enoent = __webpack_require__(/*! ./lib/enoent */ "./node_modules/execa/node_modules/cross-spawn/lib/enoent.js");
+
+function spawn(command, args, options) {
+    // Parse the arguments
+    const parsed = parse(command, args, options);
+
+    // Spawn the child process
+    const spawned = cp.spawn(parsed.command, parsed.args, parsed.options);
+
+    // Hook into child process "exit" event to emit an error if the command
+    // does not exists, see: https://github.com/IndigoUnited/node-cross-spawn/issues/16
+    enoent.hookChildProcess(spawned, parsed);
+
+    return spawned;
+}
+
+function spawnSync(command, args, options) {
+    // Parse the arguments
+    const parsed = parse(command, args, options);
+
+    // Spawn the child process
+    const result = cp.spawnSync(parsed.command, parsed.args, parsed.options);
+
+    // Analyze if the command does not exist, see: https://github.com/IndigoUnited/node-cross-spawn/issues/16
+    result.error = result.error || enoent.verifyENOENTSync(result.status, parsed);
+
+    return result;
+}
+
+module.exports = spawn;
+module.exports.spawn = spawn;
+module.exports.sync = spawnSync;
+
+module.exports._parse = parse;
+module.exports._enoent = enoent;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/cross-spawn/lib/enoent.js":
+/*!*******************************************************************!*\
+  !*** ./node_modules/execa/node_modules/cross-spawn/lib/enoent.js ***!
+  \*******************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const isWin = process.platform === 'win32';
+
+function notFoundError(original, syscall) {
+    return Object.assign(new Error(`${syscall} ${original.command} ENOENT`), {
+        code: 'ENOENT',
+        errno: 'ENOENT',
+        syscall: `${syscall} ${original.command}`,
+        path: original.command,
+        spawnargs: original.args,
+    });
+}
+
+function hookChildProcess(cp, parsed) {
+    if (!isWin) {
+        return;
+    }
+
+    const originalEmit = cp.emit;
+
+    cp.emit = function (name, arg1) {
+        // If emitting "exit" event and exit code is 1, we need to check if
+        // the command exists and emit an "error" instead
+        // See https://github.com/IndigoUnited/node-cross-spawn/issues/16
+        if (name === 'exit') {
+            const err = verifyENOENT(arg1, parsed, 'spawn');
+
+            if (err) {
+                return originalEmit.call(cp, 'error', err);
+            }
+        }
+
+        return originalEmit.apply(cp, arguments); // eslint-disable-line prefer-rest-params
+    };
+}
+
+function verifyENOENT(status, parsed) {
+    if (isWin && status === 1 && !parsed.file) {
+        return notFoundError(parsed.original, 'spawn');
+    }
+
+    return null;
+}
+
+function verifyENOENTSync(status, parsed) {
+    if (isWin && status === 1 && !parsed.file) {
+        return notFoundError(parsed.original, 'spawnSync');
+    }
+
+    return null;
+}
+
+module.exports = {
+    hookChildProcess,
+    verifyENOENT,
+    verifyENOENTSync,
+    notFoundError,
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/cross-spawn/lib/parse.js":
+/*!******************************************************************!*\
+  !*** ./node_modules/execa/node_modules/cross-spawn/lib/parse.js ***!
+  \******************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const path = __webpack_require__(/*! path */ "path");
+const resolveCommand = __webpack_require__(/*! ./util/resolveCommand */ "./node_modules/execa/node_modules/cross-spawn/lib/util/resolveCommand.js");
+const escape = __webpack_require__(/*! ./util/escape */ "./node_modules/execa/node_modules/cross-spawn/lib/util/escape.js");
+const readShebang = __webpack_require__(/*! ./util/readShebang */ "./node_modules/execa/node_modules/cross-spawn/lib/util/readShebang.js");
+
+const isWin = process.platform === 'win32';
+const isExecutableRegExp = /\.(?:com|exe)$/i;
+const isCmdShimRegExp = /node_modules[\\/].bin[\\/][^\\/]+\.cmd$/i;
+
+function detectShebang(parsed) {
+    parsed.file = resolveCommand(parsed);
+
+    const shebang = parsed.file && readShebang(parsed.file);
+
+    if (shebang) {
+        parsed.args.unshift(parsed.file);
+        parsed.command = shebang;
+
+        return resolveCommand(parsed);
+    }
+
+    return parsed.file;
+}
+
+function parseNonShell(parsed) {
+    if (!isWin) {
+        return parsed;
+    }
+
+    // Detect & add support for shebangs
+    const commandFile = detectShebang(parsed);
+
+    // We don't need a shell if the command filename is an executable
+    const needsShell = !isExecutableRegExp.test(commandFile);
+
+    // If a shell is required, use cmd.exe and take care of escaping everything correctly
+    // Note that `forceShell` is an hidden option used only in tests
+    if (parsed.options.forceShell || needsShell) {
+        // Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
+        // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
+        // Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
+        // we need to double escape them
+        const needsDoubleEscapeMetaChars = isCmdShimRegExp.test(commandFile);
+
+        // Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
+        // This is necessary otherwise it will always fail with ENOENT in those cases
+        parsed.command = path.normalize(parsed.command);
+
+        // Escape command & arguments
+        parsed.command = escape.command(parsed.command);
+        parsed.args = parsed.args.map((arg) => escape.argument(arg, needsDoubleEscapeMetaChars));
+
+        const shellCommand = [parsed.command].concat(parsed.args).join(' ');
+
+        parsed.args = ['/d', '/s', '/c', `"${shellCommand}"`];
+        parsed.command = process.env.comspec || 'cmd.exe';
+        parsed.options.windowsVerbatimArguments = true; // Tell node's spawn that the arguments are already escaped
+    }
+
+    return parsed;
+}
+
+function parse(command, args, options) {
+    // Normalize arguments, similar to nodejs
+    if (args && !Array.isArray(args)) {
+        options = args;
+        args = null;
+    }
+
+    args = args ? args.slice(0) : []; // Clone array to avoid changing the original
+    options = Object.assign({}, options); // Clone object to avoid changing the original
+
+    // Build our parsed object
+    const parsed = {
+        command,
+        args,
+        options,
+        file: undefined,
+        original: {
+            command,
+            args,
+        },
+    };
+
+    // Delegate further parsing to shell or non-shell
+    return options.shell ? parsed : parseNonShell(parsed);
+}
+
+module.exports = parse;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/cross-spawn/lib/util/escape.js":
+/*!************************************************************************!*\
+  !*** ./node_modules/execa/node_modules/cross-spawn/lib/util/escape.js ***!
+  \************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+// See http://www.robvanderwoude.com/escapechars.php
+const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
+
+function escapeCommand(arg) {
+    // Escape meta chars
+    arg = arg.replace(metaCharsRegExp, '^$1');
+
+    return arg;
+}
+
+function escapeArgument(arg, doubleEscapeMetaChars) {
+    // Convert to string
+    arg = `${arg}`;
+
+    // Algorithm below is based on https://qntm.org/cmd
+
+    // Sequence of backslashes followed by a double quote:
+    // double up all the backslashes and escape the double quote
+    arg = arg.replace(/(\\*)"/g, '$1$1\\"');
+
+    // Sequence of backslashes followed by the end of the string
+    // (which will become a double quote later):
+    // double up all the backslashes
+    arg = arg.replace(/(\\*)$/, '$1$1');
+
+    // All other backslashes occur literally
+
+    // Quote the whole thing:
+    arg = `"${arg}"`;
+
+    // Escape meta chars
+    arg = arg.replace(metaCharsRegExp, '^$1');
+
+    // Double escape meta chars if necessary
+    if (doubleEscapeMetaChars) {
+        arg = arg.replace(metaCharsRegExp, '^$1');
+    }
+
+    return arg;
+}
+
+module.exports.command = escapeCommand;
+module.exports.argument = escapeArgument;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/cross-spawn/lib/util/readShebang.js":
+/*!*****************************************************************************!*\
+  !*** ./node_modules/execa/node_modules/cross-spawn/lib/util/readShebang.js ***!
+  \*****************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const fs = __webpack_require__(/*! fs */ "fs");
+const shebangCommand = __webpack_require__(/*! shebang-command */ "./node_modules/execa/node_modules/shebang-command/index.js");
+
+function readShebang(command) {
+    // Read the first 150 bytes from the file
+    const size = 150;
+    const buffer = Buffer.alloc(size);
+
+    let fd;
+
+    try {
+        fd = fs.openSync(command, 'r');
+        fs.readSync(fd, buffer, 0, size, 0);
+        fs.closeSync(fd);
+    } catch (e) { /* Empty */ }
+
+    // Attempt to extract shebang (null is returned if not a shebang)
+    return shebangCommand(buffer.toString());
+}
+
+module.exports = readShebang;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/cross-spawn/lib/util/resolveCommand.js":
+/*!********************************************************************************!*\
+  !*** ./node_modules/execa/node_modules/cross-spawn/lib/util/resolveCommand.js ***!
+  \********************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const path = __webpack_require__(/*! path */ "path");
+const which = __webpack_require__(/*! which */ "./node_modules/execa/node_modules/which/which.js");
+const getPathKey = __webpack_require__(/*! path-key */ "./node_modules/execa/node_modules/path-key/index.js");
+
+function resolveCommandAttempt(parsed, withoutPathExt) {
+    const env = parsed.options.env || process.env;
+    const cwd = process.cwd();
+    const hasCustomCwd = parsed.options.cwd != null;
+    // Worker threads do not have process.chdir()
+    const shouldSwitchCwd = hasCustomCwd && process.chdir !== undefined && !process.chdir.disabled;
+
+    // If a custom `cwd` was specified, we need to change the process cwd
+    // because `which` will do stat calls but does not support a custom cwd
+    if (shouldSwitchCwd) {
+        try {
+            process.chdir(parsed.options.cwd);
+        } catch (err) {
+            /* Empty */
+        }
+    }
+
+    let resolved;
+
+    try {
+        resolved = which.sync(parsed.command, {
+            path: env[getPathKey({ env })],
+            pathExt: withoutPathExt ? path.delimiter : undefined,
+        });
+    } catch (e) {
+        /* Empty */
+    } finally {
+        if (shouldSwitchCwd) {
+            process.chdir(cwd);
+        }
+    }
+
+    // If we successfully resolved, ensure that an absolute path is returned
+    // Note that when a custom `cwd` was used, we need to resolve to an absolute path based on it
+    if (resolved) {
+        resolved = path.resolve(hasCustomCwd ? parsed.options.cwd : '', resolved);
+    }
+
+    return resolved;
+}
+
+function resolveCommand(parsed) {
+    return resolveCommandAttempt(parsed) || resolveCommandAttempt(parsed, true);
+}
+
+module.exports = resolveCommand;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/path-key/index.js":
+/*!***********************************************************!*\
+  !*** ./node_modules/execa/node_modules/path-key/index.js ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const pathKey = (options = {}) => {
+	const environment = options.env || process.env;
+	const platform = options.platform || process.platform;
+
+	if (platform !== 'win32') {
+		return 'PATH';
+	}
+
+	return Object.keys(environment).reverse().find(key => key.toUpperCase() === 'PATH') || 'Path';
+};
+
+module.exports = pathKey;
+// TODO: Remove this for the next major release
+module.exports.default = pathKey;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/shebang-command/index.js":
+/*!******************************************************************!*\
+  !*** ./node_modules/execa/node_modules/shebang-command/index.js ***!
+  \******************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const shebangRegex = __webpack_require__(/*! shebang-regex */ "./node_modules/execa/node_modules/shebang-regex/index.js");
+
+module.exports = (string = '') => {
+	const match = string.match(shebangRegex);
+
+	if (!match) {
+		return null;
+	}
+
+	const [path, argument] = match[0].replace(/#! ?/, '').split(' ');
+	const binary = path.split('/').pop();
+
+	if (binary === 'env') {
+		return argument;
+	}
+
+	return argument ? `${binary} ${argument}` : binary;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/shebang-regex/index.js":
+/*!****************************************************************!*\
+  !*** ./node_modules/execa/node_modules/shebang-regex/index.js ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+module.exports = /^#!(.*)/;
+
+
+/***/ }),
+
+/***/ "./node_modules/execa/node_modules/which/which.js":
+/*!********************************************************!*\
+  !*** ./node_modules/execa/node_modules/which/which.js ***!
+  \********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+const isWindows = process.platform === 'win32' ||
+    process.env.OSTYPE === 'cygwin' ||
+    process.env.OSTYPE === 'msys'
+
+const path = __webpack_require__(/*! path */ "path")
+const COLON = isWindows ? ';' : ':'
+const isexe = __webpack_require__(/*! isexe */ "./node_modules/isexe/index.js")
+
+const getNotFoundError = (cmd) =>
+  Object.assign(new Error(`not found: ${cmd}`), { code: 'ENOENT' })
+
+const getPathInfo = (cmd, opt) => {
+  const colon = opt.colon || COLON
+
+  // If it has a slash, then we don't bother searching the pathenv.
+  // just check the file itself, and that's it.
+  const pathEnv = cmd.match(/\//) || isWindows && cmd.match(/\\/) ? ['']
+    : (
+      [
+        // windows always checks the cwd first
+        ...(isWindows ? [process.cwd()] : []),
+        ...(opt.path || process.env.PATH ||
+          /* istanbul ignore next: very unusual */ '').split(colon),
+      ]
+    )
+  const pathExtExe = isWindows
+    ? opt.pathExt || process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM'
+    : ''
+  const pathExt = isWindows ? pathExtExe.split(colon) : ['']
+
+  if (isWindows) {
+    if (cmd.indexOf('.') !== -1 && pathExt[0] !== '')
+      pathExt.unshift('')
+  }
+
+  return {
+    pathEnv,
+    pathExt,
+    pathExtExe,
+  }
+}
+
+const which = (cmd, opt, cb) => {
+  if (typeof opt === 'function') {
+    cb = opt
+    opt = {}
+  }
+  if (!opt)
+    opt = {}
+
+  const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt)
+  const found = []
+
+  const step = i => new Promise((resolve, reject) => {
+    if (i === pathEnv.length)
+      return opt.all && found.length ? resolve(found)
+        : reject(getNotFoundError(cmd))
+
+    const ppRaw = pathEnv[i]
+    const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw
+
+    const pCmd = path.join(pathPart, cmd)
+    const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd
+      : pCmd
+
+    resolve(subStep(p, i, 0))
+  })
+
+  const subStep = (p, i, ii) => new Promise((resolve, reject) => {
+    if (ii === pathExt.length)
+      return resolve(step(i + 1))
+    const ext = pathExt[ii]
+    isexe(p + ext, { pathExt: pathExtExe }, (er, is) => {
+      if (!er && is) {
+        if (opt.all)
+          found.push(p + ext)
+        else
+          return resolve(p + ext)
+      }
+      return resolve(subStep(p, i, ii + 1))
+    })
+  })
+
+  return cb ? step(0).then(res => cb(null, res), cb) : step(0)
+}
+
+const whichSync = (cmd, opt) => {
+  opt = opt || {}
+
+  const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt)
+  const found = []
+
+  for (let i = 0; i < pathEnv.length; i ++) {
+    const ppRaw = pathEnv[i]
+    const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw
+
+    const pCmd = path.join(pathPart, cmd)
+    const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd
+      : pCmd
+
+    for (let j = 0; j < pathExt.length; j ++) {
+      const cur = p + pathExt[j]
+      try {
+        const is = isexe.sync(cur, { pathExt: pathExtExe })
+        if (is) {
+          if (opt.all)
+            found.push(cur)
+          else
+            return cur
+        }
+      } catch (ex) {}
+    }
+  }
+
+  if (opt.all && found.length)
+    return found
+
+  if (opt.nothrow)
+    return null
+
+  throw getNotFoundError(cmd)
+}
+
+module.exports = which
+which.sync = whichSync
+
+
+/***/ }),
+
+/***/ "./node_modules/get-stream/buffer-stream.js":
+/*!**************************************************!*\
+  !*** ./node_modules/get-stream/buffer-stream.js ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const {PassThrough: PassThroughStream} = __webpack_require__(/*! stream */ "stream");
+
+module.exports = options => {
+	options = {...options};
+
+	const {array} = options;
+	let {encoding} = options;
+	const isBuffer = encoding === 'buffer';
+	let objectMode = false;
+
+	if (array) {
+		objectMode = !(encoding || isBuffer);
+	} else {
+		encoding = encoding || 'utf8';
+	}
+
+	if (isBuffer) {
+		encoding = null;
+	}
+
+	const stream = new PassThroughStream({objectMode});
+
+	if (encoding) {
+		stream.setEncoding(encoding);
+	}
+
+	let length = 0;
+	const chunks = [];
+
+	stream.on('data', chunk => {
+		chunks.push(chunk);
+
+		if (objectMode) {
+			length = chunks.length;
+		} else {
+			length += chunk.length;
+		}
+	});
+
+	stream.getBufferedValue = () => {
+		if (array) {
+			return chunks;
+		}
+
+		return isBuffer ? Buffer.concat(chunks, length) : chunks.join('');
+	};
+
+	stream.getBufferedLength = () => length;
+
+	return stream;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/get-stream/index.js":
+/*!******************************************!*\
+  !*** ./node_modules/get-stream/index.js ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const pump = __webpack_require__(/*! pump */ "./node_modules/pump/index.js");
+const bufferStream = __webpack_require__(/*! ./buffer-stream */ "./node_modules/get-stream/buffer-stream.js");
+
+class MaxBufferError extends Error {
+	constructor() {
+		super('maxBuffer exceeded');
+		this.name = 'MaxBufferError';
+	}
+}
+
+async function getStream(inputStream, options) {
+	if (!inputStream) {
+		return Promise.reject(new Error('Expected a stream'));
+	}
+
+	options = {
+		maxBuffer: Infinity,
+		...options
+	};
+
+	const {maxBuffer} = options;
+
+	let stream;
+	await new Promise((resolve, reject) => {
+		const rejectPromise = error => {
+			if (error) { // A null check
+				error.bufferedData = stream.getBufferedValue();
+			}
+
+			reject(error);
+		};
+
+		stream = pump(inputStream, bufferStream(options), error => {
+			if (error) {
+				rejectPromise(error);
+				return;
+			}
+
+			resolve();
+		});
+
+		stream.on('data', () => {
+			if (stream.getBufferedLength() > maxBuffer) {
+				rejectPromise(new MaxBufferError());
+			}
+		});
+	});
+
+	return stream.getBufferedValue();
+}
+
+module.exports = getStream;
+// TODO: Remove this for the next major release
+module.exports.default = getStream;
+module.exports.buffer = (stream, options) => getStream(stream, {...options, encoding: 'buffer'});
+module.exports.array = (stream, options) => getStream(stream, {...options, array: true});
+module.exports.MaxBufferError = MaxBufferError;
 
 
 /***/ }),
@@ -13382,6 +15085,47 @@ return{name,number,description,supported,action,forced,standard};
 
 /***/ }),
 
+/***/ "./node_modules/is-stream/index.js":
+/*!*****************************************!*\
+  !*** ./node_modules/is-stream/index.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const isStream = stream =>
+	stream !== null &&
+	typeof stream === 'object' &&
+	typeof stream.pipe === 'function';
+
+isStream.writable = stream =>
+	isStream(stream) &&
+	stream.writable !== false &&
+	typeof stream._write === 'function' &&
+	typeof stream._writableState === 'object';
+
+isStream.readable = stream =>
+	isStream(stream) &&
+	stream.readable !== false &&
+	typeof stream._read === 'function' &&
+	typeof stream._readableState === 'object';
+
+isStream.duplex = stream =>
+	isStream.writable(stream) &&
+	isStream.readable(stream);
+
+isStream.transform = stream =>
+	isStream.duplex(stream) &&
+	typeof stream._transform === 'function' &&
+	typeof stream._transformState === 'object';
+
+module.exports = isStream;
+
+
+/***/ }),
+
 /***/ "./node_modules/isexe/index.js":
 /*!*************************************!*\
   !*** ./node_modules/isexe/index.js ***!
@@ -13702,6 +15446,93 @@ const mimicFn = (to, from) => {
 module.exports = mimicFn;
 // TODO: Remove this for the next major release
 module.exports.default = mimicFn;
+
+
+/***/ }),
+
+/***/ "./node_modules/npm-run-path/index.js":
+/*!********************************************!*\
+  !*** ./node_modules/npm-run-path/index.js ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const path = __webpack_require__(/*! path */ "path");
+const pathKey = __webpack_require__(/*! path-key */ "./node_modules/npm-run-path/node_modules/path-key/index.js");
+
+const npmRunPath = options => {
+	options = {
+		cwd: process.cwd(),
+		path: process.env[pathKey()],
+		execPath: process.execPath,
+		...options
+	};
+
+	let previous;
+	let cwdPath = path.resolve(options.cwd);
+	const result = [];
+
+	while (previous !== cwdPath) {
+		result.push(path.join(cwdPath, 'node_modules/.bin'));
+		previous = cwdPath;
+		cwdPath = path.resolve(cwdPath, '..');
+	}
+
+	// Ensure the running `node` binary is used
+	const execPathDir = path.resolve(options.cwd, options.execPath, '..');
+	result.push(execPathDir);
+
+	return result.concat(options.path).join(path.delimiter);
+};
+
+module.exports = npmRunPath;
+// TODO: Remove this for the next major release
+module.exports.default = npmRunPath;
+
+module.exports.env = options => {
+	options = {
+		env: process.env,
+		...options
+	};
+
+	const env = {...options.env};
+	const path = pathKey({env});
+
+	options.path = env[path];
+	env[path] = module.exports(options);
+
+	return env;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/npm-run-path/node_modules/path-key/index.js":
+/*!******************************************************************!*\
+  !*** ./node_modules/npm-run-path/node_modules/path-key/index.js ***!
+  \******************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+const pathKey = (options = {}) => {
+	const environment = options.env || process.env;
+	const platform = options.platform || process.platform;
+
+	if (platform !== 'win32') {
+		return 'PATH';
+	}
+
+	return Object.keys(environment).reverse().find(key => key.toUpperCase() === 'PATH') || 'Path';
+};
+
+module.exports = pathKey;
+// TODO: Remove this for the next major release
+module.exports.default = pathKey;
 
 
 /***/ }),
@@ -14189,16 +16020,26 @@ module.exports = input => {
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const execa_1 = __importDefault(__webpack_require__(/*! execa */ "./node_modules/utlz/node_modules/execa/index.js"));
+exports.exe = exports.writeFileIfNew = exports.createDir = exports.runCmd = exports.findFileForExtensions = exports.removeFileExt = exports.defaultSpawnSync = exports.readDirSync = exports.isFile = exports.sleep = void 0;
+const execa_1 = __importDefault(__webpack_require__(/*! execa */ "./node_modules/execa/index.js"));
 const fs_1 = __importDefault(__webpack_require__(/*! fs */ "fs"));
 const path_1 = __importDefault(__webpack_require__(/*! path */ "path"));
 const child_process_1 = __webpack_require__(/*! child_process */ "child_process");
 function sleep(ms = 0, value) {
-    return new Promise(resolve => setTimeout(() => resolve(value), ms));
+    return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 exports.sleep = sleep;
 function isFile(filepath) {
@@ -14277,1605 +16118,51 @@ exports.createDir = (dirpath, options) => {
 exports.writeFileIfNew = (filepath, data = '') => {
     if (isFile(filepath))
         return false;
+    exports.createDir(path_1.default.dirname(filepath));
     fs_1.default.writeFileSync(filepath, data);
     return true;
 };
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/cross-spawn/index.js":
-/*!*************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/cross-spawn/index.js ***!
-  \*************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const cp = __webpack_require__(/*! child_process */ "child_process");
-const parse = __webpack_require__(/*! ./lib/parse */ "./node_modules/utlz/node_modules/cross-spawn/lib/parse.js");
-const enoent = __webpack_require__(/*! ./lib/enoent */ "./node_modules/utlz/node_modules/cross-spawn/lib/enoent.js");
-
-function spawn(command, args, options) {
-    // Parse the arguments
-    const parsed = parse(command, args, options);
-
-    // Spawn the child process
-    const spawned = cp.spawn(parsed.command, parsed.args, parsed.options);
-
-    // Hook into child process "exit" event to emit an error if the command
-    // does not exists, see: https://github.com/IndigoUnited/node-cross-spawn/issues/16
-    enoent.hookChildProcess(spawned, parsed);
-
-    return spawned;
+class ErrorWithData extends Error {
+    constructor(message, data) {
+        super(message);
+        this.name = 'ErrorWithData';
+        this.data = data;
+    }
 }
-
-function spawnSync(command, args, options) {
-    // Parse the arguments
-    const parsed = parse(command, args, options);
-
-    // Spawn the child process
-    const result = cp.spawnSync(parsed.command, parsed.args, parsed.options);
-
-    // Analyze if the command does not exist, see: https://github.com/IndigoUnited/node-cross-spawn/issues/16
-    result.error = result.error || enoent.verifyENOENTSync(result.status, parsed);
-
-    return result;
-}
-
-module.exports = spawn;
-module.exports.spawn = spawn;
-module.exports.sync = spawnSync;
-
-module.exports._parse = parse;
-module.exports._enoent = enoent;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/cross-spawn/lib/enoent.js":
-/*!******************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/cross-spawn/lib/enoent.js ***!
-  \******************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const isWin = process.platform === 'win32';
-
-function notFoundError(original, syscall) {
-    return Object.assign(new Error(`${syscall} ${original.command} ENOENT`), {
-        code: 'ENOENT',
-        errno: 'ENOENT',
-        syscall: `${syscall} ${original.command}`,
-        path: original.command,
-        spawnargs: original.args,
+/**
+ * Capture stdout & stderr in variables, while also allowing it to flow through to the parent
+ * process's stdout (e.g. a terminal window).
+ *
+ * Also provides some sensible error handling. Will throw if there is any stderr.
+ */
+exports.exe = (cmd, args, options) => __awaiter(void 0, void 0, void 0, function* () {
+    const child = execa_1.default(cmd, args.filter(Boolean), Object.assign(Object.assign({}, options), { stdio: 'pipe' }));
+    // Catch the error and exit the process. This is an irrecoverable crash.
+    child.on('error', (e) => {
+        console.error(`CRASH: ${e.message}`);
+        process.exit(1);
     });
-}
-
-function hookChildProcess(cp, parsed) {
-    if (!isWin) {
-        return;
-    }
-
-    const originalEmit = cp.emit;
-
-    cp.emit = function (name, arg1) {
-        // If emitting "exit" event and exit code is 1, we need to check if
-        // the command exists and emit an "error" instead
-        // See https://github.com/IndigoUnited/node-cross-spawn/issues/16
-        if (name === 'exit') {
-            const err = verifyENOENT(arg1, parsed, 'spawn');
-
-            if (err) {
-                return originalEmit.call(cp, 'error', err);
-            }
-        }
-
-        return originalEmit.apply(cp, arguments); // eslint-disable-line prefer-rest-params
-    };
-}
-
-function verifyENOENT(status, parsed) {
-    if (isWin && status === 1 && !parsed.file) {
-        return notFoundError(parsed.original, 'spawn');
-    }
-
-    return null;
-}
-
-function verifyENOENTSync(status, parsed) {
-    if (isWin && status === 1 && !parsed.file) {
-        return notFoundError(parsed.original, 'spawnSync');
-    }
-
-    return null;
-}
-
-module.exports = {
-    hookChildProcess,
-    verifyENOENT,
-    verifyENOENTSync,
-    notFoundError,
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/cross-spawn/lib/parse.js":
-/*!*****************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/cross-spawn/lib/parse.js ***!
-  \*****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const path = __webpack_require__(/*! path */ "path");
-const resolveCommand = __webpack_require__(/*! ./util/resolveCommand */ "./node_modules/utlz/node_modules/cross-spawn/lib/util/resolveCommand.js");
-const escape = __webpack_require__(/*! ./util/escape */ "./node_modules/utlz/node_modules/cross-spawn/lib/util/escape.js");
-const readShebang = __webpack_require__(/*! ./util/readShebang */ "./node_modules/utlz/node_modules/cross-spawn/lib/util/readShebang.js");
-
-const isWin = process.platform === 'win32';
-const isExecutableRegExp = /\.(?:com|exe)$/i;
-const isCmdShimRegExp = /node_modules[\\/].bin[\\/][^\\/]+\.cmd$/i;
-
-function detectShebang(parsed) {
-    parsed.file = resolveCommand(parsed);
-
-    const shebang = parsed.file && readShebang(parsed.file);
-
-    if (shebang) {
-        parsed.args.unshift(parsed.file);
-        parsed.command = shebang;
-
-        return resolveCommand(parsed);
-    }
-
-    return parsed.file;
-}
-
-function parseNonShell(parsed) {
-    if (!isWin) {
-        return parsed;
-    }
-
-    // Detect & add support for shebangs
-    const commandFile = detectShebang(parsed);
-
-    // We don't need a shell if the command filename is an executable
-    const needsShell = !isExecutableRegExp.test(commandFile);
-
-    // If a shell is required, use cmd.exe and take care of escaping everything correctly
-    // Note that `forceShell` is an hidden option used only in tests
-    if (parsed.options.forceShell || needsShell) {
-        // Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
-        // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
-        // Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
-        // we need to double escape them
-        const needsDoubleEscapeMetaChars = isCmdShimRegExp.test(commandFile);
-
-        // Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
-        // This is necessary otherwise it will always fail with ENOENT in those cases
-        parsed.command = path.normalize(parsed.command);
-
-        // Escape command & arguments
-        parsed.command = escape.command(parsed.command);
-        parsed.args = parsed.args.map((arg) => escape.argument(arg, needsDoubleEscapeMetaChars));
-
-        const shellCommand = [parsed.command].concat(parsed.args).join(' ');
-
-        parsed.args = ['/d', '/s', '/c', `"${shellCommand}"`];
-        parsed.command = process.env.comspec || 'cmd.exe';
-        parsed.options.windowsVerbatimArguments = true; // Tell node's spawn that the arguments are already escaped
-    }
-
-    return parsed;
-}
-
-function parse(command, args, options) {
-    // Normalize arguments, similar to nodejs
-    if (args && !Array.isArray(args)) {
-        options = args;
-        args = null;
-    }
-
-    args = args ? args.slice(0) : []; // Clone array to avoid changing the original
-    options = Object.assign({}, options); // Clone object to avoid changing the original
-
-    // Build our parsed object
-    const parsed = {
-        command,
-        args,
-        options,
-        file: undefined,
-        original: {
-            command,
-            args,
-        },
-    };
-
-    // Delegate further parsing to shell or non-shell
-    return options.shell ? parsed : parseNonShell(parsed);
-}
-
-module.exports = parse;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/cross-spawn/lib/util/escape.js":
-/*!***********************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/cross-spawn/lib/util/escape.js ***!
-  \***********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-// See http://www.robvanderwoude.com/escapechars.php
-const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
-
-function escapeCommand(arg) {
-    // Escape meta chars
-    arg = arg.replace(metaCharsRegExp, '^$1');
-
-    return arg;
-}
-
-function escapeArgument(arg, doubleEscapeMetaChars) {
-    // Convert to string
-    arg = `${arg}`;
-
-    // Algorithm below is based on https://qntm.org/cmd
-
-    // Sequence of backslashes followed by a double quote:
-    // double up all the backslashes and escape the double quote
-    arg = arg.replace(/(\\*)"/g, '$1$1\\"');
-
-    // Sequence of backslashes followed by the end of the string
-    // (which will become a double quote later):
-    // double up all the backslashes
-    arg = arg.replace(/(\\*)$/, '$1$1');
-
-    // All other backslashes occur literally
-
-    // Quote the whole thing:
-    arg = `"${arg}"`;
-
-    // Escape meta chars
-    arg = arg.replace(metaCharsRegExp, '^$1');
-
-    // Double escape meta chars if necessary
-    if (doubleEscapeMetaChars) {
-        arg = arg.replace(metaCharsRegExp, '^$1');
-    }
-
-    return arg;
-}
-
-module.exports.command = escapeCommand;
-module.exports.argument = escapeArgument;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/cross-spawn/lib/util/readShebang.js":
-/*!****************************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/cross-spawn/lib/util/readShebang.js ***!
-  \****************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const fs = __webpack_require__(/*! fs */ "fs");
-const shebangCommand = __webpack_require__(/*! shebang-command */ "./node_modules/utlz/node_modules/shebang-command/index.js");
-
-function readShebang(command) {
-    // Read the first 150 bytes from the file
-    const size = 150;
-    const buffer = Buffer.alloc(size);
-
-    let fd;
-
-    try {
-        fd = fs.openSync(command, 'r');
-        fs.readSync(fd, buffer, 0, size, 0);
-        fs.closeSync(fd);
-    } catch (e) { /* Empty */ }
-
-    // Attempt to extract shebang (null is returned if not a shebang)
-    return shebangCommand(buffer.toString());
-}
-
-module.exports = readShebang;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/cross-spawn/lib/util/resolveCommand.js":
-/*!*******************************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/cross-spawn/lib/util/resolveCommand.js ***!
-  \*******************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const path = __webpack_require__(/*! path */ "path");
-const which = __webpack_require__(/*! which */ "./node_modules/utlz/node_modules/which/which.js");
-const getPathKey = __webpack_require__(/*! path-key */ "./node_modules/utlz/node_modules/path-key/index.js");
-
-function resolveCommandAttempt(parsed, withoutPathExt) {
-    const env = parsed.options.env || process.env;
-    const cwd = process.cwd();
-    const hasCustomCwd = parsed.options.cwd != null;
-    // Worker threads do not have process.chdir()
-    const shouldSwitchCwd = hasCustomCwd && process.chdir !== undefined && !process.chdir.disabled;
-
-    // If a custom `cwd` was specified, we need to change the process cwd
-    // because `which` will do stat calls but does not support a custom cwd
-    if (shouldSwitchCwd) {
-        try {
-            process.chdir(parsed.options.cwd);
-        } catch (err) {
-            /* Empty */
-        }
-    }
-
-    let resolved;
-
-    try {
-        resolved = which.sync(parsed.command, {
-            path: env[getPathKey({ env })],
-            pathExt: withoutPathExt ? path.delimiter : undefined,
-        });
-    } catch (e) {
-        /* Empty */
-    } finally {
-        if (shouldSwitchCwd) {
-            process.chdir(cwd);
-        }
-    }
-
-    // If we successfully resolved, ensure that an absolute path is returned
-    // Note that when a custom `cwd` was used, we need to resolve to an absolute path based on it
-    if (resolved) {
-        resolved = path.resolve(hasCustomCwd ? parsed.options.cwd : '', resolved);
-    }
-
-    return resolved;
-}
-
-function resolveCommand(parsed) {
-    return resolveCommandAttempt(parsed) || resolveCommandAttempt(parsed, true);
-}
-
-module.exports = resolveCommand;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/execa/index.js":
-/*!*******************************************************!*\
-  !*** ./node_modules/utlz/node_modules/execa/index.js ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const path = __webpack_require__(/*! path */ "path");
-const childProcess = __webpack_require__(/*! child_process */ "child_process");
-const crossSpawn = __webpack_require__(/*! cross-spawn */ "./node_modules/utlz/node_modules/cross-spawn/index.js");
-const stripFinalNewline = __webpack_require__(/*! strip-final-newline */ "./node_modules/strip-final-newline/index.js");
-const npmRunPath = __webpack_require__(/*! npm-run-path */ "./node_modules/utlz/node_modules/npm-run-path/index.js");
-const onetime = __webpack_require__(/*! onetime */ "./node_modules/onetime/index.js");
-const makeError = __webpack_require__(/*! ./lib/error */ "./node_modules/utlz/node_modules/execa/lib/error.js");
-const normalizeStdio = __webpack_require__(/*! ./lib/stdio */ "./node_modules/utlz/node_modules/execa/lib/stdio.js");
-const {spawnedKill, spawnedCancel, setupTimeout, setExitHandler} = __webpack_require__(/*! ./lib/kill */ "./node_modules/utlz/node_modules/execa/lib/kill.js");
-const {handleInput, getSpawnedResult, makeAllStream, validateInputSync} = __webpack_require__(/*! ./lib/stream.js */ "./node_modules/utlz/node_modules/execa/lib/stream.js");
-const {mergePromise, getSpawnedPromise} = __webpack_require__(/*! ./lib/promise.js */ "./node_modules/utlz/node_modules/execa/lib/promise.js");
-const {joinCommand, parseCommand} = __webpack_require__(/*! ./lib/command.js */ "./node_modules/utlz/node_modules/execa/lib/command.js");
-
-const DEFAULT_MAX_BUFFER = 1000 * 1000 * 100;
-
-const getEnv = ({env: envOption, extendEnv, preferLocal, localDir, execPath}) => {
-	const env = extendEnv ? {...process.env, ...envOption} : envOption;
-
-	if (preferLocal) {
-		return npmRunPath.env({env, cwd: localDir, execPath});
-	}
-
-	return env;
-};
-
-const handleArgs = (file, args, options = {}) => {
-	const parsed = crossSpawn._parse(file, args, options);
-	file = parsed.command;
-	args = parsed.args;
-	options = parsed.options;
-
-	options = {
-		maxBuffer: DEFAULT_MAX_BUFFER,
-		buffer: true,
-		stripFinalNewline: true,
-		extendEnv: true,
-		preferLocal: false,
-		localDir: options.cwd || process.cwd(),
-		execPath: process.execPath,
-		encoding: 'utf8',
-		reject: true,
-		cleanup: true,
-		all: false,
-		windowsHide: true,
-		...options
-	};
-
-	options.env = getEnv(options);
-
-	options.stdio = normalizeStdio(options);
-
-	if (process.platform === 'win32' && path.basename(file, '.exe') === 'cmd') {
-		// #116
-		args.unshift('/q');
-	}
-
-	return {file, args, options, parsed};
-};
-
-const handleOutput = (options, value, error) => {
-	if (typeof value !== 'string' && !Buffer.isBuffer(value)) {
-		// When `execa.sync()` errors, we normalize it to '' to mimic `execa()`
-		return error === undefined ? undefined : '';
-	}
-
-	if (options.stripFinalNewline) {
-		return stripFinalNewline(value);
-	}
-
-	return value;
-};
-
-const execa = (file, args, options) => {
-	const parsed = handleArgs(file, args, options);
-	const command = joinCommand(file, args);
-
-	let spawned;
-	try {
-		spawned = childProcess.spawn(parsed.file, parsed.args, parsed.options);
-	} catch (error) {
-		// Ensure the returned error is always both a promise and a child process
-		const dummySpawned = new childProcess.ChildProcess();
-		const errorPromise = Promise.reject(makeError({
-			error,
-			stdout: '',
-			stderr: '',
-			all: '',
-			command,
-			parsed,
-			timedOut: false,
-			isCanceled: false,
-			killed: false
-		}));
-		return mergePromise(dummySpawned, errorPromise);
-	}
-
-	const spawnedPromise = getSpawnedPromise(spawned);
-	const timedPromise = setupTimeout(spawned, parsed.options, spawnedPromise);
-	const processDone = setExitHandler(spawned, parsed.options, timedPromise);
-
-	const context = {isCanceled: false};
-
-	spawned.kill = spawnedKill.bind(null, spawned.kill.bind(spawned));
-	spawned.cancel = spawnedCancel.bind(null, spawned, context);
-
-	const handlePromise = async () => {
-		const [{error, exitCode, signal, timedOut}, stdoutResult, stderrResult, allResult] = await getSpawnedResult(spawned, parsed.options, processDone);
-		const stdout = handleOutput(parsed.options, stdoutResult);
-		const stderr = handleOutput(parsed.options, stderrResult);
-		const all = handleOutput(parsed.options, allResult);
-
-		if (error || exitCode !== 0 || signal !== null) {
-			const returnedError = makeError({
-				error,
-				exitCode,
-				signal,
-				stdout,
-				stderr,
-				all,
-				command,
-				parsed,
-				timedOut,
-				isCanceled: context.isCanceled,
-				killed: spawned.killed
-			});
-
-			if (!parsed.options.reject) {
-				return returnedError;
-			}
-
-			throw returnedError;
-		}
-
-		return {
-			command,
-			exitCode: 0,
-			stdout,
-			stderr,
-			all,
-			failed: false,
-			timedOut: false,
-			isCanceled: false,
-			killed: false
-		};
-	};
-
-	const handlePromiseOnce = onetime(handlePromise);
-
-	crossSpawn._enoent.hookChildProcess(spawned, parsed.parsed);
-
-	handleInput(spawned, parsed.options.input);
-
-	spawned.all = makeAllStream(spawned, parsed.options);
-
-	return mergePromise(spawned, handlePromiseOnce);
-};
-
-module.exports = execa;
-
-module.exports.sync = (file, args, options) => {
-	const parsed = handleArgs(file, args, options);
-	const command = joinCommand(file, args);
-
-	validateInputSync(parsed.options);
-
-	let result;
-	try {
-		result = childProcess.spawnSync(parsed.file, parsed.args, parsed.options);
-	} catch (error) {
-		throw makeError({
-			error,
-			stdout: '',
-			stderr: '',
-			all: '',
-			command,
-			parsed,
-			timedOut: false,
-			isCanceled: false,
-			killed: false
-		});
-	}
-
-	const stdout = handleOutput(parsed.options, result.stdout, result.error);
-	const stderr = handleOutput(parsed.options, result.stderr, result.error);
-
-	if (result.error || result.status !== 0 || result.signal !== null) {
-		const error = makeError({
-			stdout,
-			stderr,
-			error: result.error,
-			signal: result.signal,
-			exitCode: result.status,
-			command,
-			parsed,
-			timedOut: result.error && result.error.code === 'ETIMEDOUT',
-			isCanceled: false,
-			killed: result.signal !== null
-		});
-
-		if (!parsed.options.reject) {
-			return error;
-		}
-
-		throw error;
-	}
-
-	return {
-		command,
-		exitCode: 0,
-		stdout,
-		stderr,
-		failed: false,
-		timedOut: false,
-		isCanceled: false,
-		killed: false
-	};
-};
-
-module.exports.command = (command, options) => {
-	const [file, ...args] = parseCommand(command);
-	return execa(file, args, options);
-};
-
-module.exports.commandSync = (command, options) => {
-	const [file, ...args] = parseCommand(command);
-	return execa.sync(file, args, options);
-};
-
-module.exports.node = (scriptPath, args, options = {}) => {
-	if (args && !Array.isArray(args) && typeof args === 'object') {
-		options = args;
-		args = [];
-	}
-
-	const stdio = normalizeStdio.node(options);
-
-	const {nodePath = process.execPath, nodeOptions = process.execArgv} = options;
-
-	return execa(
-		nodePath,
-		[
-			...nodeOptions,
-			scriptPath,
-			...(Array.isArray(args) ? args : [])
-		],
-		{
-			...options,
-			stdin: undefined,
-			stdout: undefined,
-			stderr: undefined,
-			stdio,
-			shell: false
-		}
-	);
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/execa/lib/command.js":
-/*!*************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/execa/lib/command.js ***!
-  \*************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const SPACES_REGEXP = / +/g;
-
-const joinCommand = (file, args = []) => {
-	if (!Array.isArray(args)) {
-		return file;
-	}
-
-	return [file, ...args].join(' ');
-};
-
-// Allow spaces to be escaped by a backslash if not meant as a delimiter
-const handleEscaping = (tokens, token, index) => {
-	if (index === 0) {
-		return [token];
-	}
-
-	const previousToken = tokens[tokens.length - 1];
-
-	if (previousToken.endsWith('\\')) {
-		return [...tokens.slice(0, -1), `${previousToken.slice(0, -1)} ${token}`];
-	}
-
-	return [...tokens, token];
-};
-
-// Handle `execa.command()`
-const parseCommand = command => {
-	return command
-		.trim()
-		.split(SPACES_REGEXP)
-		.reduce(handleEscaping, []);
-};
-
-module.exports = {
-	joinCommand,
-	parseCommand
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/execa/lib/error.js":
-/*!***********************************************************!*\
-  !*** ./node_modules/utlz/node_modules/execa/lib/error.js ***!
-  \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const {signalsByName} = __webpack_require__(/*! human-signals */ "./node_modules/human-signals/build/src/main.js");
-
-const getErrorPrefix = ({timedOut, timeout, errorCode, signal, signalDescription, exitCode, isCanceled}) => {
-	if (timedOut) {
-		return `timed out after ${timeout} milliseconds`;
-	}
-
-	if (isCanceled) {
-		return 'was canceled';
-	}
-
-	if (errorCode !== undefined) {
-		return `failed with ${errorCode}`;
-	}
-
-	if (signal !== undefined) {
-		return `was killed with ${signal} (${signalDescription})`;
-	}
-
-	if (exitCode !== undefined) {
-		return `failed with exit code ${exitCode}`;
-	}
-
-	return 'failed';
-};
-
-const makeError = ({
-	stdout,
-	stderr,
-	all,
-	error,
-	signal,
-	exitCode,
-	command,
-	timedOut,
-	isCanceled,
-	killed,
-	parsed: {options: {timeout}}
-}) => {
-	// `signal` and `exitCode` emitted on `spawned.on('exit')` event can be `null`.
-	// We normalize them to `undefined`
-	exitCode = exitCode === null ? undefined : exitCode;
-	signal = signal === null ? undefined : signal;
-	const signalDescription = signal === undefined ? undefined : signalsByName[signal].description;
-
-	const errorCode = error && error.code;
-
-	const prefix = getErrorPrefix({timedOut, timeout, errorCode, signal, signalDescription, exitCode, isCanceled});
-	const execaMessage = `Command ${prefix}: ${command}`;
-	const shortMessage = error instanceof Error ? `${execaMessage}\n${error.message}` : execaMessage;
-	const message = [shortMessage, stderr, stdout].filter(Boolean).join('\n');
-
-	if (error instanceof Error) {
-		error.originalMessage = error.message;
-		error.message = message;
-	} else {
-		error = new Error(message);
-	}
-
-	error.shortMessage = shortMessage;
-	error.command = command;
-	error.exitCode = exitCode;
-	error.signal = signal;
-	error.signalDescription = signalDescription;
-	error.stdout = stdout;
-	error.stderr = stderr;
-
-	if (all !== undefined) {
-		error.all = all;
-	}
-
-	if ('bufferedData' in error) {
-		delete error.bufferedData;
-	}
-
-	error.failed = true;
-	error.timedOut = Boolean(timedOut);
-	error.isCanceled = isCanceled;
-	error.killed = killed && !timedOut;
-
-	return error;
-};
-
-module.exports = makeError;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/execa/lib/kill.js":
-/*!**********************************************************!*\
-  !*** ./node_modules/utlz/node_modules/execa/lib/kill.js ***!
-  \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const os = __webpack_require__(/*! os */ "os");
-const onExit = __webpack_require__(/*! signal-exit */ "./node_modules/signal-exit/index.js");
-
-const DEFAULT_FORCE_KILL_TIMEOUT = 1000 * 5;
-
-// Monkey-patches `childProcess.kill()` to add `forceKillAfterTimeout` behavior
-const spawnedKill = (kill, signal = 'SIGTERM', options = {}) => {
-	const killResult = kill(signal);
-	setKillTimeout(kill, signal, options, killResult);
-	return killResult;
-};
-
-const setKillTimeout = (kill, signal, options, killResult) => {
-	if (!shouldForceKill(signal, options, killResult)) {
-		return;
-	}
-
-	const timeout = getForceKillAfterTimeout(options);
-	const t = setTimeout(() => {
-		kill('SIGKILL');
-	}, timeout);
-
-	// Guarded because there's no `.unref()` when `execa` is used in the renderer
-	// process in Electron. This cannot be tested since we don't run tests in
-	// Electron.
-	// istanbul ignore else
-	if (t.unref) {
-		t.unref();
-	}
-};
-
-const shouldForceKill = (signal, {forceKillAfterTimeout}, killResult) => {
-	return isSigterm(signal) && forceKillAfterTimeout !== false && killResult;
-};
-
-const isSigterm = signal => {
-	return signal === os.constants.signals.SIGTERM ||
-		(typeof signal === 'string' && signal.toUpperCase() === 'SIGTERM');
-};
-
-const getForceKillAfterTimeout = ({forceKillAfterTimeout = true}) => {
-	if (forceKillAfterTimeout === true) {
-		return DEFAULT_FORCE_KILL_TIMEOUT;
-	}
-
-	if (!Number.isInteger(forceKillAfterTimeout) || forceKillAfterTimeout < 0) {
-		throw new TypeError(`Expected the \`forceKillAfterTimeout\` option to be a non-negative integer, got \`${forceKillAfterTimeout}\` (${typeof forceKillAfterTimeout})`);
-	}
-
-	return forceKillAfterTimeout;
-};
-
-// `childProcess.cancel()`
-const spawnedCancel = (spawned, context) => {
-	const killResult = spawned.kill();
-
-	if (killResult) {
-		context.isCanceled = true;
-	}
-};
-
-const timeoutKill = (spawned, signal, reject) => {
-	spawned.kill(signal);
-	reject(Object.assign(new Error('Timed out'), {timedOut: true, signal}));
-};
-
-// `timeout` option handling
-const setupTimeout = (spawned, {timeout, killSignal = 'SIGTERM'}, spawnedPromise) => {
-	if (timeout === 0 || timeout === undefined) {
-		return spawnedPromise;
-	}
-
-	if (!Number.isInteger(timeout) || timeout < 0) {
-		throw new TypeError(`Expected the \`timeout\` option to be a non-negative integer, got \`${timeout}\` (${typeof timeout})`);
-	}
-
-	let timeoutId;
-	const timeoutPromise = new Promise((resolve, reject) => {
-		timeoutId = setTimeout(() => {
-			timeoutKill(spawned, killSignal, reject);
-		}, timeout);
-	});
-
-	const safeSpawnedPromise = spawnedPromise.finally(() => {
-		clearTimeout(timeoutId);
-	});
-
-	return Promise.race([timeoutPromise, safeSpawnedPromise]);
-};
-
-// `cleanup` option handling
-const setExitHandler = async (spawned, {cleanup, detached}, timedPromise) => {
-	if (!cleanup || detached) {
-		return timedPromise;
-	}
-
-	const removeExitHandler = onExit(() => {
-		spawned.kill();
-	});
-
-	return timedPromise.finally(() => {
-		removeExitHandler();
-	});
-};
-
-module.exports = {
-	spawnedKill,
-	spawnedCancel,
-	setupTimeout,
-	setExitHandler
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/execa/lib/promise.js":
-/*!*************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/execa/lib/promise.js ***!
-  \*************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const mergePromiseProperty = (spawned, promise, property) => {
-	// Starting the main `promise` is deferred to avoid consuming streams
-	const value = typeof promise === 'function' ?
-		(...args) => promise()[property](...args) :
-		promise[property].bind(promise);
-
-	Object.defineProperty(spawned, property, {
-		value,
-		writable: true,
-		enumerable: false,
-		configurable: true
-	});
-};
-
-// The return value is a mixin of `childProcess` and `Promise`
-const mergePromise = (spawned, promise) => {
-	mergePromiseProperty(spawned, promise, 'then');
-	mergePromiseProperty(spawned, promise, 'catch');
-	mergePromiseProperty(spawned, promise, 'finally');
-	return spawned;
-};
-
-// Use promises instead of `child_process` events
-const getSpawnedPromise = spawned => {
-	return new Promise((resolve, reject) => {
-		spawned.on('exit', (exitCode, signal) => {
-			resolve({exitCode, signal});
-		});
-
-		spawned.on('error', error => {
-			reject(error);
-		});
-
-		if (spawned.stdin) {
-			spawned.stdin.on('error', error => {
-				reject(error);
-			});
-		}
-	});
-};
-
-module.exports = {
-	mergePromise,
-	getSpawnedPromise
-};
-
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/execa/lib/stdio.js":
-/*!***********************************************************!*\
-  !*** ./node_modules/utlz/node_modules/execa/lib/stdio.js ***!
-  \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const aliases = ['stdin', 'stdout', 'stderr'];
-
-const hasAlias = opts => aliases.some(alias => opts[alias] !== undefined);
-
-const normalizeStdio = opts => {
-	if (!opts) {
-		return;
-	}
-
-	const {stdio} = opts;
-
-	if (stdio === undefined) {
-		return aliases.map(alias => opts[alias]);
-	}
-
-	if (hasAlias(opts)) {
-		throw new Error(`It's not possible to provide \`stdio\` in combination with one of ${aliases.map(alias => `\`${alias}\``).join(', ')}`);
-	}
-
-	if (typeof stdio === 'string') {
-		return stdio;
-	}
-
-	if (!Array.isArray(stdio)) {
-		throw new TypeError(`Expected \`stdio\` to be of type \`string\` or \`Array\`, got \`${typeof stdio}\``);
-	}
-
-	const length = Math.max(stdio.length, aliases.length);
-	return Array.from({length}, (value, index) => stdio[index]);
-};
-
-module.exports = normalizeStdio;
-
-// `ipc` is pushed unless it is already present
-module.exports.node = opts => {
-	const stdio = normalizeStdio(opts);
-
-	if (stdio === 'ipc') {
-		return 'ipc';
-	}
-
-	if (stdio === undefined || typeof stdio === 'string') {
-		return [stdio, stdio, stdio, 'ipc'];
-	}
-
-	if (stdio.includes('ipc')) {
-		return stdio;
-	}
-
-	return [...stdio, 'ipc'];
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/execa/lib/stream.js":
-/*!************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/execa/lib/stream.js ***!
-  \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const isStream = __webpack_require__(/*! is-stream */ "./node_modules/utlz/node_modules/is-stream/index.js");
-const getStream = __webpack_require__(/*! get-stream */ "./node_modules/utlz/node_modules/get-stream/index.js");
-const mergeStream = __webpack_require__(/*! merge-stream */ "./node_modules/merge-stream/index.js");
-
-// `input` option
-const handleInput = (spawned, input) => {
-	// Checking for stdin is workaround for https://github.com/nodejs/node/issues/26852
-	// TODO: Remove `|| spawned.stdin === undefined` once we drop support for Node.js <=12.2.0
-	if (input === undefined || spawned.stdin === undefined) {
-		return;
-	}
-
-	if (isStream(input)) {
-		input.pipe(spawned.stdin);
-	} else {
-		spawned.stdin.end(input);
-	}
-};
-
-// `all` interleaves `stdout` and `stderr`
-const makeAllStream = (spawned, {all}) => {
-	if (!all || (!spawned.stdout && !spawned.stderr)) {
-		return;
-	}
-
-	const mixed = mergeStream();
-
-	if (spawned.stdout) {
-		mixed.add(spawned.stdout);
-	}
-
-	if (spawned.stderr) {
-		mixed.add(spawned.stderr);
-	}
-
-	return mixed;
-};
-
-// On failure, `result.stdout|stderr|all` should contain the currently buffered stream
-const getBufferedData = async (stream, streamPromise) => {
-	if (!stream) {
-		return;
-	}
-
-	stream.destroy();
-
-	try {
-		return await streamPromise;
-	} catch (error) {
-		return error.bufferedData;
-	}
-};
-
-const getStreamPromise = (stream, {encoding, buffer, maxBuffer}) => {
-	if (!stream || !buffer) {
-		return;
-	}
-
-	if (encoding) {
-		return getStream(stream, {encoding, maxBuffer});
-	}
-
-	return getStream.buffer(stream, {maxBuffer});
-};
-
-// Retrieve result of child process: exit code, signal, error, streams (stdout/stderr/all)
-const getSpawnedResult = async ({stdout, stderr, all}, {encoding, buffer, maxBuffer}, processDone) => {
-	const stdoutPromise = getStreamPromise(stdout, {encoding, buffer, maxBuffer});
-	const stderrPromise = getStreamPromise(stderr, {encoding, buffer, maxBuffer});
-	const allPromise = getStreamPromise(all, {encoding, buffer, maxBuffer: maxBuffer * 2});
-
-	try {
-		return await Promise.all([processDone, stdoutPromise, stderrPromise, allPromise]);
-	} catch (error) {
-		return Promise.all([
-			{error, signal: error.signal, timedOut: error.timedOut},
-			getBufferedData(stdout, stdoutPromise),
-			getBufferedData(stderr, stderrPromise),
-			getBufferedData(all, allPromise)
-		]);
-	}
-};
-
-const validateInputSync = ({input}) => {
-	if (isStream(input)) {
-		throw new TypeError('The `input` option cannot be a stream in sync mode');
-	}
-};
-
-module.exports = {
-	handleInput,
-	makeAllStream,
-	getSpawnedResult,
-	validateInputSync
-};
-
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/get-stream/buffer-stream.js":
-/*!********************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/get-stream/buffer-stream.js ***!
-  \********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const {PassThrough: PassThroughStream} = __webpack_require__(/*! stream */ "stream");
-
-module.exports = options => {
-	options = {...options};
-
-	const {array} = options;
-	let {encoding} = options;
-	const isBuffer = encoding === 'buffer';
-	let objectMode = false;
-
-	if (array) {
-		objectMode = !(encoding || isBuffer);
-	} else {
-		encoding = encoding || 'utf8';
-	}
-
-	if (isBuffer) {
-		encoding = null;
-	}
-
-	const stream = new PassThroughStream({objectMode});
-
-	if (encoding) {
-		stream.setEncoding(encoding);
-	}
-
-	let length = 0;
-	const chunks = [];
-
-	stream.on('data', chunk => {
-		chunks.push(chunk);
-
-		if (objectMode) {
-			length = chunks.length;
-		} else {
-			length += chunk.length;
-		}
-	});
-
-	stream.getBufferedValue = () => {
-		if (array) {
-			return chunks;
-		}
-
-		return isBuffer ? Buffer.concat(chunks, length) : chunks.join('');
-	};
-
-	stream.getBufferedLength = () => length;
-
-	return stream;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/get-stream/index.js":
-/*!************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/get-stream/index.js ***!
-  \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const pump = __webpack_require__(/*! pump */ "./node_modules/pump/index.js");
-const bufferStream = __webpack_require__(/*! ./buffer-stream */ "./node_modules/utlz/node_modules/get-stream/buffer-stream.js");
-
-class MaxBufferError extends Error {
-	constructor() {
-		super('maxBuffer exceeded');
-		this.name = 'MaxBufferError';
-	}
-}
-
-async function getStream(inputStream, options) {
-	if (!inputStream) {
-		return Promise.reject(new Error('Expected a stream'));
-	}
-
-	options = {
-		maxBuffer: Infinity,
-		...options
-	};
-
-	const {maxBuffer} = options;
-
-	let stream;
-	await new Promise((resolve, reject) => {
-		const rejectPromise = error => {
-			if (error) { // A null check
-				error.bufferedData = stream.getBufferedValue();
-			}
-
-			reject(error);
-		};
-
-		stream = pump(inputStream, bufferStream(options), error => {
-			if (error) {
-				rejectPromise(error);
-				return;
-			}
-
-			resolve();
-		});
-
-		stream.on('data', () => {
-			if (stream.getBufferedLength() > maxBuffer) {
-				rejectPromise(new MaxBufferError());
-			}
-		});
-	});
-
-	return stream.getBufferedValue();
-}
-
-module.exports = getStream;
-// TODO: Remove this for the next major release
-module.exports.default = getStream;
-module.exports.buffer = (stream, options) => getStream(stream, {...options, encoding: 'buffer'});
-module.exports.array = (stream, options) => getStream(stream, {...options, array: true});
-module.exports.MaxBufferError = MaxBufferError;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/is-stream/index.js":
-/*!***********************************************************!*\
-  !*** ./node_modules/utlz/node_modules/is-stream/index.js ***!
-  \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const isStream = stream =>
-	stream !== null &&
-	typeof stream === 'object' &&
-	typeof stream.pipe === 'function';
-
-isStream.writable = stream =>
-	isStream(stream) &&
-	stream.writable !== false &&
-	typeof stream._write === 'function' &&
-	typeof stream._writableState === 'object';
-
-isStream.readable = stream =>
-	isStream(stream) &&
-	stream.readable !== false &&
-	typeof stream._read === 'function' &&
-	typeof stream._readableState === 'object';
-
-isStream.duplex = stream =>
-	isStream.writable(stream) &&
-	isStream.readable(stream);
-
-isStream.transform = stream =>
-	isStream.duplex(stream) &&
-	typeof stream._transform === 'function' &&
-	typeof stream._transformState === 'object';
-
-module.exports = isStream;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/npm-run-path/index.js":
-/*!**************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/npm-run-path/index.js ***!
-  \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const path = __webpack_require__(/*! path */ "path");
-const pathKey = __webpack_require__(/*! path-key */ "./node_modules/utlz/node_modules/path-key/index.js");
-
-const npmRunPath = options => {
-	options = {
-		cwd: process.cwd(),
-		path: process.env[pathKey()],
-		execPath: process.execPath,
-		...options
-	};
-
-	let previous;
-	let cwdPath = path.resolve(options.cwd);
-	const result = [];
-
-	while (previous !== cwdPath) {
-		result.push(path.join(cwdPath, 'node_modules/.bin'));
-		previous = cwdPath;
-		cwdPath = path.resolve(cwdPath, '..');
-	}
-
-	// Ensure the running `node` binary is used
-	const execPathDir = path.resolve(options.cwd, options.execPath, '..');
-	result.push(execPathDir);
-
-	return result.concat(options.path).join(path.delimiter);
-};
-
-module.exports = npmRunPath;
-// TODO: Remove this for the next major release
-module.exports.default = npmRunPath;
-
-module.exports.env = options => {
-	options = {
-		env: process.env,
-		...options
-	};
-
-	const env = {...options.env};
-	const path = pathKey({env});
-
-	options.path = env[path];
-	env[path] = module.exports(options);
-
-	return env;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/path-key/index.js":
-/*!**********************************************************!*\
-  !*** ./node_modules/utlz/node_modules/path-key/index.js ***!
-  \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const pathKey = (options = {}) => {
-	const environment = options.env || process.env;
-	const platform = options.platform || process.platform;
-
-	if (platform !== 'win32') {
-		return 'PATH';
-	}
-
-	return Object.keys(environment).reverse().find(key => key.toUpperCase() === 'PATH') || 'Path';
-};
-
-module.exports = pathKey;
-// TODO: Remove this for the next major release
-module.exports.default = pathKey;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/shebang-command/index.js":
-/*!*****************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/shebang-command/index.js ***!
-  \*****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const shebangRegex = __webpack_require__(/*! shebang-regex */ "./node_modules/utlz/node_modules/shebang-regex/index.js");
-
-module.exports = (string = '') => {
-	const match = string.match(shebangRegex);
-
-	if (!match) {
-		return null;
-	}
-
-	const [path, argument] = match[0].replace(/#! ?/, '').split(' ');
-	const binary = path.split('/').pop();
-
-	if (binary === 'env') {
-		return argument;
-	}
-
-	return argument ? `${binary} ${argument}` : binary;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/shebang-regex/index.js":
-/*!***************************************************************!*\
-  !*** ./node_modules/utlz/node_modules/shebang-regex/index.js ***!
-  \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-module.exports = /^#!(.*)/;
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/node_modules/which/which.js":
-/*!*******************************************************!*\
-  !*** ./node_modules/utlz/node_modules/which/which.js ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-const isWindows = process.platform === 'win32' ||
-    process.env.OSTYPE === 'cygwin' ||
-    process.env.OSTYPE === 'msys'
-
-const path = __webpack_require__(/*! path */ "path")
-const COLON = isWindows ? ';' : ':'
-const isexe = __webpack_require__(/*! isexe */ "./node_modules/isexe/index.js")
-
-const getNotFoundError = (cmd) =>
-  Object.assign(new Error(`not found: ${cmd}`), { code: 'ENOENT' })
-
-const getPathInfo = (cmd, opt) => {
-  const colon = opt.colon || COLON
-
-  // If it has a slash, then we don't bother searching the pathenv.
-  // just check the file itself, and that's it.
-  const pathEnv = cmd.match(/\//) || isWindows && cmd.match(/\\/) ? ['']
-    : (
-      [
-        // windows always checks the cwd first
-        ...(isWindows ? [process.cwd()] : []),
-        ...(opt.path || process.env.PATH ||
-          /* istanbul ignore next: very unusual */ '').split(colon),
-      ]
-    )
-  const pathExtExe = isWindows
-    ? opt.pathExt || process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM'
-    : ''
-  const pathExt = isWindows ? pathExtExe.split(colon) : ['']
-
-  if (isWindows) {
-    if (cmd.indexOf('.') !== -1 && pathExt[0] !== '')
-      pathExt.unshift('')
-  }
-
-  return {
-    pathEnv,
-    pathExt,
-    pathExtExe,
-  }
-}
-
-const which = (cmd, opt, cb) => {
-  if (typeof opt === 'function') {
-    cb = opt
-    opt = {}
-  }
-  if (!opt)
-    opt = {}
-
-  const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt)
-  const found = []
-
-  const step = i => new Promise((resolve, reject) => {
-    if (i === pathEnv.length)
-      return opt.all && found.length ? resolve(found)
-        : reject(getNotFoundError(cmd))
-
-    const ppRaw = pathEnv[i]
-    const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw
-
-    const pCmd = path.join(pathPart, cmd)
-    const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd
-      : pCmd
-
-    resolve(subStep(p, i, 0))
-  })
-
-  const subStep = (p, i, ii) => new Promise((resolve, reject) => {
-    if (ii === pathExt.length)
-      return resolve(step(i + 1))
-    const ext = pathExt[ii]
-    isexe(p + ext, { pathExt: pathExtExe }, (er, is) => {
-      if (!er && is) {
-        if (opt.all)
-          found.push(p + ext)
-        else
-          return resolve(p + ext)
-      }
-      return resolve(subStep(p, i, ii + 1))
-    })
-  })
-
-  return cb ? step(0).then(res => cb(null, res), cb) : step(0)
-}
-
-const whichSync = (cmd, opt) => {
-  opt = opt || {}
-
-  const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt)
-  const found = []
-
-  for (let i = 0; i < pathEnv.length; i ++) {
-    const ppRaw = pathEnv[i]
-    const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw
-
-    const pCmd = path.join(pathPart, cmd)
-    const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd
-      : pCmd
-
-    for (let j = 0; j < pathExt.length; j ++) {
-      const cur = p + pathExt[j]
-      try {
-        const is = isexe.sync(cur, { pathExt: pathExtExe })
-        if (is) {
-          if (opt.all)
-            found.push(cur)
-          else
-            return cur
-        }
-      } catch (ex) {}
-    }
-  }
-
-  if (opt.all && found.length)
-    return found
-
-  if (opt.nothrow)
-    return null
-
-  throw getNotFoundError(cmd)
-}
-
-module.exports = which
-which.sync = whichSync
-
+    // Let the ouput flow through to the main process's stdout
+    child.stdout.pipe(process.stdout);
+    child.stderr.pipe(process.stderr);
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (buffer) => {
+        stdout += buffer.toString();
+    });
+    child.stderr.on('data', (buffer) => {
+        stderr += buffer.toString();
+    });
+    // Wait for both stdout and stderr to close
+    yield Promise.all([
+        new Promise((res) => child.stdout.on('close', res)),
+        new Promise((res) => child.stderr.on('close', res)),
+    ]);
+    if (stderr)
+        throw new ErrorWithData('stderr has data', { stdout, stderr });
+    return stdout;
+});
+//# sourceMappingURL=index.js.map
 
 /***/ }),
 
@@ -16260,9 +16547,14 @@ function createCorrespondingTestFile() {
   const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
   const testFilepath = getCorrespondingTestFilepath(editor.document.fileName);
-  Object(utlz__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(testFilepath);
-  copyTestCommand(testFilepath);
-  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(testFilepath);
+
+  try {
+    Object(utlz__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(testFilepath);
+    copyTestCommand(testFilepath);
+    Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(testFilepath);
+  } catch (e) {
+    console.info(':: ', e);
+  }
 }
 function getFilenameParts(filepath) {
   return path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');

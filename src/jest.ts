@@ -53,9 +53,13 @@ export function createCorrespondingTestFile() {
   if (!editor) return
 
   const testFilepath = getCorrespondingTestFilepath(editor.document.fileName)
-  writeFileIfNew(testFilepath)
-  copyTestCommand(testFilepath)
-  showTextDocument(testFilepath)
+  try {
+    writeFileIfNew(testFilepath)
+    copyTestCommand(testFilepath)
+    showTextDocument(testFilepath)
+  } catch (e) {
+    console.info(':: ', e)
+  }
 }
 
 export function getFilenameParts(filepath: string) {
