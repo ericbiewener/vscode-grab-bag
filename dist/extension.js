@@ -15085,6 +15085,47 @@ return{name,number,description,supported,action,forced,standard};
 
 /***/ }),
 
+/***/ "./node_modules/is-docker/index.js":
+/*!*****************************************!*\
+  !*** ./node_modules/is-docker/index.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const fs = __webpack_require__(/*! fs */ "fs");
+
+let isDocker;
+
+function hasDockerEnv() {
+	try {
+		fs.statSync('/.dockerenv');
+		return true;
+	} catch (_) {
+		return false;
+	}
+}
+
+function hasDockerCGroup() {
+	try {
+		return fs.readFileSync('/proc/self/cgroup', 'utf8').includes('docker');
+	} catch (_) {
+		return false;
+	}
+}
+
+module.exports = () => {
+	if (isDocker === undefined) {
+		isDocker = hasDockerEnv() || hasDockerCGroup();
+	}
+
+	return isDocker;
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/is-stream/index.js":
 /*!*****************************************!*\
   !*** ./node_modules/is-stream/index.js ***!
@@ -15122,6 +15163,49 @@ isStream.transform = stream =>
 	typeof stream._transformState === 'object';
 
 module.exports = isStream;
+
+
+/***/ }),
+
+/***/ "./node_modules/is-wsl/index.js":
+/*!**************************************!*\
+  !*** ./node_modules/is-wsl/index.js ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const os = __webpack_require__(/*! os */ "os");
+const fs = __webpack_require__(/*! fs */ "fs");
+const isDocker = __webpack_require__(/*! is-docker */ "./node_modules/is-docker/index.js");
+
+const isWsl = () => {
+	if (process.platform !== 'linux') {
+		return false;
+	}
+
+	if (os.release().toLowerCase().includes('microsoft')) {
+		if (isDocker()) {
+			return false;
+		}
+
+		return true;
+	}
+
+	try {
+		return fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft') ?
+			!isDocker() : false;
+	} catch (_) {
+		return false;
+	}
+};
+
+if (process.env.__IS_WSL_TEST__) {
+	module.exports = isWsl;
+} else {
+	module.exports = isWsl();
+}
 
 
 /***/ }),
@@ -15649,6 +15733,184 @@ module.exports.callCount = fn => {
 	return calledFunctions.get(fn);
 };
 
+
+/***/ }),
+
+/***/ "./node_modules/open/index.js":
+/*!************************************!*\
+  !*** ./node_modules/open/index.js ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(__dirname) {
+const {promisify} = __webpack_require__(/*! util */ "util");
+const path = __webpack_require__(/*! path */ "path");
+const childProcess = __webpack_require__(/*! child_process */ "child_process");
+const fs = __webpack_require__(/*! fs */ "fs");
+const url = __webpack_require__(/*! url */ "url");
+const isWsl = __webpack_require__(/*! is-wsl */ "./node_modules/is-wsl/index.js");
+const isDocker = __webpack_require__(/*! is-docker */ "./node_modules/is-docker/index.js");
+
+const pAccess = promisify(fs.access);
+const pExecFile = promisify(childProcess.execFile);
+
+// Path to included `xdg-open`.
+const localXdgOpenPath = path.join(__dirname, 'xdg-open');
+
+// Convert a path from WSL format to Windows format:
+// `/mnt/c/Program Files/Example/MyApp.exe` → `C:\Program Files\Example\MyApp.exe`
+const wslToWindowsPath = async path => {
+	const {stdout} = await pExecFile('wslpath', ['-w', path]);
+	return stdout.trim();
+};
+
+module.exports = async (target, options) => {
+	if (typeof target !== 'string') {
+		throw new TypeError('Expected a `target`');
+	}
+
+	options = {
+		wait: false,
+		background: false,
+		url: false,
+		allowNonzeroExitCode: false,
+		...options
+	};
+
+	let command;
+	let appArguments = [];
+	const cliArguments = [];
+	const childProcessOptions = {};
+
+	if (Array.isArray(options.app)) {
+		appArguments = options.app.slice(1);
+		options.app = options.app[0];
+	}
+
+	// Encodes the target as if it were an URL. Especially useful to get
+	// double-quotes through the “double-quotes on Windows caveat”, but it
+	// can be used on any platform.
+	if (options.url) {
+		target = new url.URL(target).href;
+
+		if (isWsl) {
+			target = target.replace(/&/g, '^&');
+		}
+	}
+
+	if (process.platform === 'darwin') {
+		command = 'open';
+
+		if (options.wait) {
+			cliArguments.push('--wait-apps');
+		}
+
+		if (options.background) {
+			cliArguments.push('--background');
+		}
+
+		if (options.app) {
+			cliArguments.push('-a', options.app);
+		}
+	} else if (process.platform === 'win32' || (isWsl && !isDocker())) {
+		command = 'cmd' + (isWsl ? '.exe' : '');
+		cliArguments.push('/s', '/c', 'start', '""', '/b');
+
+		if (!isWsl) {
+			// Always quoting target allows for URLs/paths to have spaces and unmarked characters, as `cmd.exe` will
+			// interpret them as plain text to be forwarded as one unique argument. Enabling `windowsVerbatimArguments`
+			// disables Node.js's default quotes and escapes handling (https://git.io/fjdem).
+			// References:
+			// - Issues #17, #44, #55, #77, #101, #115
+			// - Pull requests: #74, #98
+			//
+			// As a result, all double-quotes are stripped from the `target` and do not get to your desired destination.
+			target = `"${target}"`;
+			childProcessOptions.windowsVerbatimArguments = true;
+
+			if (options.app) {
+				options.app = `"${options.app}"`;
+			}
+		}
+
+		if (options.wait) {
+			cliArguments.push('/wait');
+		}
+
+		if (options.app) {
+			if (isWsl && options.app.startsWith('/mnt/')) {
+				const windowsPath = await wslToWindowsPath(options.app);
+				options.app = windowsPath;
+			}
+
+			cliArguments.push(options.app);
+		}
+
+		if (appArguments.length > 0) {
+			cliArguments.push(...appArguments);
+		}
+	} else {
+		if (options.app) {
+			command = options.app;
+		} else {
+			// When bundled by Webpack, there's no actual package file path and no local `xdg-open`.
+			const isBundled =  false || __dirname === '/';
+
+			// Check if local `xdg-open` exists and is executable.
+			let exeLocalXdgOpen = false;
+			try {
+				await pAccess(localXdgOpenPath, fs.constants.X_OK);
+				exeLocalXdgOpen = true;
+			} catch (_) {}
+
+			const useSystemXdgOpen = process.versions.electron ||
+				process.platform === 'android' || isBundled || !exeLocalXdgOpen;
+			command = useSystemXdgOpen ? 'xdg-open' : localXdgOpenPath;
+		}
+
+		if (appArguments.length > 0) {
+			cliArguments.push(...appArguments);
+		}
+
+		if (!options.wait) {
+			// `xdg-open` will block the process unless stdio is ignored
+			// and it's detached from the parent even if it's unref'd.
+			childProcessOptions.stdio = 'ignore';
+			childProcessOptions.detached = true;
+		}
+	}
+
+	cliArguments.push(target);
+
+	if (process.platform === 'darwin' && appArguments.length > 0) {
+		cliArguments.push('--args', ...appArguments);
+	}
+
+	const subprocess = childProcess.spawn(command, cliArguments, childProcessOptions);
+
+	if (options.wait) {
+		return new Promise((resolve, reject) => {
+			subprocess.once('error', reject);
+
+			subprocess.once('close', exitCode => {
+				if (options.allowNonzeroExitCode && exitCode > 0) {
+					reject(new Error(`Exited with code ${exitCode}`));
+					return;
+				}
+
+				resolve(subprocess);
+			});
+		});
+	}
+
+	subprocess.unref();
+
+	return subprocess;
+};
+
+/* WEBPACK VAR INJECTION */}.call(this, "/"))
 
 /***/ }),
 
@@ -16477,7 +16739,7 @@ __webpack_require__.r(__webpack_exports__);
 
 const activate = async function activate(ctx) {
   Object(_utils_misc__WEBPACK_IMPORTED_MODULE_7__["setExtCtx"])(ctx);
-  ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_6__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretDown', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])()), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretUp', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false)), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_1__["addReturnToArrowFunction"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openAllFilesListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesListedInDocument"]));
+  ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_6__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretDown', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])()), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretUp', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false)), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_1__["addReturnToArrowFunction"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesOrLinksListedInDocument"]));
 };
 
 /***/ }),
@@ -16583,23 +16845,26 @@ async function copyTestCommand(filepath) {
 /*!*********************!*\
   !*** ./src/misc.ts ***!
   \*********************/
-/*! exports provided: gotoSymbolGrouped, openAllFilesListedInDocument */
+/*! exports provided: gotoSymbolGrouped, openAllFilesOrLinksListedInDocument */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "gotoSymbolGrouped", function() { return gotoSymbolGrouped; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openAllFilesListedInDocument", function() { return openAllFilesListedInDocument; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openAllFilesOrLinksListedInDocument", function() { return openAllFilesOrLinksListedInDocument; });
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! open */ "./node_modules/open/index.js");
+/* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(open__WEBPACK_IMPORTED_MODULE_2__);
+
 
 
 function gotoSymbolGrouped() {
   vscode__WEBPACK_IMPORTED_MODULE_1___default.a.commands.executeCommand('workbench.action.quickOpen', '@:');
 }
-const openAllFilesListedInDocument = () => {
+const openAllFilesOrLinksListedInDocument = () => {
   const editor = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.activeTextEditor;
   const {
     workspaceFolders
@@ -16609,6 +16874,11 @@ const openAllFilesListedInDocument = () => {
   const rootPath = workspaceFolders[0].uri.fsPath;
 
   for (const line of lines) {
+    if (line.startsWith('http')) {
+      open__WEBPACK_IMPORTED_MODULE_2___default()(line);
+      continue;
+    }
+
     const filepath = !line.startsWith('/') ? path__WEBPACK_IMPORTED_MODULE_0___default.a.join(rootPath, line) : line;
     vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.showTextDocument(vscode__WEBPACK_IMPORTED_MODULE_1___default.a.Uri.file(filepath), {
       preview: false
@@ -16839,6 +17109,28 @@ module.exports = require("path");
 /***/ (function(module, exports) {
 
 module.exports = require("stream");
+
+/***/ }),
+
+/***/ "url":
+/*!**********************!*\
+  !*** external "url" ***!
+  \**********************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("url");
+
+/***/ }),
+
+/***/ "util":
+/*!***********************!*\
+  !*** external "util" ***!
+  \***********************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("util");
 
 /***/ }),
 

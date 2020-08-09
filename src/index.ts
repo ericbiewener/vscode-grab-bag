@@ -11,7 +11,7 @@ import {
   openCorrespondingSnapshot,
   openCorrespondingTestFile,
 } from './jest'
-import { gotoSymbolGrouped, openAllFilesListedInDocument } from './misc'
+import { gotoSymbolGrouped, openAllFilesOrLinksListedInDocument } from './misc'
 import { openCorrespondingCssModule, createCorrespondingCssModule } from './correspondingCssModule'
 import { openCorrespondingReduxContainer } from './openCorrespondingReduxContainer'
 import { setExtCtx } from './utils/misc'
@@ -36,6 +36,9 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.moveCaretUp', () => moveCaret(false)),
     commands.registerCommand('grabBag.gotoSymbolGrouped', gotoSymbolGrouped),
     commands.registerCommand('grabBag.addReturnToArrowFunction', addReturnToArrowFunction),
-    commands.registerCommand('grabBag.openAllFilesListedInDocument', openAllFilesListedInDocument),
+    commands.registerCommand(
+      'grabBag.openAllFilesOrLinksListedInDocument',
+      openAllFilesOrLinksListedInDocument,
+    ),
   )
 }

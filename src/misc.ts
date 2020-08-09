@@ -1,11 +1,12 @@
 import path from 'path'
 import vsc from 'vscode'
+import open from 'open'
 
 export function gotoSymbolGrouped() {
   vsc.commands.executeCommand('workbench.action.quickOpen', '@:')
 }
 
-export const openAllFilesListedInDocument = () => {
+export const openAllFilesOrLinksListedInDocument = () => {
   const editor = vsc.window.activeTextEditor
   const { workspaceFolders } = vsc.workspace
   if (!editor || !workspaceFolders) return
@@ -19,6 +20,10 @@ export const openAllFilesListedInDocument = () => {
   const rootPath = workspaceFolders[0].uri.fsPath
 
   for (const line of lines) {
+    if (line.startsWith('http')) {
+      open(line)
+      continue
+    }
     const filepath = !line.startsWith('/') ? path.join(rootPath, line) : line
     vsc.window.showTextDocument(vsc.Uri.file(filepath), { preview: false })
   }

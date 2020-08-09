@@ -104,8 +104,8 @@
         "category": "Grab Bag"
       },
       {
-        "title": "Open all files listed in document",
-        "command": "grabBag.openAllFilesListedInDocument",
+        "title": "Open all files or links listed in document",
+        "command": "grabBag.openAllFilesOrLinksListedInDocument",
         "category": "Grab Bag"
       }
     ],
@@ -187,6 +187,7 @@
     "@babel/parser": "7.10.5",
     "@typescript-eslint/typescript-estree": "3.7.0",
     "estraverse": "5.1.0",
+    "open": "7.1.0",
     "run-jxa": "2.0.0",
     "utlz": "3.2.2"
   }
