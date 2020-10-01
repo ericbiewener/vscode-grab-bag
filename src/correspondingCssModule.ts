@@ -1,6 +1,7 @@
 import path from 'path'
 import { window } from 'vscode'
-import { removeFileExt, writeFileIfNew } from 'utlz'
+import { writeFileIfNew } from '@ericbiewener/utils/src/writeFileIfNew'
+import { removeFileExt } from '@ericbiewener/utils/src/removeFileExt'
 import { findFileForExtensions } from './utils/filepaths'
 import { getConfiguration, showTextDocument } from './utils/misc'
 

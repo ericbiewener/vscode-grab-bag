@@ -144,6 +144,9 @@ const types = {
   bigint: new TokenType("bigint", {
     startsExpr
   }),
+  decimal: new TokenType("decimal", {
+    startsExpr
+  }),
   regexp: new TokenType("regexp", {
     startsExpr
   }),
@@ -267,7 +270,9 @@ const types = {
     binop: 10,
     startsExpr
   }),
-  star: createBinop("*", 10),
+  star: new TokenType("*", {
+    binop: 10
+  }),
   slash: createBinop("/", 10),
   exponent: new TokenType("**", {
     beforeExpr,
@@ -694,6 +699,7 @@ class CommentsParser extends BaseParser {
 }
 
 const ErrorMessages = Object.freeze({
+  AccessorIsGenerator: "A %0ter cannot be a generator",
   ArgumentsDisallowedInInitializer: "'arguments' is not allowed in class field initializer",
   AsyncFunctionInSingleStatementContext: "Async functions can only be declared at the top level or inside a block",
   AwaitBindingIdentifier: "Can not use 'await' as identifier inside an async function",
@@ -735,6 +741,7 @@ const ErrorMessages = Object.freeze({
   ImportOutsideModule: `'import' and 'export' may appear only with 'sourceType: "module"'`,
   InvalidBigIntLiteral: "Invalid BigIntLiteral",
   InvalidCodePoint: "Code point out of bounds",
+  InvalidDecimal: "Invalid decimal",
   InvalidDigit: "Expected number in radix %0",
   InvalidEscapeSequence: "Bad character escape sequence",
   InvalidEscapeSequenceTemplate: "Invalid escape sequence in template",
@@ -751,6 +758,7 @@ const ErrorMessages = Object.freeze({
   InvalidRestAssignmentPattern: "Invalid rest operator's argument",
   LabelRedeclaration: "Label '%0' is already declared",
   LetInLexicalBinding: "'let' is not allowed to be used as a name in 'let' or 'const' declarations.",
+  LineTerminatorBeforeArrow: "No line break is allowed before '=>'",
   MalformedRegExpFlags: "Invalid regular expression flag",
   MissingClassName: "A class name is required",
   MissingEqInAssignment: "Only '=' operator can be used for specifying default value.",
@@ -790,6 +798,7 @@ const ErrorMessages = Object.freeze({
   StrictEvalArguments: "Assigning to '%0' in strict mode",
   StrictEvalArgumentsBinding: "Binding '%0' in strict mode",
   StrictFunction: "In strict mode code, functions can only be declared at top level or inside a block",
+  StrictNumericEscape: "The only valid numeric escape in strict mode is '\\0'",
   StrictOctalLiteral: "Legacy octal literals are not allowed in strict mode",
   StrictWith: "'with' in strict mode",
   SuperNotAllowed: "super() is only valid inside a class constructor of a subclass. Maybe a typo in the method name ('constructor') or not extending another class?",
@@ -891,6 +900,13 @@ var estree = (superClass => class extends superClass {
     const bigInt = typeof BigInt !== "undefined" ? BigInt(value) : null;
     const node = this.estreeParseLiteral(bigInt);
     node.bigint = String(node.value || value);
+    return node;
+  }
+
+  estreeParseDecimalLiteral(value) {
+    const decimal = null;
+    const node = this.estreeParseLiteral(decimal);
+    node.decimal = String(node.value || value);
     return node;
   }
 
@@ -1002,6 +1018,9 @@ var estree = (superClass => class extends superClass {
       case types.bigint:
         return this.estreeParseBigIntLiteral(this.state.value);
 
+      case types.decimal:
+        return this.estreeParseDecimalLiteral(this.state.value);
+
       case types._null:
         return this.estreeParseLiteral(null);
 
@@ -1039,8 +1058,8 @@ var estree = (superClass => class extends superClass {
     return this.finishNode(node, type);
   }
 
-  parseObjectMethod(prop, isGenerator, isAsync, isPattern, containsEsc) {
-    const node = super.parseObjectMethod(prop, isGenerator, isAsync, isPattern, containsEsc);
+  parseObjectMethod(prop, isGenerator, isAsync, isPattern, isAccessor) {
+    const node = super.parseObjectMethod(prop, isGenerator, isAsync, isPattern, isAccessor);
 
     if (node) {
       node.type = "Property";
@@ -1089,8 +1108,6 @@ var estree = (superClass => class extends superClass {
       node.source = node.arguments[0];
       delete node.arguments;
       delete node.callee;
-    } else if (node.type === "CallExpression") {
-      node.optional = false;
     }
 
     return node;
@@ -1125,10 +1142,20 @@ var estree = (superClass => class extends superClass {
     return node;
   }
 
-  parseSubscript(...args) {
-    const node = super.parseSubscript(...args);
+  parseSubscript(base, startPos, startLoc, noCalls, state) {
+    const node = super.parseSubscript(base, startPos, startLoc, noCalls, state);
 
-    if (node.type === "MemberExpression") {
+    if (state.optionalChainMember) {
+      if (node.type === "OptionalMemberExpression" || node.type === "OptionalCallExpression") {
+        node.type = node.type.substring(8);
+      }
+
+      if (state.stop) {
+        const chain = this.startNodeAtNode(node);
+        chain.expression = node;
+        return this.finishNode(chain, "ChainExpression");
+      }
+    } else if (node.type === "MemberExpression" || node.type === "CallExpression") {
       node.optional = false;
     }
 
@@ -1149,6 +1176,7 @@ class TokContext {
 const types$1 = {
   braceStatement: new TokContext("{", false),
   braceExpression: new TokContext("{", true),
+  recordExpression: new TokContext("#{", true),
   templateQuasi: new TokContext("${", false),
   parenStatement: new TokContext("(", false),
   parenExpression: new TokContext("(", true),
@@ -1207,7 +1235,7 @@ types.parenL.updateContext = function (prevType) {
 types.incDec.updateContext = function () {};
 
 types._function.updateContext = types._class.updateContext = function (prevType) {
-  if (prevType === types.dot || prevType === types.questionDot) ; else if (prevType.beforeExpr && prevType !== types.semi && prevType !== types._else && !(prevType === types._return && lineBreak.test(this.input.slice(this.state.lastTokEnd, this.state.start))) && !((prevType === types.colon || prevType === types.braceL) && this.curContext() === types$1.b_stat)) {
+  if (prevType.beforeExpr && prevType !== types.semi && prevType !== types._else && !(prevType === types._return && this.hasPrecedingLineBreak()) && !((prevType === types.colon || prevType === types.braceL) && this.curContext() === types$1.b_stat)) {
     this.state.context.push(types$1.functionExpression);
   } else {
     this.state.context.push(types$1.functionStatement);
@@ -1226,8 +1254,9 @@ types.backQuote.updateContext = function () {
   this.state.exprAllowed = false;
 };
 
-types.star.updateContext = function () {
-  this.state.exprAllowed = false;
+types.braceHashL.updateContext = function () {
+  this.state.context.push(types$1.recordExpression);
+  this.state.exprAllowed = true;
 };
 
 let nonASCIIidentifierStartChars = "\xaa\xb5\xba\xc0-\xd6\xd8-\xf6\xf8-\u02c1\u02c6-\u02d1\u02e0-\u02e4\u02ec\u02ee\u0370-\u0374\u0376\u0377\u037a-\u037d\u037f\u0386\u0388-\u038a\u038c\u038e-\u03a1\u03a3-\u03f5\u03f7-\u0481\u048a-\u052f\u0531-\u0556\u0559\u0560-\u0588\u05d0-\u05ea\u05ef-\u05f2\u0620-\u064a\u066e\u066f\u0671-\u06d3\u06d5\u06e5\u06e6\u06ee\u06ef\u06fa-\u06fc\u06ff\u0710\u0712-\u072f\u074d-\u07a5\u07b1\u07ca-\u07ea\u07f4\u07f5\u07fa\u0800-\u0815\u081a\u0824\u0828\u0840-\u0858\u0860-\u086a\u08a0-\u08b4\u08b6-\u08c7\u0904-\u0939\u093d\u0950\u0958-\u0961\u0971-\u0980\u0985-\u098c\u098f\u0990\u0993-\u09a8\u09aa-\u09b0\u09b2\u09b6-\u09b9\u09bd\u09ce\u09dc\u09dd\u09df-\u09e1\u09f0\u09f1\u09fc\u0a05-\u0a0a\u0a0f\u0a10\u0a13-\u0a28\u0a2a-\u0a30\u0a32\u0a33\u0a35\u0a36\u0a38\u0a39\u0a59-\u0a5c\u0a5e\u0a72-\u0a74\u0a85-\u0a8d\u0a8f-\u0a91\u0a93-\u0aa8\u0aaa-\u0ab0\u0ab2\u0ab3\u0ab5-\u0ab9\u0abd\u0ad0\u0ae0\u0ae1\u0af9\u0b05-\u0b0c\u0b0f\u0b10\u0b13-\u0b28\u0b2a-\u0b30\u0b32\u0b33\u0b35-\u0b39\u0b3d\u0b5c\u0b5d\u0b5f-\u0b61\u0b71\u0b83\u0b85-\u0b8a\u0b8e-\u0b90\u0b92-\u0b95\u0b99\u0b9a\u0b9c\u0b9e\u0b9f\u0ba3\u0ba4\u0ba8-\u0baa\u0bae-\u0bb9\u0bd0\u0c05-\u0c0c\u0c0e-\u0c10\u0c12-\u0c28\u0c2a-\u0c39\u0c3d\u0c58-\u0c5a\u0c60\u0c61\u0c80\u0c85-\u0c8c\u0c8e-\u0c90\u0c92-\u0ca8\u0caa-\u0cb3\u0cb5-\u0cb9\u0cbd\u0cde\u0ce0\u0ce1\u0cf1\u0cf2\u0d04-\u0d0c\u0d0e-\u0d10\u0d12-\u0d3a\u0d3d\u0d4e\u0d54-\u0d56\u0d5f-\u0d61\u0d7a-\u0d7f\u0d85-\u0d96\u0d9a-\u0db1\u0db3-\u0dbb\u0dbd\u0dc0-\u0dc6\u0e01-\u0e30\u0e32\u0e33\u0e40-\u0e46\u0e81\u0e82\u0e84\u0e86-\u0e8a\u0e8c-\u0ea3\u0ea5\u0ea7-\u0eb0\u0eb2\u0eb3\u0ebd\u0ec0-\u0ec4\u0ec6\u0edc-\u0edf\u0f00\u0f40-\u0f47\u0f49-\u0f6c\u0f88-\u0f8c\u1000-\u102a\u103f\u1050-\u1055\u105a-\u105d\u1061\u1065\u1066\u106e-\u1070\u1075-\u1081\u108e\u10a0-\u10c5\u10c7\u10cd\u10d0-\u10fa\u10fc-\u1248\u124a-\u124d\u1250-\u1256\u1258\u125a-\u125d\u1260-\u1288\u128a-\u128d\u1290-\u12b0\u12b2-\u12b5\u12b8-\u12be\u12c0\u12c2-\u12c5\u12c8-\u12d6\u12d8-\u1310\u1312-\u1315\u1318-\u135a\u1380-\u138f\u13a0-\u13f5\u13f8-\u13fd\u1401-\u166c\u166f-\u167f\u1681-\u169a\u16a0-\u16ea\u16ee-\u16f8\u1700-\u170c\u170e-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176c\u176e-\u1770\u1780-\u17b3\u17d7\u17dc\u1820-\u1878\u1880-\u18a8\u18aa\u18b0-\u18f5\u1900-\u191e\u1950-\u196d\u1970-\u1974\u1980-\u19ab\u19b0-\u19c9\u1a00-\u1a16\u1a20-\u1a54\u1aa7\u1b05-\u1b33\u1b45-\u1b4b\u1b83-\u1ba0\u1bae\u1baf\u1bba-\u1be5\u1c00-\u1c23\u1c4d-\u1c4f\u1c5a-\u1c7d\u1c80-\u1c88\u1c90-\u1cba\u1cbd-\u1cbf\u1ce9-\u1cec\u1cee-\u1cf3\u1cf5\u1cf6\u1cfa\u1d00-\u1dbf\u1e00-\u1f15\u1f18-\u1f1d\u1f20-\u1f45\u1f48-\u1f4d\u1f50-\u1f57\u1f59\u1f5b\u1f5d\u1f5f-\u1f7d\u1f80-\u1fb4\u1fb6-\u1fbc\u1fbe\u1fc2-\u1fc4\u1fc6-\u1fcc\u1fd0-\u1fd3\u1fd6-\u1fdb\u1fe0-\u1fec\u1ff2-\u1ff4\u1ff6-\u1ffc\u2071\u207f\u2090-\u209c\u2102\u2107\u210a-\u2113\u2115\u2118-\u211d\u2124\u2126\u2128\u212a-\u2139\u213c-\u213f\u2145-\u2149\u214e\u2160-\u2188\u2c00-\u2c2e\u2c30-\u2c5e\u2c60-\u2ce4\u2ceb-\u2cee\u2cf2\u2cf3\u2d00-\u2d25\u2d27\u2d2d\u2d30-\u2d67\u2d6f\u2d80-\u2d96\u2da0-\u2da6\u2da8-\u2dae\u2db0-\u2db6\u2db8-\u2dbe\u2dc0-\u2dc6\u2dc8-\u2dce\u2dd0-\u2dd6\u2dd8-\u2dde\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303c\u3041-\u3096\u309b-\u309f\u30a1-\u30fa\u30fc-\u30ff\u3105-\u312f\u3131-\u318e\u31a0-\u31bf\u31f0-\u31ff\u3400-\u4dbf\u4e00-\u9ffc\ua000-\ua48c\ua4d0-\ua4fd\ua500-\ua60c\ua610-\ua61f\ua62a\ua62b\ua640-\ua66e\ua67f-\ua69d\ua6a0-\ua6ef\ua717-\ua71f\ua722-\ua788\ua78b-\ua7bf\ua7c2-\ua7ca\ua7f5-\ua801\ua803-\ua805\ua807-\ua80a\ua80c-\ua822\ua840-\ua873\ua882-\ua8b3\ua8f2-\ua8f7\ua8fb\ua8fd\ua8fe\ua90a-\ua925\ua930-\ua946\ua960-\ua97c\ua984-\ua9b2\ua9cf\ua9e0-\ua9e4\ua9e6-\ua9ef\ua9fa-\ua9fe\uaa00-\uaa28\uaa40-\uaa42\uaa44-\uaa4b\uaa60-\uaa76\uaa7a\uaa7e-\uaaaf\uaab1\uaab5\uaab6\uaab9-\uaabd\uaac0\uaac2\uaadb-\uaadd\uaae0-\uaaea\uaaf2-\uaaf4\uab01-\uab06\uab09-\uab0e\uab11-\uab16\uab20-\uab26\uab28-\uab2e\uab30-\uab5a\uab5c-\uab69\uab70-\uabe2\uac00-\ud7a3\ud7b0-\ud7c6\ud7cb-\ud7fb\uf900-\ufa6d\ufa70-\ufad9\ufb00-\ufb06\ufb13-\ufb17\ufb1d\ufb1f-\ufb28\ufb2a-\ufb36\ufb38-\ufb3c\ufb3e\ufb40\ufb41\ufb43\ufb44\ufb46-\ufbb1\ufbd3-\ufd3d\ufd50-\ufd8f\ufd92-\ufdc7\ufdf0-\ufdfb\ufe70-\ufe74\ufe76-\ufefc\uff21-\uff3a\uff41-\uff5a\uff66-\uffbe\uffc2-\uffc7\uffca-\uffcf\uffd2-\uffd7\uffda-\uffdc";
@@ -1345,6 +1374,7 @@ const FlowErrors = Object.freeze({
   UnexpectedSpreadType: "Spread operator cannot appear in class or interface definitions",
   UnexpectedSubtractionOperand: 'Unexpected token, expected "number" or "bigint"',
   UnexpectedTokenAfterTypeParameter: "Expected an arrow function after this type parameter declaration",
+  UnexpectedTypeParameterBeforeAsyncArrowFunction: "Type parameters must come after the async keyword, e.g. instead of `<T> async () => {}`, use `async <T>() => {}`",
   UnsupportedDeclareExportKind: "`declare export %0` is not supported. Use `%1` instead",
   UnsupportedStatementInDeclareModule: "Only declares and type imports are allowed inside declare module",
   UnterminatedFlowComment: "Unterminated flow-comment"
@@ -2706,11 +2736,11 @@ var flow = (superClass => class extends superClass {
     return super.parseExportDefaultExpression();
   }
 
-  parseConditional(expr, noIn, startPos, startLoc, refNeedsArrowPos) {
+  parseConditional(expr, startPos, startLoc, refNeedsArrowPos) {
     if (!this.match(types.question)) return expr;
 
     if (refNeedsArrowPos) {
-      const result = this.tryParse(() => super.parseConditional(expr, noIn, startPos, startLoc));
+      const result = this.tryParse(() => super.parseConditional(expr, startPos, startLoc));
 
       if (!result.node) {
         refNeedsArrowPos.start = result.error.pos || this.state.start;
@@ -2768,13 +2798,13 @@ var flow = (superClass => class extends superClass {
     this.expect(types.colon);
     node.test = expr;
     node.consequent = consequent;
-    node.alternate = this.forwardNoArrowParamsConversionAt(node, () => this.parseMaybeAssign(noIn, undefined, undefined, undefined));
+    node.alternate = this.forwardNoArrowParamsConversionAt(node, () => this.parseMaybeAssign(undefined, undefined, undefined));
     return this.finishNode(node, "ConditionalExpression");
   }
 
   tryParseConditionalConsequent() {
     this.state.noArrowParamsConversionAt.push(this.state.start);
-    const consequent = this.parseMaybeAssign();
+    const consequent = this.parseMaybeAssignAllowIn();
     const failed = !this.match(types.colon);
     this.state.noArrowParamsConversionAt.pop();
     return {
@@ -2965,6 +2995,8 @@ var flow = (superClass => class extends superClass {
       return this.finishOp(types.braceBarL, 2);
     } else if (this.state.inType && (code === 62 || code === 60)) {
       return this.finishOp(types.relational, 1);
+    } else if (this.state.inType && code === 63) {
+      return this.finishOp(types.question, 1);
     } else if (isIteratorStart(code, next)) {
       this.state.isIterator = true;
       return super.readWord();
@@ -3143,7 +3175,7 @@ var flow = (superClass => class extends superClass {
     return key;
   }
 
-  parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, refExpressionErrors, containsEsc) {
+  parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, isAccessor, refExpressionErrors) {
     if (prop.variance) {
       this.unexpected(prop.variance.start);
     }
@@ -3151,12 +3183,12 @@ var flow = (superClass => class extends superClass {
     delete prop.variance;
     let typeParameters;
 
-    if (this.isRelational("<")) {
+    if (this.isRelational("<") && !isAccessor) {
       typeParameters = this.flowParseTypeParameterDeclaration();
       if (!this.match(types.parenL)) this.unexpected();
     }
 
-    super.parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, refExpressionErrors, containsEsc);
+    super.parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, isAccessor, refExpressionErrors);
 
     if (typeParameters) {
       (prop.value || prop).typeParameters = typeParameters;
@@ -3326,7 +3358,7 @@ var flow = (superClass => class extends superClass {
     return this.match(types.colon) || super.shouldParseAsyncArrow();
   }
 
-  parseMaybeAssign(noIn, refExpressionErrors, afterLeftParse, refNeedsArrowPos) {
+  parseMaybeAssign(refExpressionErrors, afterLeftParse, refNeedsArrowPos) {
     var _jsx;
 
     let state = null;
@@ -3334,7 +3366,7 @@ var flow = (superClass => class extends superClass {
 
     if (this.hasPlugin("jsx") && (this.match(types.jsxTagStart) || this.isRelational("<"))) {
       state = this.state.clone();
-      jsx = this.tryParse(() => super.parseMaybeAssign(noIn, refExpressionErrors, afterLeftParse, refNeedsArrowPos), state);
+      jsx = this.tryParse(() => super.parseMaybeAssign(refExpressionErrors, afterLeftParse, refNeedsArrowPos), state);
       if (!jsx.error) return jsx.node;
       const {
         context
@@ -3348,19 +3380,42 @@ var flow = (superClass => class extends superClass {
     }
 
     if (((_jsx = jsx) == null ? void 0 : _jsx.error) || this.isRelational("<")) {
-      var _arrow$node, _jsx2, _jsx3;
+      var _jsx2, _jsx3;
 
       state = state || this.state.clone();
       let typeParameters;
-      const arrow = this.tryParse(() => {
+      const arrow = this.tryParse(abort => {
+        var _arrowExpression$extr;
+
         typeParameters = this.flowParseTypeParameterDeclaration();
-        const arrowExpression = this.forwardNoArrowParamsConversionAt(typeParameters, () => super.parseMaybeAssign(noIn, refExpressionErrors, afterLeftParse, refNeedsArrowPos));
-        arrowExpression.typeParameters = typeParameters;
-        this.resetStartLocationFromNode(arrowExpression, typeParameters);
+        const arrowExpression = this.forwardNoArrowParamsConversionAt(typeParameters, () => {
+          const result = super.parseMaybeAssign(refExpressionErrors, afterLeftParse, refNeedsArrowPos);
+          this.resetStartLocationFromNode(result, typeParameters);
+          return result;
+        });
+
+        if (arrowExpression.type !== "ArrowFunctionExpression" && ((_arrowExpression$extr = arrowExpression.extra) == null ? void 0 : _arrowExpression$extr.parenthesized)) {
+          abort();
+        }
+
+        const expr = this.maybeUnwrapTypeCastExpression(arrowExpression);
+        expr.typeParameters = typeParameters;
+        this.resetStartLocationFromNode(expr, typeParameters);
         return arrowExpression;
       }, state);
-      const arrowExpression = ((_arrow$node = arrow.node) == null ? void 0 : _arrow$node.type) === "ArrowFunctionExpression" ? arrow.node : null;
-      if (!arrow.error && arrowExpression) return arrowExpression;
+      let arrowExpression = null;
+
+      if (arrow.node && this.maybeUnwrapTypeCastExpression(arrow.node).type === "ArrowFunctionExpression") {
+        if (!arrow.error && !arrow.aborted) {
+          if (arrow.node.async) {
+            this.raise(typeParameters.start, FlowErrors.UnexpectedTypeParameterBeforeAsyncArrowFunction);
+          }
+
+          return arrow.node;
+        }
+
+        arrowExpression = arrow.node;
+      }
 
       if ((_jsx2 = jsx) == null ? void 0 : _jsx2.node) {
         this.state = jsx.failState;
@@ -3377,7 +3432,7 @@ var flow = (superClass => class extends superClass {
       throw this.raise(typeParameters.start, FlowErrors.UnexpectedTokenAfterTypeParameter);
     }
 
-    return super.parseMaybeAssign(noIn, refExpressionErrors, afterLeftParse, refNeedsArrowPos);
+    return super.parseMaybeAssign(refExpressionErrors, afterLeftParse, refNeedsArrowPos);
   }
 
   parseArrow(node) {
@@ -3455,7 +3510,7 @@ var flow = (superClass => class extends superClass {
   }
 
   parseSubscript(base, startPos, startLoc, noCalls, subscriptState) {
-    if (this.match(types.questionDot) && this.isLookaheadRelational("<")) {
+    if (this.match(types.questionDot) && this.isLookaheadToken_lt()) {
       subscriptState.optionalChainMember = true;
 
       if (noCalls) {
@@ -4045,6 +4100,21 @@ var flow = (superClass => class extends superClass {
     }
   }
 
+  isLookaheadToken_lt() {
+    const next = this.nextTokenStart();
+
+    if (this.input.charCodeAt(next) === 60) {
+      const afterNext = this.input.charCodeAt(next + 1);
+      return afterNext !== 60 && afterNext !== 61;
+    }
+
+    return false;
+  }
+
+  maybeUnwrapTypeCastExpression(node) {
+    return node.type === "TypeCastExpression" ? node.expression : node;
+  }
+
 });
 
 const entities = {
@@ -4605,7 +4675,7 @@ var jsx = (superClass => class extends superClass {
 
     if (this.eat(types.braceL)) {
       this.expect(types.ellipsis);
-      node.argument = this.parseMaybeAssign();
+      node.argument = this.parseMaybeAssignAllowIn();
       this.expect(types.braceR);
       return this.finishNode(node, "JSXSpreadAttribute");
     }
@@ -5023,10 +5093,11 @@ class TypeScriptScopeHandler extends ScopeHandler {
 
 }
 
-const PARAM = 0b000,
-      PARAM_YIELD = 0b001,
-      PARAM_AWAIT = 0b010,
-      PARAM_RETURN = 0b100;
+const PARAM = 0b0000,
+      PARAM_YIELD = 0b0001,
+      PARAM_AWAIT = 0b0010,
+      PARAM_RETURN = 0b0100,
+      PARAM_IN = 0b1000;
 class ProductionParameterHandler {
   constructor() {
     this.stacks = [];
@@ -5054,6 +5125,10 @@ class ProductionParameterHandler {
 
   get hasReturn() {
     return (this.currentFlags() & PARAM_RETURN) > 0;
+  }
+
+  get hasIn() {
+    return (this.currentFlags() & PARAM_IN) > 0;
   }
 
 }
@@ -5084,6 +5159,8 @@ const TSErrors = Object.freeze({
   IndexSignatureHasAbstract: "Index signatures cannot have the 'abstract' modifier",
   IndexSignatureHasAccessibility: "Index signatures cannot have an accessibility modifier ('%0')",
   IndexSignatureHasStatic: "Index signatures cannot have the 'static' modifier",
+  InvalidTupleMemberLabel: "Tuple members must be labeled with a simple identifier.",
+  MixedLabeledAndUnlabeledElements: "Tuple members must all have names or all not have names.",
   OptionalTypeBeforeRequired: "A required element cannot follow an optional element.",
   PatternIsOptional: "A binding pattern parameter cannot be optional in an implementation signature.",
   PrivateElementHasAbstract: "Private elements cannot have the 'abstract' modifier.",
@@ -5560,35 +5637,68 @@ var typescript = (superClass => class extends superClass {
     const node = this.startNode();
     node.elementTypes = this.tsParseBracketedList("TupleElementTypes", this.tsParseTupleElementType.bind(this), true, false);
     let seenOptionalElement = false;
+    let labeledElements = null;
     node.elementTypes.forEach(elementNode => {
-      if (elementNode.type === "TSOptionalType") {
-        seenOptionalElement = true;
-      } else if (seenOptionalElement && elementNode.type !== "TSRestType") {
+      var _labeledElements;
+
+      let {
+        type
+      } = elementNode;
+
+      if (seenOptionalElement && type !== "TSRestType" && type !== "TSOptionalType" && !(type === "TSNamedTupleMember" && elementNode.optional)) {
         this.raise(elementNode.start, TSErrors.OptionalTypeBeforeRequired);
+      }
+
+      seenOptionalElement = seenOptionalElement || type === "TSNamedTupleMember" && elementNode.optional || type === "TSOptionalType";
+
+      if (type === "TSRestType") {
+        elementNode = elementNode.typeAnnotation;
+        type = elementNode.type;
+      }
+
+      const isLabeled = type === "TSNamedTupleMember";
+      labeledElements = (_labeledElements = labeledElements) != null ? _labeledElements : isLabeled;
+
+      if (labeledElements !== isLabeled) {
+        this.raise(elementNode.start, TSErrors.MixedLabeledAndUnlabeledElements);
       }
     });
     return this.finishNode(node, "TSTupleType");
   }
 
   tsParseTupleElementType() {
-    if (this.match(types.ellipsis)) {
-      const restNode = this.startNode();
-      this.next();
-      restNode.typeAnnotation = this.tsParseType();
+    const {
+      start: startPos,
+      startLoc
+    } = this.state;
+    const rest = this.eat(types.ellipsis);
+    let type = this.tsParseType();
+    const optional = this.eat(types.question);
+    const labeled = this.eat(types.colon);
 
-      if (this.match(types.comma) && this.lookaheadCharCode() !== 93) {
-        this.raiseRestNotLast(this.state.start);
+    if (labeled) {
+      const labeledNode = this.startNodeAtNode(type);
+      labeledNode.optional = optional;
+
+      if (type.type === "TSTypeReference" && !type.typeParameters && type.typeName.type === "Identifier") {
+        labeledNode.label = type.typeName;
+      } else {
+        this.raise(type.start, TSErrors.InvalidTupleMemberLabel);
+        labeledNode.label = type;
       }
 
-      return this.finishNode(restNode, "TSRestType");
-    }
-
-    const type = this.tsParseType();
-
-    if (this.eat(types.question)) {
+      labeledNode.elementType = this.tsParseType();
+      type = this.finishNode(labeledNode, "TSNamedTupleMember");
+    } else if (optional) {
       const optionalTypeNode = this.startNodeAtNode(type);
       optionalTypeNode.typeAnnotation = type;
-      return this.finishNode(optionalTypeNode, "TSOptionalType");
+      type = this.finishNode(optionalTypeNode, "TSOptionalType");
+    }
+
+    if (rest) {
+      const restNode = this.startNodeAt(startPos, startLoc);
+      restNode.typeAnnotation = type;
+      type = this.finishNode(restNode, "TSRestType");
     }
 
     return type;
@@ -6107,7 +6217,7 @@ var typescript = (superClass => class extends superClass {
     node.id = this.match(types.string) ? this.parseExprAtom() : this.parseIdentifier(true);
 
     if (this.eat(types.eq)) {
-      node.initializer = this.parseMaybeAssign();
+      node.initializer = this.parseMaybeAssignAllowIn();
     }
 
     return this.finishNode(node, "TSEnumMember");
@@ -6542,7 +6652,9 @@ var typescript = (superClass => class extends superClass {
             node.typeParameters = typeArguments;
             return this.finishCallExpression(node, state.optionalChainMember);
           } else if (this.match(types.backQuote)) {
-            return this.parseTaggedTemplateExpression(startPos, startLoc, base, state, typeArguments);
+            const result = this.parseTaggedTemplateExpression(base, startPos, startLoc, state);
+            result.typeParameters = typeArguments;
+            return result;
           }
         }
 
@@ -6570,7 +6682,7 @@ var typescript = (superClass => class extends superClass {
     super.parseNewArguments(node);
   }
 
-  parseExprOp(left, leftStartPos, leftStartLoc, minPrec, noIn) {
+  parseExprOp(left, leftStartPos, leftStartLoc, minPrec) {
     if (nonNull(types._in.binop) > minPrec && !this.hasPrecedingLineBreak() && this.isContextual("as")) {
       const node = this.startNodeAt(leftStartPos, leftStartLoc);
       node.expression = left;
@@ -6584,10 +6696,11 @@ var typescript = (superClass => class extends superClass {
       }
 
       this.finishNode(node, "TSAsExpression");
-      return this.parseExprOp(node, leftStartPos, leftStartLoc, minPrec, noIn);
+      this.reScan_lt_gt();
+      return this.parseExprOp(node, leftStartPos, leftStartLoc, minPrec);
     }
 
-    return super.parseExprOp(left, leftStartPos, leftStartLoc, minPrec, noIn);
+    return super.parseExprOp(left, leftStartPos, leftStartLoc, minPrec);
   }
 
   checkReservedWord(word, startLoc, checkKeywords, isBinding) {}
@@ -6742,12 +6855,12 @@ var typescript = (superClass => class extends superClass {
     return super.shouldParseExportDeclaration();
   }
 
-  parseConditional(expr, noIn, startPos, startLoc, refNeedsArrowPos) {
+  parseConditional(expr, startPos, startLoc, refNeedsArrowPos) {
     if (!refNeedsArrowPos || !this.match(types.question)) {
-      return super.parseConditional(expr, noIn, startPos, startLoc, refNeedsArrowPos);
+      return super.parseConditional(expr, startPos, startLoc, refNeedsArrowPos);
     }
 
-    const result = this.tryParse(() => super.parseConditional(expr, noIn, startPos, startLoc));
+    const result = this.tryParse(() => super.parseConditional(expr, startPos, startLoc));
 
     if (!result.node) {
       refNeedsArrowPos.start = result.error.pos || this.state.start;
@@ -7110,6 +7223,17 @@ var typescript = (superClass => class extends superClass {
     }
   }
 
+  reScan_lt_gt() {
+    if (this.match(types.relational)) {
+      const code = this.input.charCodeAt(this.state.start);
+
+      if (code === 60 || code === 62) {
+        this.state.pos -= 1;
+        this.readToken_lt_gt(code);
+      }
+    }
+  }
+
   toAssignableList(exprList) {
     for (let i = 0; i < exprList.length; i++) {
       const expr = exprList[i];
@@ -7179,6 +7303,18 @@ var typescript = (superClass => class extends superClass {
     const firstParam = method.params[0];
     const hasContextParam = firstParam && firstParam.type === "Identifier" && firstParam.name === "this";
     return hasContextParam ? baseCount + 1 : baseCount;
+  }
+
+  parseCatchClauseParam() {
+    const param = super.parseCatchClauseParam();
+    const type = this.tsTryParseTypeAnnotation();
+
+    if (type) {
+      param.typeAnnotation = type;
+      this.resetEndLocation(param);
+    }
+
+    return param;
   }
 
 });
@@ -7277,6 +7413,7 @@ var placeholders = (superClass => class extends superClass {
     const type = isStatement ? "ClassDeclaration" : "ClassExpression";
     this.next();
     this.takeDecorators(node);
+    const oldStrict = this.state.strict;
     const placeholder = this.parsePlaceholder("Identifier");
 
     if (placeholder) {
@@ -7294,7 +7431,7 @@ var placeholders = (superClass => class extends superClass {
     }
 
     this.parseClassSuper(node);
-    node.body = this.parsePlaceholder("ClassBody") || this.parseClassBody(!!node.superClass);
+    node.body = this.parsePlaceholder("ClassBody") || this.parseClassBody(!!node.superClass, oldStrict);
     return this.finishNode(node, type);
   }
 
@@ -7989,7 +8126,7 @@ class Tokenizer extends ParserError {
     const next = this.input.charCodeAt(this.state.pos + 1);
 
     if (next === code) {
-      if (next === 45 && !this.inModule && this.input.charCodeAt(this.state.pos + 2) === 62 && (this.state.lastTokEnd === 0 || lineBreak.test(this.input.slice(this.state.lastTokEnd, this.state.pos)))) {
+      if (next === 45 && !this.inModule && this.input.charCodeAt(this.state.pos + 2) === 62 && (this.state.lastTokEnd === 0 || this.hasPrecedingLineBreak())) {
         this.skipLineComment(3);
         this.skipSpace();
         this.nextToken();
@@ -8058,7 +8195,7 @@ class Tokenizer extends ParserError {
     const next = this.input.charCodeAt(this.state.pos + 1);
     const next2 = this.input.charCodeAt(this.state.pos + 2);
 
-    if (next === 63 && !this.state.inType) {
+    if (next === 63) {
       if (next2 === 61) {
         this.finishOp(types.assign, 3);
       } else {
@@ -8333,24 +8470,22 @@ class Tokenizer extends ParserError {
       const code = this.input.charCodeAt(this.state.pos);
       let val;
 
-      if (this.hasPlugin("numericSeparator")) {
-        if (code === 95) {
-          const prev = this.input.charCodeAt(this.state.pos - 1);
-          const next = this.input.charCodeAt(this.state.pos + 1);
+      if (code === 95) {
+        const prev = this.input.charCodeAt(this.state.pos - 1);
+        const next = this.input.charCodeAt(this.state.pos + 1);
 
-          if (allowedSiblings.indexOf(next) === -1) {
-            this.raise(this.state.pos, ErrorMessages.UnexpectedNumericSeparator);
-          } else if (forbiddenSiblings.indexOf(prev) > -1 || forbiddenSiblings.indexOf(next) > -1 || Number.isNaN(next)) {
-            this.raise(this.state.pos, ErrorMessages.UnexpectedNumericSeparator);
-          }
-
-          if (!allowNumSeparator) {
-            this.raise(this.state.pos, ErrorMessages.NumericSeparatorInEscapeSequence);
-          }
-
-          ++this.state.pos;
-          continue;
+        if (allowedSiblings.indexOf(next) === -1) {
+          this.raise(this.state.pos, ErrorMessages.UnexpectedNumericSeparator);
+        } else if (forbiddenSiblings.indexOf(prev) > -1 || forbiddenSiblings.indexOf(next) > -1 || Number.isNaN(next)) {
+          this.raise(this.state.pos, ErrorMessages.UnexpectedNumericSeparator);
         }
+
+        if (!allowNumSeparator) {
+          this.raise(this.state.pos, ErrorMessages.NumericSeparatorInEscapeSequence);
+        }
+
+        ++this.state.pos;
+        continue;
       }
 
       if (code >= 97) {
@@ -8398,13 +8533,11 @@ class Tokenizer extends ParserError {
 
     const next = this.input.charCodeAt(this.state.pos);
 
-    if (next === 95) {
-      this.expectPlugin("numericSeparator", this.state.pos);
-    }
-
     if (next === 110) {
       ++this.state.pos;
       isBigInt = true;
+    } else if (next === 109) {
+      throw this.raise(start, ErrorMessages.InvalidDecimal);
     }
 
     if (isIdentifierStart(this.input.codePointAt(this.state.pos))) {
@@ -8424,35 +8557,42 @@ class Tokenizer extends ParserError {
     const start = this.state.pos;
     let isFloat = false;
     let isBigInt = false;
-    let isNonOctalDecimalInt = false;
+    let isDecimal = false;
+    let hasExponent = false;
+    let isOctal = false;
 
     if (!startsWithDot && this.readInt(10) === null) {
       this.raise(start, ErrorMessages.InvalidNumber);
     }
 
-    let octal = this.state.pos - start >= 2 && this.input.charCodeAt(start) === 48;
+    const hasLeadingZero = this.state.pos - start >= 2 && this.input.charCodeAt(start) === 48;
 
-    if (octal) {
+    if (hasLeadingZero) {
+      const integer = this.input.slice(start, this.state.pos);
+
       if (this.state.strict) {
         this.raise(start, ErrorMessages.StrictOctalLiteral);
+      } else {
+        const underscorePos = integer.indexOf("_");
+
+        if (underscorePos > 0) {
+          this.raise(underscorePos + start, ErrorMessages.ZeroDigitNumericSeparator);
+        }
       }
 
-      if (/[89]/.test(this.input.slice(start, this.state.pos))) {
-        octal = false;
-        isNonOctalDecimalInt = true;
-      }
+      isOctal = hasLeadingZero && !/[89]/.test(integer);
     }
 
     let next = this.input.charCodeAt(this.state.pos);
 
-    if (next === 46 && !octal) {
+    if (next === 46 && !isOctal) {
       ++this.state.pos;
       this.readInt(10);
       isFloat = true;
       next = this.input.charCodeAt(this.state.pos);
     }
 
-    if ((next === 69 || next === 101) && !octal) {
+    if ((next === 69 || next === 101) && !isOctal) {
       next = this.input.charCodeAt(++this.state.pos);
 
       if (next === 43 || next === 45) {
@@ -8461,23 +8601,12 @@ class Tokenizer extends ParserError {
 
       if (this.readInt(10) === null) this.raise(start, ErrorMessages.InvalidNumber);
       isFloat = true;
+      hasExponent = true;
       next = this.input.charCodeAt(this.state.pos);
     }
 
-    if (this.hasPlugin("numericSeparator") && (octal || isNonOctalDecimalInt)) {
-      const underscorePos = this.input.slice(start, this.state.pos).indexOf("_");
-
-      if (underscorePos > 0) {
-        this.raise(underscorePos + start, ErrorMessages.ZeroDigitNumericSeparator);
-      }
-    }
-
-    if (next === 95) {
-      this.expectPlugin("numericSeparator", this.state.pos);
-    }
-
     if (next === 110) {
-      if (isFloat || octal || isNonOctalDecimalInt) {
+      if (isFloat || hasLeadingZero) {
         this.raise(start, ErrorMessages.InvalidBigIntLiteral);
       }
 
@@ -8485,18 +8614,34 @@ class Tokenizer extends ParserError {
       isBigInt = true;
     }
 
+    if (next === 109) {
+      this.expectPlugin("decimal", this.state.pos);
+
+      if (hasExponent || hasLeadingZero) {
+        this.raise(start, ErrorMessages.InvalidDecimal);
+      }
+
+      ++this.state.pos;
+      isDecimal = true;
+    }
+
     if (isIdentifierStart(this.input.codePointAt(this.state.pos))) {
       throw this.raise(this.state.pos, ErrorMessages.NumberIdentifier);
     }
 
-    const str = this.input.slice(start, this.state.pos).replace(/[_n]/g, "");
+    const str = this.input.slice(start, this.state.pos).replace(/[_mn]/g, "");
 
     if (isBigInt) {
       this.finishToken(types.bigint, str);
       return;
     }
 
-    const val = octal ? parseInt(str, 8) : parseFloat(str);
+    if (isDecimal) {
+      this.finishToken(types.decimal, str);
+      return;
+    }
+
+    const val = isOctal ? parseInt(str, 8) : parseFloat(str);
     this.finishToken(types.num, val);
   }
 
@@ -8676,6 +8821,8 @@ class Tokenizer extends ParserError {
       case 57:
         if (inTemplate) {
           return null;
+        } else if (this.state.strict) {
+          this.raise(this.state.pos - 1, ErrorMessages.StrictNumericEscape);
         }
 
       default:
@@ -8697,7 +8844,7 @@ class Tokenizer extends ParserError {
             if (inTemplate) {
               return null;
             } else if (this.state.strict) {
-              this.raise(codePos, ErrorMessages.StrictOctalLiteral);
+              this.raise(codePos, ErrorMessages.StrictNumericEscape);
             } else {
               this.state.octalPositions.push(codePos);
             }
@@ -8804,7 +8951,7 @@ class Tokenizer extends ParserError {
     }
 
     if (prevType === types._return || prevType === types.name && this.state.exprAllowed) {
-      return lineBreak.test(this.input.slice(this.state.lastTokEnd, this.state.start));
+      return this.hasPrecedingLineBreak();
     }
 
     if (prevType === types._else || prevType === types.semi || prevType === types.eof || prevType === types.parenR || prevType === types.arrow) {
@@ -8850,21 +8997,6 @@ class UtilParser extends Tokenizer {
 
   isRelational(op) {
     return this.match(types.relational) && this.state.value === op;
-  }
-
-  isLookaheadRelational(op) {
-    const next = this.nextTokenStart();
-
-    if (this.input.charAt(next) === op) {
-      if (next + 1 === this.input.length) {
-        return true;
-      }
-
-      const afterNext = this.input.charCodeAt(next + 1);
-      return afterNext !== op.charCodeAt(0) && afterNext !== 61;
-    }
-
-    return false;
   }
 
   expectRelational(op) {
@@ -9035,7 +9167,7 @@ class UtilParser extends Tokenizer {
   }
 
   isLiteralPropertyName() {
-    return this.match(types.name) || !!this.state.type.keyword || this.match(types.string) || this.match(types.num) || this.match(types.bigint);
+    return this.match(types.name) || !!this.state.type.keyword || this.match(types.string) || this.match(types.num) || this.match(types.bigint) || this.match(types.decimal);
   }
 
 }
@@ -9267,7 +9399,7 @@ class LValParser extends NodeUtils {
   parseSpread(refExpressionErrors, refNeedsArrowPos) {
     const node = this.startNode();
     this.next();
-    node.argument = this.parseMaybeAssign(false, refExpressionErrors, undefined, refNeedsArrowPos);
+    node.argument = this.parseMaybeAssignAllowIn(refExpressionErrors, undefined, refNeedsArrowPos);
     return this.finishNode(node, "SpreadElement");
   }
 
@@ -9289,7 +9421,7 @@ class LValParser extends NodeUtils {
         }
 
       case types.braceL:
-        return this.parseObj(types.braceR, true);
+        return this.parseObjectLike(types.braceR, true);
     }
 
     return this.parseIdentifier();
@@ -9350,13 +9482,15 @@ class LValParser extends NodeUtils {
   }
 
   parseMaybeDefault(startPos, startLoc, left) {
-    startLoc = startLoc || this.state.startLoc;
-    startPos = startPos || this.state.start;
-    left = left || this.parseBindingAtom();
+    var _startLoc, _startPos, _left;
+
+    startLoc = (_startLoc = startLoc) != null ? _startLoc : this.state.startLoc;
+    startPos = (_startPos = startPos) != null ? _startPos : this.state.start;
+    left = (_left = left) != null ? _left : this.parseBindingAtom();
     if (!this.eat(types.eq)) return left;
     const node = this.startNodeAt(startPos, startLoc);
     node.left = left;
-    node.right = this.parseMaybeAssign();
+    node.right = this.parseMaybeAssignAllowIn();
     return this.finishNode(node, "AssignmentPattern");
   }
 
@@ -9488,6 +9622,10 @@ class ExpressionParser extends LValParser {
     }
   }
 
+  shouldExitDescending(expr, potentialArrowAt) {
+    return expr.type === "ArrowFunctionExpression" && expr.start === potentialArrowAt;
+  }
+
   getExpression() {
     let paramFlags = PARAM;
 
@@ -9509,17 +9647,25 @@ class ExpressionParser extends LValParser {
     return expr;
   }
 
-  parseExpression(noIn, refExpressionErrors) {
+  parseExpression(disallowIn, refExpressionErrors) {
+    if (disallowIn) {
+      return this.disallowInAnd(() => this.parseExpressionBase(refExpressionErrors));
+    }
+
+    return this.allowInAnd(() => this.parseExpressionBase(refExpressionErrors));
+  }
+
+  parseExpressionBase(refExpressionErrors) {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
-    const expr = this.parseMaybeAssign(noIn, refExpressionErrors);
+    const expr = this.parseMaybeAssign(refExpressionErrors);
 
     if (this.match(types.comma)) {
       const node = this.startNodeAt(startPos, startLoc);
       node.expressions = [expr];
 
       while (this.eat(types.comma)) {
-        node.expressions.push(this.parseMaybeAssign(noIn, refExpressionErrors));
+        node.expressions.push(this.parseMaybeAssign(refExpressionErrors));
       }
 
       this.toReferencedList(node.expressions);
@@ -9529,13 +9675,21 @@ class ExpressionParser extends LValParser {
     return expr;
   }
 
-  parseMaybeAssign(noIn, refExpressionErrors, afterLeftParse, refNeedsArrowPos) {
+  parseMaybeAssignDisallowIn(refExpressionErrors, afterLeftParse, refNeedsArrowPos) {
+    return this.disallowInAnd(() => this.parseMaybeAssign(refExpressionErrors, afterLeftParse, refNeedsArrowPos));
+  }
+
+  parseMaybeAssignAllowIn(refExpressionErrors, afterLeftParse, refNeedsArrowPos) {
+    return this.allowInAnd(() => this.parseMaybeAssign(refExpressionErrors, afterLeftParse, refNeedsArrowPos));
+  }
+
+  parseMaybeAssign(refExpressionErrors, afterLeftParse, refNeedsArrowPos) {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
 
     if (this.isContextual("yield")) {
       if (this.prodParam.hasYield) {
-        let left = this.parseYield(noIn);
+        let left = this.parseYield();
 
         if (afterLeftParse) {
           left = afterLeftParse.call(this, left, startPos, startLoc);
@@ -9560,7 +9714,7 @@ class ExpressionParser extends LValParser {
       this.state.potentialArrowAt = this.state.start;
     }
 
-    let left = this.parseMaybeConditional(noIn, refExpressionErrors, refNeedsArrowPos);
+    let left = this.parseMaybeConditional(refExpressionErrors, refNeedsArrowPos);
 
     if (afterLeftParse) {
       left = afterLeftParse.call(this, left, startPos, startLoc);
@@ -9570,14 +9724,6 @@ class ExpressionParser extends LValParser {
       const node = this.startNodeAt(startPos, startLoc);
       const operator = this.state.value;
       node.operator = operator;
-
-      if (operator === "??=") {
-        this.expectPlugin("logicalAssignment");
-      }
-
-      if (operator === "||=" || operator === "&&=") {
-        this.expectPlugin("logicalAssignment");
-      }
 
       if (this.match(types.eq)) {
         node.left = this.toAssignable(left);
@@ -9592,7 +9738,7 @@ class ExpressionParser extends LValParser {
 
       this.checkLVal(left, undefined, undefined, "assignment expression");
       this.next();
-      node.right = this.parseMaybeAssign(noIn);
+      node.right = this.parseMaybeAssign();
       return this.finishNode(node, "AssignmentExpression");
     } else if (ownExpressionErrors) {
       this.checkExpressionErrors(refExpressionErrors, true);
@@ -9601,78 +9747,75 @@ class ExpressionParser extends LValParser {
     return left;
   }
 
-  parseMaybeConditional(noIn, refExpressionErrors, refNeedsArrowPos) {
+  parseMaybeConditional(refExpressionErrors, refNeedsArrowPos) {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
     const potentialArrowAt = this.state.potentialArrowAt;
-    const expr = this.parseExprOps(noIn, refExpressionErrors);
+    const expr = this.parseExprOps(refExpressionErrors);
 
-    if (expr.type === "ArrowFunctionExpression" && expr.start === potentialArrowAt) {
+    if (this.shouldExitDescending(expr, potentialArrowAt)) {
       return expr;
     }
 
-    if (this.checkExpressionErrors(refExpressionErrors, false)) return expr;
-    return this.parseConditional(expr, noIn, startPos, startLoc, refNeedsArrowPos);
+    return this.parseConditional(expr, startPos, startLoc, refNeedsArrowPos);
   }
 
-  parseConditional(expr, noIn, startPos, startLoc, refNeedsArrowPos) {
+  parseConditional(expr, startPos, startLoc, refNeedsArrowPos) {
     if (this.eat(types.question)) {
       const node = this.startNodeAt(startPos, startLoc);
       node.test = expr;
-      node.consequent = this.parseMaybeAssign();
+      node.consequent = this.parseMaybeAssignAllowIn();
       this.expect(types.colon);
-      node.alternate = this.parseMaybeAssign(noIn);
+      node.alternate = this.parseMaybeAssign();
       return this.finishNode(node, "ConditionalExpression");
     }
 
     return expr;
   }
 
-  parseExprOps(noIn, refExpressionErrors) {
+  parseExprOps(refExpressionErrors) {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
     const potentialArrowAt = this.state.potentialArrowAt;
     const expr = this.parseMaybeUnary(refExpressionErrors);
 
-    if (expr.type === "ArrowFunctionExpression" && expr.start === potentialArrowAt) {
+    if (this.shouldExitDescending(expr, potentialArrowAt)) {
       return expr;
     }
 
-    if (this.checkExpressionErrors(refExpressionErrors, false)) {
-      return expr;
-    }
-
-    return this.parseExprOp(expr, startPos, startLoc, -1, noIn);
+    return this.parseExprOp(expr, startPos, startLoc, -1);
   }
 
-  parseExprOp(left, leftStartPos, leftStartLoc, minPrec, noIn) {
+  parseExprOp(left, leftStartPos, leftStartLoc, minPrec) {
     let prec = this.state.type.binop;
 
-    if (prec != null && (!noIn || !this.match(types._in))) {
+    if (prec != null && (this.prodParam.hasIn || !this.match(types._in))) {
       if (prec > minPrec) {
-        const operator = this.state.value;
+        const op = this.state.type;
 
-        if (operator === "|>" && this.state.inFSharpPipelineDirectBody) {
-          return left;
+        if (op === types.pipeline) {
+          this.expectPlugin("pipelineOperator");
+
+          if (this.state.inFSharpPipelineDirectBody) {
+            return left;
+          }
+
+          this.state.inPipeline = true;
+          this.checkPipelineAtInfixOperator(left, leftStartPos);
         }
 
         const node = this.startNodeAt(leftStartPos, leftStartLoc);
         node.left = left;
-        node.operator = operator;
+        node.operator = this.state.value;
 
-        if (operator === "**" && left.type === "UnaryExpression" && (this.options.createParenthesizedExpressions || !(left.extra && left.extra.parenthesized))) {
+        if (op === types.exponent && left.type === "UnaryExpression" && (this.options.createParenthesizedExpressions || !(left.extra && left.extra.parenthesized))) {
           this.raise(left.argument.start, ErrorMessages.UnexpectedTokenUnaryExponentiation);
         }
 
-        const op = this.state.type;
         const logical = op === types.logicalOR || op === types.logicalAND;
         const coalesce = op === types.nullishCoalescing;
 
-        if (op === types.pipeline) {
-          this.expectPlugin("pipelineOperator");
-          this.state.inPipeline = true;
-          this.checkPipelineAtInfixOperator(left, leftStartPos);
-        } else if (coalesce) {
+        if (coalesce) {
           prec = types.logicalAND.binop;
         }
 
@@ -9684,7 +9827,7 @@ class ExpressionParser extends LValParser {
           }
         }
 
-        node.right = this.parseExprOpRightExpr(op, prec, noIn);
+        node.right = this.parseExprOpRightExpr(op, prec);
         this.finishNode(node, logical || coalesce ? "LogicalExpression" : "BinaryExpression");
         const nextOp = this.state.type;
 
@@ -9692,14 +9835,14 @@ class ExpressionParser extends LValParser {
           throw this.raise(this.state.start, ErrorMessages.MixingCoalesceWithLogical);
         }
 
-        return this.parseExprOp(node, leftStartPos, leftStartLoc, minPrec, noIn);
+        return this.parseExprOp(node, leftStartPos, leftStartLoc, minPrec);
       }
     }
 
     return left;
   }
 
-  parseExprOpRightExpr(op, prec, noIn) {
+  parseExprOpRightExpr(op, prec) {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
 
@@ -9708,46 +9851,48 @@ class ExpressionParser extends LValParser {
         switch (this.getPluginOption("pipelineOperator", "proposal")) {
           case "smart":
             return this.withTopicPermittingContext(() => {
-              return this.parseSmartPipelineBody(this.parseExprOpBaseRightExpr(op, prec, noIn), startPos, startLoc);
+              return this.parseSmartPipelineBody(this.parseExprOpBaseRightExpr(op, prec), startPos, startLoc);
             });
 
           case "fsharp":
             return this.withSoloAwaitPermittingContext(() => {
-              return this.parseFSharpPipelineBody(prec, noIn);
+              return this.parseFSharpPipelineBody(prec);
             });
         }
 
       default:
-        return this.parseExprOpBaseRightExpr(op, prec, noIn);
+        return this.parseExprOpBaseRightExpr(op, prec);
     }
   }
 
-  parseExprOpBaseRightExpr(op, prec, noIn) {
+  parseExprOpBaseRightExpr(op, prec) {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
-    return this.parseExprOp(this.parseMaybeUnary(), startPos, startLoc, op.rightAssociative ? prec - 1 : prec, noIn);
+    return this.parseExprOp(this.parseMaybeUnary(), startPos, startLoc, op.rightAssociative ? prec - 1 : prec);
   }
 
   parseMaybeUnary(refExpressionErrors) {
     if (this.isContextual("await") && this.isAwaitAllowed()) {
       return this.parseAwait();
-    } else if (this.state.type.prefix) {
-      const node = this.startNode();
-      const update = this.match(types.incDec);
+    }
+
+    const update = this.match(types.incDec);
+    const node = this.startNode();
+
+    if (this.state.type.prefix) {
       node.operator = this.state.value;
       node.prefix = true;
 
-      if (node.operator === "throw") {
+      if (this.match(types._throw)) {
         this.expectPlugin("throwExpressions");
       }
 
+      const isDelete = this.match(types._delete);
       this.next();
       node.argument = this.parseMaybeUnary();
       this.checkExpressionErrors(refExpressionErrors, true);
 
-      if (update) {
-        this.checkLVal(node.argument, undefined, undefined, "prefix operation");
-      } else if (this.state.strict && node.operator === "delete") {
+      if (this.state.strict && isDelete) {
         const arg = node.argument;
 
         if (arg.type === "Identifier") {
@@ -9757,7 +9902,18 @@ class ExpressionParser extends LValParser {
         }
       }
 
-      return this.finishNode(node, update ? "UpdateExpression" : "UnaryExpression");
+      if (!update) {
+        return this.finishNode(node, "UnaryExpression");
+      }
+    }
+
+    return this.parseUpdate(node, update, refExpressionErrors);
+  }
+
+  parseUpdate(node, update, refExpressionErrors) {
+    if (update) {
+      this.checkLVal(node.argument, undefined, undefined, "prefix operation");
+      return this.finishNode(node, "UpdateExpression");
     }
 
     const startPos = this.state.start;
@@ -9784,7 +9940,7 @@ class ExpressionParser extends LValParser {
     const potentialArrowAt = this.state.potentialArrowAt;
     const expr = this.parseExprAtom(refExpressionErrors);
 
-    if (expr.type === "ArrowFunctionExpression" && expr.start === potentialArrowAt) {
+    if (this.shouldExitDescending(expr, potentialArrowAt)) {
       return expr;
     }
 
@@ -9815,11 +9971,9 @@ class ExpressionParser extends LValParser {
 
   parseSubscript(base, startPos, startLoc, noCalls, state) {
     if (!noCalls && this.eat(types.doubleColon)) {
-      const node = this.startNodeAt(startPos, startLoc);
-      node.object = base;
-      node.callee = this.parseNoCallExpr();
-      state.stop = true;
-      return this.parseSubscripts(this.finishNode(node, "BindExpression"), startPos, startLoc, noCalls);
+      return this.parseBind(base, startPos, startLoc, noCalls, state);
+    } else if (this.match(types.backQuote)) {
+      return this.parseTaggedTemplateExpression(base, startPos, startLoc, state);
     }
 
     let optional = false;
@@ -9835,85 +9989,99 @@ class ExpressionParser extends LValParser {
       this.next();
     }
 
-    const computed = this.eat(types.bracketL);
-
-    if (optional && !this.match(types.parenL) && !this.match(types.backQuote) || computed || this.eat(types.dot)) {
-      const node = this.startNodeAt(startPos, startLoc);
-      node.object = base;
-      node.property = computed ? this.parseExpression() : this.parseMaybePrivateName(true);
-      node.computed = computed;
-
-      if (node.property.type === "PrivateName") {
-        if (node.object.type === "Super") {
-          this.raise(startPos, ErrorMessages.SuperPrivateField);
-        }
-
-        this.classScope.usePrivateName(node.property.id.name, node.property.start);
-      }
-
-      if (computed) {
-        this.expect(types.bracketR);
-      }
-
-      if (state.optionalChainMember) {
-        node.optional = optional;
-        return this.finishNode(node, "OptionalMemberExpression");
-      } else {
-        return this.finishNode(node, "MemberExpression");
-      }
-    } else if (!noCalls && this.match(types.parenL)) {
-      const oldMaybeInArrowParameters = this.state.maybeInArrowParameters;
-      const oldYieldPos = this.state.yieldPos;
-      const oldAwaitPos = this.state.awaitPos;
-      this.state.maybeInArrowParameters = true;
-      this.state.yieldPos = -1;
-      this.state.awaitPos = -1;
-      this.next();
-      let node = this.startNodeAt(startPos, startLoc);
-      node.callee = base;
-
-      if (state.optionalChainMember) {
-        node.optional = optional;
-      }
-
-      if (optional) {
-        node.arguments = this.parseCallExpressionArguments(types.parenR, false);
-      } else {
-        node.arguments = this.parseCallExpressionArguments(types.parenR, state.maybeAsyncArrow, base.type === "Import", base.type !== "Super", node);
-      }
-
-      this.finishCallExpression(node, state.optionalChainMember);
-
-      if (state.maybeAsyncArrow && this.shouldParseAsyncArrow() && !optional) {
-        state.stop = true;
-        node = this.parseAsyncArrowFromCallExpression(this.startNodeAt(startPos, startLoc), node);
-        this.checkYieldAwaitInDefaultParams();
-        this.state.yieldPos = oldYieldPos;
-        this.state.awaitPos = oldAwaitPos;
-      } else {
-        this.toReferencedListDeep(node.arguments);
-        if (oldYieldPos !== -1) this.state.yieldPos = oldYieldPos;
-
-        if (!this.isAwaitAllowed() && !oldMaybeInArrowParameters || oldAwaitPos !== -1) {
-          this.state.awaitPos = oldAwaitPos;
-        }
-      }
-
-      this.state.maybeInArrowParameters = oldMaybeInArrowParameters;
-      return node;
-    } else if (this.match(types.backQuote)) {
-      return this.parseTaggedTemplateExpression(startPos, startLoc, base, state);
+    if (!noCalls && this.match(types.parenL)) {
+      return this.parseCoverCallAndAsyncArrowHead(base, startPos, startLoc, state, optional);
+    } else if (optional || this.match(types.bracketL) || this.eat(types.dot)) {
+      return this.parseMember(base, startPos, startLoc, state, optional);
     } else {
       state.stop = true;
       return base;
     }
   }
 
-  parseTaggedTemplateExpression(startPos, startLoc, base, state, typeArguments) {
+  parseMember(base, startPos, startLoc, state, optional) {
+    const node = this.startNodeAt(startPos, startLoc);
+    const computed = this.eat(types.bracketL);
+    node.object = base;
+    node.computed = computed;
+    const property = computed ? this.parseExpression() : this.parseMaybePrivateName(true);
+
+    if (property.type === "PrivateName") {
+      if (node.object.type === "Super") {
+        this.raise(startPos, ErrorMessages.SuperPrivateField);
+      }
+
+      this.classScope.usePrivateName(property.id.name, property.start);
+    }
+
+    node.property = property;
+
+    if (computed) {
+      this.expect(types.bracketR);
+    }
+
+    if (state.optionalChainMember) {
+      node.optional = optional;
+      return this.finishNode(node, "OptionalMemberExpression");
+    } else {
+      return this.finishNode(node, "MemberExpression");
+    }
+  }
+
+  parseBind(base, startPos, startLoc, noCalls, state) {
+    const node = this.startNodeAt(startPos, startLoc);
+    node.object = base;
+    node.callee = this.parseNoCallExpr();
+    state.stop = true;
+    return this.parseSubscripts(this.finishNode(node, "BindExpression"), startPos, startLoc, noCalls);
+  }
+
+  parseCoverCallAndAsyncArrowHead(base, startPos, startLoc, state, optional) {
+    const oldMaybeInArrowParameters = this.state.maybeInArrowParameters;
+    const oldYieldPos = this.state.yieldPos;
+    const oldAwaitPos = this.state.awaitPos;
+    this.state.maybeInArrowParameters = true;
+    this.state.yieldPos = -1;
+    this.state.awaitPos = -1;
+    this.next();
+    let node = this.startNodeAt(startPos, startLoc);
+    node.callee = base;
+
+    if (state.optionalChainMember) {
+      node.optional = optional;
+    }
+
+    if (optional) {
+      node.arguments = this.parseCallExpressionArguments(types.parenR, false);
+    } else {
+      node.arguments = this.parseCallExpressionArguments(types.parenR, state.maybeAsyncArrow, base.type === "Import", base.type !== "Super", node);
+    }
+
+    this.finishCallExpression(node, state.optionalChainMember);
+
+    if (state.maybeAsyncArrow && this.shouldParseAsyncArrow() && !optional) {
+      state.stop = true;
+      node = this.parseAsyncArrowFromCallExpression(this.startNodeAt(startPos, startLoc), node);
+      this.checkYieldAwaitInDefaultParams();
+      this.state.yieldPos = oldYieldPos;
+      this.state.awaitPos = oldAwaitPos;
+    } else {
+      this.toReferencedListDeep(node.arguments);
+      if (oldYieldPos !== -1) this.state.yieldPos = oldYieldPos;
+
+      if (!this.isAwaitAllowed() && !oldMaybeInArrowParameters || oldAwaitPos !== -1) {
+        this.state.awaitPos = oldAwaitPos;
+      }
+    }
+
+    this.state.maybeInArrowParameters = oldMaybeInArrowParameters;
+    return node;
+  }
+
+  parseTaggedTemplateExpression(base, startPos, startLoc, state) {
     const node = this.startNodeAt(startPos, startLoc);
     node.tag = base;
     node.quasi = this.parseTemplate(true);
-    if (typeArguments) node.typeParameters = typeArguments;
 
     if (state.optionalChainMember) {
       this.raise(startPos, ErrorMessages.OptionalChainingNoTemplate);
@@ -10017,20 +10185,7 @@ class ExpressionParser extends LValParser {
 
     switch (this.state.type) {
       case types._super:
-        node = this.startNode();
-        this.next();
-
-        if (this.match(types.parenL) && !this.scope.allowDirectSuper && !this.options.allowSuperOutsideMethod) {
-          this.raise(node.start, ErrorMessages.SuperNotAllowed);
-        } else if (!this.scope.allowSuper && !this.options.allowSuperOutsideMethod) {
-          this.raise(node.start, ErrorMessages.UnexpectedSuper);
-        }
-
-        if (!this.match(types.parenL) && !this.match(types.bracketL) && !this.match(types.dot)) {
-          this.raise(node.start, ErrorMessages.UnsupportedSuper);
-        }
-
-        return this.finishNode(node, "Super");
+        return this.parseSuper();
 
       case types._import:
         node = this.startNode();
@@ -10053,44 +10208,28 @@ class ExpressionParser extends LValParser {
 
       case types.name:
         {
-          node = this.startNode();
           const containsEsc = this.state.containsEsc;
           const id = this.parseIdentifier();
 
-          if (!containsEsc && id.name === "async" && this.match(types._function) && !this.canInsertSemicolon()) {
-            const last = this.state.context.length - 1;
+          if (!containsEsc && id.name === "async" && !this.canInsertSemicolon()) {
+            if (this.match(types._function)) {
+              const last = this.state.context.length - 1;
 
-            if (this.state.context[last] !== types$1.functionStatement) {
-              throw new Error("Internal error");
+              if (this.state.context[last] !== types$1.functionStatement) {
+                throw new Error("Internal error");
+              }
+
+              this.state.context[last] = types$1.functionExpression;
+              this.next();
+              return this.parseFunction(this.startNodeAtNode(id), undefined, true);
+            } else if (this.match(types.name)) {
+              return this.parseAsyncArrowUnaryFunction(id);
             }
-
-            this.state.context[last] = types$1.functionExpression;
-            this.next();
-            return this.parseFunction(node, undefined, true);
-          } else if (canBeArrow && !containsEsc && id.name === "async" && this.match(types.name) && !this.canInsertSemicolon()) {
-            const oldMaybeInArrowParameters = this.state.maybeInArrowParameters;
-            const oldMaybeInAsyncArrowHead = this.state.maybeInAsyncArrowHead;
-            const oldYieldPos = this.state.yieldPos;
-            const oldAwaitPos = this.state.awaitPos;
-            this.state.maybeInArrowParameters = true;
-            this.state.maybeInAsyncArrowHead = true;
-            this.state.yieldPos = -1;
-            this.state.awaitPos = -1;
-            const params = [this.parseIdentifier()];
-            this.expect(types.arrow);
-            this.checkYieldAwaitInDefaultParams();
-            this.state.maybeInArrowParameters = oldMaybeInArrowParameters;
-            this.state.maybeInAsyncArrowHead = oldMaybeInAsyncArrowHead;
-            this.state.yieldPos = oldYieldPos;
-            this.state.awaitPos = oldAwaitPos;
-            this.parseArrowExpression(node, params, true);
-            return node;
           }
 
           if (canBeArrow && this.match(types.arrow) && !this.canInsertSemicolon()) {
             this.next();
-            this.parseArrowExpression(node, [id], false);
-            return node;
+            return this.parseArrowExpression(this.startNodeAtNode(id), [id], false);
           }
 
           return id;
@@ -10098,14 +10237,7 @@ class ExpressionParser extends LValParser {
 
       case types._do:
         {
-          this.expectPlugin("doExpressions");
-          const node = this.startNode();
-          this.next();
-          const oldLabels = this.state.labels;
-          this.state.labels = [];
-          node.body = this.parseBlock();
-          this.state.labels = oldLabels;
-          return this.finishNode(node, "DoExpression");
+          return this.parseDo();
         }
 
       case types.regexp:
@@ -10122,6 +10254,9 @@ class ExpressionParser extends LValParser {
 
       case types.bigint:
         return this.parseLiteral(this.state.value, "BigIntLiteral");
+
+      case types.decimal:
+        return this.parseLiteral(this.state.value, "DecimalLiteral");
 
       case types.string:
         return this.parseLiteral(this.state.value, "StringLiteral");
@@ -10141,56 +10276,27 @@ class ExpressionParser extends LValParser {
       case types.bracketBarL:
       case types.bracketHashL:
         {
-          this.expectPlugin("recordAndTuple");
-          const oldInFSharpPipelineDirectBody = this.state.inFSharpPipelineDirectBody;
-          const close = this.state.type === types.bracketBarL ? types.bracketBarR : types.bracketR;
-          this.state.inFSharpPipelineDirectBody = false;
-          node = this.startNode();
-          this.next();
-          node.elements = this.parseExprList(close, false, refExpressionErrors, node);
-          this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
-          return this.finishNode(node, "TupleExpression");
+          return this.parseArrayLike(this.state.type === types.bracketBarL ? types.bracketBarR : types.bracketR, false, true, refExpressionErrors);
         }
 
       case types.bracketL:
         {
-          const oldInFSharpPipelineDirectBody = this.state.inFSharpPipelineDirectBody;
-          this.state.inFSharpPipelineDirectBody = false;
-          node = this.startNode();
-          this.next();
-          node.elements = this.parseExprList(types.bracketR, true, refExpressionErrors, node);
-
-          if (!this.state.maybeInArrowParameters) {
-            this.toReferencedList(node.elements);
-          }
-
-          this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
-          return this.finishNode(node, "ArrayExpression");
+          return this.parseArrayLike(types.bracketR, true, false, refExpressionErrors);
         }
 
       case types.braceBarL:
       case types.braceHashL:
         {
-          this.expectPlugin("recordAndTuple");
-          const oldInFSharpPipelineDirectBody = this.state.inFSharpPipelineDirectBody;
-          const close = this.state.type === types.braceBarL ? types.braceBarR : types.braceR;
-          this.state.inFSharpPipelineDirectBody = false;
-          const ret = this.parseObj(close, false, true, refExpressionErrors);
-          this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
-          return ret;
+          return this.parseObjectLike(this.state.type === types.braceBarL ? types.braceBarR : types.braceR, false, true, refExpressionErrors);
         }
 
       case types.braceL:
         {
-          const oldInFSharpPipelineDirectBody = this.state.inFSharpPipelineDirectBody;
-          this.state.inFSharpPipelineDirectBody = false;
-          const ret = this.parseObj(types.braceR, false, false, refExpressionErrors);
-          this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
-          return ret;
+          return this.parseObjectLike(types.braceR, false, false, refExpressionErrors);
         }
 
       case types._function:
-        return this.parseFunctionExpression();
+        return this.parseFunctionOrFunctionSent();
 
       case types.at:
         this.parseDecorators();
@@ -10201,7 +10307,7 @@ class ExpressionParser extends LValParser {
         return this.parseClass(node, false);
 
       case types._new:
-        return this.parseNew();
+        return this.parseNewOrNewTarget();
 
       case types.backQuote:
         return this.parseTemplate(false);
@@ -10274,6 +10380,60 @@ class ExpressionParser extends LValParser {
     }
   }
 
+  parseAsyncArrowUnaryFunction(id) {
+    const node = this.startNodeAtNode(id);
+    const oldMaybeInArrowParameters = this.state.maybeInArrowParameters;
+    const oldMaybeInAsyncArrowHead = this.state.maybeInAsyncArrowHead;
+    const oldYieldPos = this.state.yieldPos;
+    const oldAwaitPos = this.state.awaitPos;
+    this.state.maybeInArrowParameters = true;
+    this.state.maybeInAsyncArrowHead = true;
+    this.state.yieldPos = -1;
+    this.state.awaitPos = -1;
+    const params = [this.parseIdentifier()];
+
+    if (this.hasPrecedingLineBreak()) {
+      this.raise(this.state.pos, ErrorMessages.LineTerminatorBeforeArrow);
+    }
+
+    this.expect(types.arrow);
+    this.checkYieldAwaitInDefaultParams();
+    this.state.maybeInArrowParameters = oldMaybeInArrowParameters;
+    this.state.maybeInAsyncArrowHead = oldMaybeInAsyncArrowHead;
+    this.state.yieldPos = oldYieldPos;
+    this.state.awaitPos = oldAwaitPos;
+    this.parseArrowExpression(node, params, true);
+    return node;
+  }
+
+  parseDo() {
+    this.expectPlugin("doExpressions");
+    const node = this.startNode();
+    this.next();
+    const oldLabels = this.state.labels;
+    this.state.labels = [];
+    node.body = this.parseBlock();
+    this.state.labels = oldLabels;
+    return this.finishNode(node, "DoExpression");
+  }
+
+  parseSuper() {
+    const node = this.startNode();
+    this.next();
+
+    if (this.match(types.parenL) && !this.scope.allowDirectSuper && !this.options.allowSuperOutsideMethod) {
+      this.raise(node.start, ErrorMessages.SuperNotAllowed);
+    } else if (!this.scope.allowSuper && !this.options.allowSuperOutsideMethod) {
+      this.raise(node.start, ErrorMessages.UnexpectedSuper);
+    }
+
+    if (!this.match(types.parenL) && !this.match(types.bracketL) && !this.match(types.dot)) {
+      this.raise(node.start, ErrorMessages.UnsupportedSuper);
+    }
+
+    return this.finishNode(node, "Super");
+  }
+
   parseBooleanLiteral() {
     const node = this.startNode();
     node.value = this.match(types._true);
@@ -10301,13 +10461,13 @@ class ExpressionParser extends LValParser {
     }
   }
 
-  parseFunctionExpression() {
+  parseFunctionOrFunctionSent() {
     const node = this.startNode();
-    let meta = this.startNode();
     this.next();
-    meta = this.createIdentifier(meta, "function");
 
-    if (this.prodParam.hasYield && this.eat(types.dot)) {
+    if (this.prodParam.hasYield && this.match(types.dot)) {
+      const meta = this.createIdentifier(this.startNodeAtNode(node), "function");
+      this.next();
       return this.parseMetaProperty(node, meta, "sent");
     }
 
@@ -10337,7 +10497,7 @@ class ExpressionParser extends LValParser {
 
   parseImportMetaProperty(node) {
     const id = this.createIdentifier(this.startNodeAtNode(node), "import");
-    this.expect(types.dot);
+    this.next();
 
     if (this.isContextual("meta")) {
       if (!this.inModule) {
@@ -10367,7 +10527,7 @@ class ExpressionParser extends LValParser {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
     let val;
-    this.expect(types.parenL);
+    this.next();
     const oldMaybeInArrowParameters = this.state.maybeInArrowParameters;
     const oldYieldPos = this.state.yieldPos;
     const oldAwaitPos = this.state.awaitPos;
@@ -10407,12 +10567,12 @@ class ExpressionParser extends LValParser {
         this.checkCommaAfterRest(41);
         break;
       } else {
-        exprList.push(this.parseMaybeAssign(false, refExpressionErrors, this.parseParenItem, refNeedsArrowPos));
+        exprList.push(this.parseMaybeAssignAllowIn(refExpressionErrors, this.parseParenItem, refNeedsArrowPos));
       }
     }
 
-    const innerEndPos = this.state.start;
-    const innerEndLoc = this.state.startLoc;
+    const innerEndPos = this.state.lastTokEnd;
+    const innerEndLoc = this.state.lastTokEndLoc;
     this.expect(types.parenR);
     this.state.maybeInArrowParameters = oldMaybeInArrowParameters;
     this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
@@ -10486,13 +10646,13 @@ class ExpressionParser extends LValParser {
     return node;
   }
 
-  parseNew() {
+  parseNewOrNewTarget() {
     const node = this.startNode();
-    let meta = this.startNode();
     this.next();
-    meta = this.createIdentifier(meta, "new");
 
-    if (this.eat(types.dot)) {
+    if (this.match(types.dot)) {
+      const meta = this.createIdentifier(this.startNodeAtNode(node), "new");
+      this.next();
       const metaProp = this.parseMetaProperty(node, meta, "target");
 
       if (!this.scope.inNonArrowFunction && !this.scope.inClass) {
@@ -10508,6 +10668,10 @@ class ExpressionParser extends LValParser {
       return metaProp;
     }
 
+    return this.parseNew(node);
+  }
+
+  parseNew(node) {
     node.callee = this.parseNoCallExpr();
 
     if (node.callee.type === "Import") {
@@ -10568,7 +10732,13 @@ class ExpressionParser extends LValParser {
     return this.finishNode(node, "TemplateLiteral");
   }
 
-  parseObj(close, isPattern, isRecord, refExpressionErrors) {
+  parseObjectLike(close, isPattern, isRecord, refExpressionErrors) {
+    if (isRecord) {
+      this.expectPlugin("recordAndTuple");
+    }
+
+    const oldInFSharpPipelineDirectBody = this.state.inFSharpPipelineDirectBody;
+    this.state.inFSharpPipelineDirectBody = false;
     const propHash = Object.create(null);
     let first = true;
     const node = this.startNode();
@@ -10588,7 +10758,7 @@ class ExpressionParser extends LValParser {
         }
       }
 
-      const prop = this.parseObjectMember(isPattern, refExpressionErrors);
+      const prop = this.parsePropertyDefinition(isPattern, refExpressionErrors);
 
       if (!isPattern) {
         this.checkProto(prop, isRecord, propHash, refExpressionErrors);
@@ -10605,6 +10775,7 @@ class ExpressionParser extends LValParser {
       node.properties.push(prop);
     }
 
+    this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
     let type = "ObjectExpression";
 
     if (isPattern) {
@@ -10616,11 +10787,11 @@ class ExpressionParser extends LValParser {
     return this.finishNode(node, type);
   }
 
-  isAsyncProp(prop) {
-    return !prop.computed && prop.key.type === "Identifier" && prop.key.name === "async" && (this.isLiteralPropertyName() || this.match(types.bracketL) || this.match(types.star)) && !this.hasPrecedingLineBreak();
+  maybeAsyncOrAccessorProp(prop) {
+    return !prop.computed && prop.key.type === "Identifier" && (this.isLiteralPropertyName() || this.match(types.bracketL) || this.match(types.star));
   }
 
-  parseObjectMember(isPattern, refExpressionErrors) {
+  parsePropertyDefinition(isPattern, refExpressionErrors) {
     let decorators = [];
 
     if (this.match(types.at)) {
@@ -10636,6 +10807,7 @@ class ExpressionParser extends LValParser {
     const prop = this.startNode();
     let isGenerator = false;
     let isAsync = false;
+    let isAccessor = false;
     let startPos;
     let startLoc;
 
@@ -10669,22 +10841,33 @@ class ExpressionParser extends LValParser {
     }
 
     const containsEsc = this.state.containsEsc;
-    this.parsePropertyName(prop, false);
+    const key = this.parsePropertyName(prop, false);
 
-    if (!isPattern && !containsEsc && !isGenerator && this.isAsyncProp(prop)) {
-      isAsync = true;
-      isGenerator = this.eat(types.star);
-      this.parsePropertyName(prop, false);
-    } else {
-      isAsync = false;
+    if (!isPattern && !isGenerator && !containsEsc && this.maybeAsyncOrAccessorProp(prop)) {
+      const keyName = key.name;
+
+      if (keyName === "async" && !this.hasPrecedingLineBreak()) {
+        isAsync = true;
+        isGenerator = this.eat(types.star);
+        this.parsePropertyName(prop, false);
+      }
+
+      if (keyName === "get" || keyName === "set") {
+        isAccessor = true;
+        prop.kind = keyName;
+
+        if (this.match(types.star)) {
+          isGenerator = true;
+          this.raise(this.state.pos, ErrorMessages.AccessorIsGenerator, keyName);
+          this.next();
+        }
+
+        this.parsePropertyName(prop, false);
+      }
     }
 
-    this.parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, refExpressionErrors, containsEsc);
+    this.parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, isAccessor, refExpressionErrors);
     return prop;
-  }
-
-  isGetterOrSetterMethod(prop, isPattern) {
-    return !isPattern && !prop.computed && prop.key.type === "Identifier" && (prop.key.name === "get" || prop.key.name === "set") && (this.isLiteralPropertyName() || this.match(types.bracketL));
   }
 
   getGetterSetterExpectedParamCount(method) {
@@ -10708,21 +10891,18 @@ class ExpressionParser extends LValParser {
     }
   }
 
-  parseObjectMethod(prop, isGenerator, isAsync, isPattern, containsEsc) {
+  parseObjectMethod(prop, isGenerator, isAsync, isPattern, isAccessor) {
+    if (isAccessor) {
+      this.parseMethod(prop, isGenerator, false, false, false, "ObjectMethod");
+      this.checkGetterSetterParams(prop);
+      return prop;
+    }
+
     if (isAsync || isGenerator || this.match(types.parenL)) {
       if (isPattern) this.unexpected();
       prop.kind = "method";
       prop.method = true;
       return this.parseMethod(prop, isGenerator, isAsync, false, false, "ObjectMethod");
-    }
-
-    if (!containsEsc && this.isGetterOrSetterMethod(prop, isPattern)) {
-      if (isGenerator || isAsync) this.unexpected();
-      prop.kind = prop.key.name;
-      this.parsePropertyName(prop, false);
-      this.parseMethod(prop, false, false, false, false, "ObjectMethod");
-      this.checkGetterSetterParams(prop);
-      return prop;
     }
   }
 
@@ -10730,12 +10910,12 @@ class ExpressionParser extends LValParser {
     prop.shorthand = false;
 
     if (this.eat(types.colon)) {
-      prop.value = isPattern ? this.parseMaybeDefault(this.state.start, this.state.startLoc) : this.parseMaybeAssign(false, refExpressionErrors);
+      prop.value = isPattern ? this.parseMaybeDefault(this.state.start, this.state.startLoc) : this.parseMaybeAssignAllowIn(refExpressionErrors);
       return this.finishNode(prop, "ObjectProperty");
     }
 
     if (!prop.computed && prop.key.type === "Identifier") {
-      this.checkReservedWord(prop.key.name, prop.key.start, true, true);
+      this.checkReservedWord(prop.key.name, prop.key.start, true, false);
 
       if (isPattern) {
         prop.value = this.parseMaybeDefault(startPos, startLoc, prop.key.__clone());
@@ -10754,8 +10934,8 @@ class ExpressionParser extends LValParser {
     }
   }
 
-  parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, refExpressionErrors, containsEsc) {
-    const node = this.parseObjectMethod(prop, isGenerator, isAsync, isPattern, containsEsc) || this.parseObjectProperty(prop, startPos, startLoc, isPattern, refExpressionErrors);
+  parseObjPropValue(prop, startPos, startLoc, isGenerator, isAsync, isPattern, isAccessor, refExpressionErrors) {
+    const node = this.parseObjectMethod(prop, isGenerator, isAsync, isPattern, isAccessor) || this.parseObjectProperty(prop, startPos, startLoc, isPattern, refExpressionErrors);
     if (!node) this.unexpected();
     return node;
   }
@@ -10763,12 +10943,12 @@ class ExpressionParser extends LValParser {
   parsePropertyName(prop, isPrivateNameAllowed) {
     if (this.eat(types.bracketL)) {
       prop.computed = true;
-      prop.key = this.parseMaybeAssign();
+      prop.key = this.parseMaybeAssignAllowIn();
       this.expect(types.bracketR);
     } else {
       const oldInPropertyName = this.state.inPropertyName;
       this.state.inPropertyName = true;
-      prop.key = this.match(types.num) || this.match(types.string) || this.match(types.bigint) ? this.parseExprAtom() : this.parseMaybePrivateName(isPrivateNameAllowed);
+      prop.key = this.match(types.num) || this.match(types.string) || this.match(types.bigint) || this.match(types.decimal) ? this.parseExprAtom() : this.parseMaybePrivateName(isPrivateNameAllowed);
 
       if (prop.key.type !== "PrivateName") {
         prop.computed = false;
@@ -10805,9 +10985,34 @@ class ExpressionParser extends LValParser {
     return node;
   }
 
+  parseArrayLike(close, canBePattern, isTuple, refExpressionErrors) {
+    if (isTuple) {
+      this.expectPlugin("recordAndTuple");
+    }
+
+    const oldInFSharpPipelineDirectBody = this.state.inFSharpPipelineDirectBody;
+    this.state.inFSharpPipelineDirectBody = false;
+    const node = this.startNode();
+    this.next();
+    node.elements = this.parseExprList(close, !isTuple, refExpressionErrors, node);
+
+    if (canBePattern && !this.state.maybeInArrowParameters) {
+      this.toReferencedList(node.elements);
+    }
+
+    this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
+    return this.finishNode(node, isTuple ? "TupleExpression" : "ArrayExpression");
+  }
+
   parseArrowExpression(node, params, isAsync, trailingCommaPos) {
     this.scope.enter(SCOPE_FUNCTION | SCOPE_ARROW);
-    this.prodParam.enter(functionFlags(isAsync, false));
+    let flags = functionFlags(isAsync, false);
+
+    if (!this.match(types.bracketL) && this.prodParam.hasIn) {
+      flags |= PARAM_IN;
+    }
+
+    this.prodParam.enter(flags);
     this.initFunction(node, isAsync);
     const oldMaybeInArrowParameters = this.state.maybeInArrowParameters;
     const oldYieldPos = this.state.yieldPos;
@@ -10940,7 +11145,7 @@ class ExpressionParser extends LValParser {
       this.next();
       elt = this.finishNode(node, "ArgumentPlaceholder");
     } else {
-      elt = this.parseMaybeAssign(false, refExpressionErrors, this.parseParenItem, refNeedsArrowPos);
+      elt = this.parseMaybeAssignAllowIn(refExpressionErrors, this.parseParenItem, refNeedsArrowPos);
     }
 
     return elt;
@@ -10960,15 +11165,19 @@ class ExpressionParser extends LValParser {
 
   parseIdentifierName(pos, liberal) {
     let name;
+    const {
+      start,
+      type
+    } = this.state;
 
-    if (this.match(types.name)) {
+    if (type === types.name) {
       name = this.state.value;
-    } else if (this.state.type.keyword) {
-      name = this.state.type.keyword;
-      const context = this.state.context;
+    } else if (type.keyword) {
+      name = type.keyword;
+      const curContext = this.curContext();
 
-      if ((name === "class" || name === "function") && context[context.length - 1].token === "function") {
-        context.pop();
+      if ((type === types._class || type === types._function) && (curContext === types$1.functionStatement || curContext === types$1.functionExpression)) {
+        this.state.context.pop();
       }
     } else {
       throw this.unexpected();
@@ -10977,7 +11186,7 @@ class ExpressionParser extends LValParser {
     if (liberal) {
       this.state.type = types.name;
     } else {
-      this.checkReservedWord(name, this.state.start, !!this.state.type.keyword, false);
+      this.checkReservedWord(name, start, !!type.keyword, false);
     }
 
     this.next();
@@ -11062,7 +11271,7 @@ class ExpressionParser extends LValParser {
     return this.finishNode(node, "AwaitExpression");
   }
 
-  parseYield(noIn) {
+  parseYield() {
     const node = this.startNode();
 
     if (this.state.inParameters) {
@@ -11078,7 +11287,7 @@ class ExpressionParser extends LValParser {
       node.argument = null;
     } else {
       node.delegate = this.eat(types.star);
-      node.argument = this.parseMaybeAssign(noIn);
+      node.argument = this.parseMaybeAssign();
     }
 
     return this.finishNode(node, "YieldExpression");
@@ -11093,55 +11302,33 @@ class ExpressionParser extends LValParser {
   }
 
   parseSmartPipelineBody(childExpression, startPos, startLoc) {
-    const pipelineStyle = this.checkSmartPipelineBodyStyle(childExpression);
-    this.checkSmartPipelineBodyEarlyErrors(childExpression, pipelineStyle, startPos);
-    return this.parseSmartPipelineBodyInStyle(childExpression, pipelineStyle, startPos, startLoc);
+    this.checkSmartPipelineBodyEarlyErrors(childExpression, startPos);
+    return this.parseSmartPipelineBodyInStyle(childExpression, startPos, startLoc);
   }
 
-  checkSmartPipelineBodyEarlyErrors(childExpression, pipelineStyle, startPos) {
+  checkSmartPipelineBodyEarlyErrors(childExpression, startPos) {
     if (this.match(types.arrow)) {
       throw this.raise(this.state.start, ErrorMessages.PipelineBodyNoArrow);
-    } else if (pipelineStyle === "PipelineTopicExpression" && childExpression.type === "SequenceExpression") {
+    } else if (childExpression.type === "SequenceExpression") {
       this.raise(startPos, ErrorMessages.PipelineBodySequenceExpression);
     }
   }
 
-  parseSmartPipelineBodyInStyle(childExpression, pipelineStyle, startPos, startLoc) {
+  parseSmartPipelineBodyInStyle(childExpression, startPos, startLoc) {
     const bodyNode = this.startNodeAt(startPos, startLoc);
+    const isSimpleReference = this.isSimpleReference(childExpression);
 
-    switch (pipelineStyle) {
-      case "PipelineBareFunction":
-        bodyNode.callee = childExpression;
-        break;
+    if (isSimpleReference) {
+      bodyNode.callee = childExpression;
+    } else {
+      if (!this.topicReferenceWasUsedInCurrentTopicContext()) {
+        this.raise(startPos, ErrorMessages.PipelineTopicUnused);
+      }
 
-      case "PipelineBareConstructor":
-        bodyNode.callee = childExpression.callee;
-        break;
-
-      case "PipelineBareAwaitedFunction":
-        bodyNode.callee = childExpression.argument;
-        break;
-
-      case "PipelineTopicExpression":
-        if (!this.topicReferenceWasUsedInCurrentTopicContext()) {
-          this.raise(startPos, ErrorMessages.PipelineTopicUnused);
-        }
-
-        bodyNode.expression = childExpression;
-        break;
-
-      default:
-        throw new Error(`Internal @babel/parser error: Unknown pipeline style (${pipelineStyle})`);
+      bodyNode.expression = childExpression;
     }
 
-    return this.finishNode(bodyNode, pipelineStyle);
-  }
-
-  checkSmartPipelineBodyStyle(expression) {
-    switch (expression.type) {
-      default:
-        return this.isSimpleReference(expression) ? "PipelineBareFunction" : "PipelineTopicExpression";
-    }
+    return this.finishNode(bodyNode, isSimpleReference ? "PipelineBareFunction" : "PipelineTopicExpression");
   }
 
   isSimpleReference(expression) {
@@ -11196,6 +11383,40 @@ class ExpressionParser extends LValParser {
     }
   }
 
+  allowInAnd(callback) {
+    const flags = this.prodParam.currentFlags();
+    const prodParamToSet = PARAM_IN & ~flags;
+
+    if (prodParamToSet) {
+      this.prodParam.enter(flags | PARAM_IN);
+
+      try {
+        return callback();
+      } finally {
+        this.prodParam.exit();
+      }
+    }
+
+    return callback();
+  }
+
+  disallowInAnd(callback) {
+    const flags = this.prodParam.currentFlags();
+    const prodParamToClear = PARAM_IN & flags;
+
+    if (prodParamToClear) {
+      this.prodParam.enter(flags & ~PARAM_IN);
+
+      try {
+        return callback();
+      } finally {
+        this.prodParam.exit();
+      }
+    }
+
+    return callback();
+  }
+
   registerTopicReference() {
     this.state.topicContext.maxTopicIndex = 0;
   }
@@ -11208,13 +11429,13 @@ class ExpressionParser extends LValParser {
     return this.state.topicContext.maxTopicIndex != null && this.state.topicContext.maxTopicIndex >= 0;
   }
 
-  parseFSharpPipelineBody(prec, noIn) {
+  parseFSharpPipelineBody(prec) {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
     this.state.potentialArrowAt = this.state.start;
     const oldInFSharpPipelineDirectBody = this.state.inFSharpPipelineDirectBody;
     this.state.inFSharpPipelineDirectBody = true;
-    const ret = this.parseExprOp(this.parseMaybeUnary(), startPos, startLoc, prec, noIn);
+    const ret = this.parseExprOp(this.parseMaybeUnary(), startPos, startLoc, prec);
     this.state.inFSharpPipelineDirectBody = oldInFSharpPipelineDirectBody;
     return ret;
   }
@@ -11385,15 +11606,17 @@ class StatementParser extends ExpressionParser {
       case types.semi:
         return this.parseEmptyStatement(node);
 
-      case types._export:
       case types._import:
         {
           const nextTokenCharCode = this.lookaheadCharCode();
 
           if (nextTokenCharCode === 40 || nextTokenCharCode === 46) {
-            break;
-          }
+              break;
+            }
+        }
 
+      case types._export:
+        {
           if (!this.options.allowImportExportEverywhere && !topLevel) {
             this.raise(this.state.start, ErrorMessages.UnexpectedImportExport);
           }
@@ -11726,13 +11949,21 @@ class StatementParser extends ExpressionParser {
   parseThrowStatement(node) {
     this.next();
 
-    if (lineBreak.test(this.input.slice(this.state.lastTokEnd, this.state.start))) {
+    if (this.hasPrecedingLineBreak()) {
       this.raise(this.state.lastTokEnd, ErrorMessages.NewlineAfterThrow);
     }
 
     node.argument = this.parseExpression();
     this.semicolon();
     return this.finishNode(node, "ThrowStatement");
+  }
+
+  parseCatchClauseParam() {
+    const param = this.parseBindingAtom();
+    const simple = param.type === "Identifier";
+    this.scope.enter(simple ? SCOPE_SIMPLE_CATCH : 0);
+    this.checkLVal(param, BIND_LEXICAL, null, "catch clause");
+    return param;
   }
 
   parseTryStatement(node) {
@@ -11746,10 +11977,7 @@ class StatementParser extends ExpressionParser {
 
       if (this.match(types.parenL)) {
         this.expect(types.parenL);
-        clause.param = this.parseBindingAtom();
-        const simple = clause.param.type === "Identifier";
-        this.scope.enter(simple ? SCOPE_SIMPLE_CATCH : 0);
-        this.checkLVal(clause.param, BIND_LEXICAL, null, "catch clause");
+        clause.param = this.parseCatchClauseParam();
         this.expect(types.parenR);
       } else {
         clause.param = null;
@@ -11945,7 +12173,7 @@ class StatementParser extends ExpressionParser {
     }
 
     node.left = init;
-    node.right = isForIn ? this.parseExpression() : this.parseMaybeAssign();
+    node.right = isForIn ? this.parseExpression() : this.parseMaybeAssignAllowIn();
     this.expect(types.parenR);
     node.body = this.withTopicForbiddingContext(() => this.parseStatement("for"));
     this.scope.exit();
@@ -11963,7 +12191,7 @@ class StatementParser extends ExpressionParser {
       this.parseVarId(decl, kind);
 
       if (this.eat(types.eq)) {
-        decl.init = this.parseMaybeAssign(isFor);
+        decl.init = isFor ? this.parseMaybeAssignDisallowIn() : this.parseMaybeAssignAllowIn();
       } else {
         if (kind === "const" && !(this.match(types._in) || this.isContextual("of"))) {
           if (!isTypescript) {
@@ -12060,7 +12288,6 @@ class StatementParser extends ExpressionParser {
     this.parseClassId(node, isStatement, optionalId);
     this.parseClassSuper(node);
     node.body = this.parseClassBody(!!node.superClass, oldStrict);
-    this.state.strict = oldStrict;
     return this.finishNode(node, isStatement ? "ClassDeclaration" : "ClassExpression");
   }
 
@@ -12115,11 +12342,7 @@ class StatementParser extends ExpressionParser {
         }
       }
     });
-
-    if (!oldStrict) {
-      this.state.strict = false;
-    }
-
+    this.state.strict = oldStrict;
     this.next();
 
     if (decorators.length) {
@@ -12131,7 +12354,6 @@ class StatementParser extends ExpressionParser {
   }
 
   parseClassMemberFromModifier(classBody, member) {
-    const containsEsc = this.state.containsEsc;
     const key = this.parseIdentifier(true);
 
     if (this.isClassMethod()) {
@@ -12149,8 +12371,6 @@ class StatementParser extends ExpressionParser {
       prop.static = false;
       classBody.body.push(this.parseClassProperty(prop));
       return true;
-    } else if (containsEsc) {
-      throw this.unexpected();
     }
 
     return false;
@@ -12177,7 +12397,7 @@ class StatementParser extends ExpressionParser {
 
     if (this.eat(types.star)) {
       method.kind = "method";
-      this.parseClassPropertyName(method);
+      this.parseClassElementName(method);
 
       if (method.key.type === "PrivateName") {
         this.pushClassPrivateMethod(classBody, privateMethod, true, false);
@@ -12193,7 +12413,7 @@ class StatementParser extends ExpressionParser {
     }
 
     const containsEsc = this.state.containsEsc;
-    const key = this.parseClassPropertyName(member);
+    const key = this.parseClassElementName(member);
     const isPrivate = key.type === "PrivateName";
     const isSimple = key.type === "Identifier";
     const maybeQuestionTokenStart = this.state.start;
@@ -12236,7 +12456,7 @@ class StatementParser extends ExpressionParser {
       }
 
       method.kind = "method";
-      this.parseClassPropertyName(method);
+      this.parseClassElementName(method);
       this.parsePostMemberNameModifiers(publicMember);
 
       if (method.key.type === "PrivateName") {
@@ -12250,7 +12470,7 @@ class StatementParser extends ExpressionParser {
       }
     } else if (isSimple && (key.name === "get" || key.name === "set") && !containsEsc && !(this.match(types.star) && this.isLineTerminator())) {
       method.kind = key.name;
-      this.parseClassPropertyName(publicMethod);
+      this.parseClassElementName(publicMethod);
 
       if (method.key.type === "PrivateName") {
         this.pushClassPrivateMethod(classBody, privateMethod, false, false);
@@ -12274,7 +12494,7 @@ class StatementParser extends ExpressionParser {
     }
   }
 
-  parseClassPropertyName(member) {
+  parseClassElementName(member) {
     const key = this.parsePropertyName(member, true);
 
     if (!member.computed && member.static && (key.name === "prototype" || key.value === "prototype")) {
@@ -12317,14 +12537,10 @@ class StatementParser extends ExpressionParser {
 
   parsePostMemberNameModifiers(methodOrProp) {}
 
-  parseAccessModifier() {
-    return undefined;
-  }
-
   parseClassPrivateProperty(node) {
     this.scope.enter(SCOPE_CLASS | SCOPE_SUPER);
     this.prodParam.enter(PARAM);
-    node.value = this.eat(types.eq) ? this.parseMaybeAssign() : null;
+    node.value = this.eat(types.eq) ? this.parseMaybeAssignAllowIn() : null;
     this.semicolon();
     this.prodParam.exit();
     this.scope.exit();
@@ -12342,7 +12558,7 @@ class StatementParser extends ExpressionParser {
     if (this.match(types.eq)) {
       this.expectPlugin("classProperties");
       this.next();
-      node.value = this.parseMaybeAssign();
+      node.value = this.parseMaybeAssignAllowIn();
     } else {
       node.value = null;
     }
@@ -12459,14 +12675,6 @@ class StatementParser extends ExpressionParser {
 
   maybeParseExportDeclaration(node) {
     if (this.shouldParseExportDeclaration()) {
-      if (this.isContextual("async")) {
-        const next = this.nextTokenStart();
-
-        if (!this.isUnparsedContextual(next, "function")) {
-          this.unexpected(next, types._function);
-        }
-      }
-
       node.specifiers = [];
       node.source = null;
       node.declaration = this.parseExportDeclaration(node);
@@ -12506,7 +12714,7 @@ class StatementParser extends ExpressionParser {
     } else if (this.match(types._const) || this.match(types._var) || this.isLet()) {
       throw this.raise(this.state.start, ErrorMessages.UnsupportedDefaultExport);
     } else {
-      const res = this.parseMaybeAssign();
+      const res = this.parseMaybeAssignAllowIn();
       this.semicolon();
       return res;
     }
@@ -12520,7 +12728,7 @@ class StatementParser extends ExpressionParser {
     if (this.match(types.name)) {
       const value = this.state.value;
 
-      if (value === "async" || value === "let") {
+      if (value === "async" && !this.state.containsEsc || value === "let") {
         return false;
       }
 
@@ -12623,13 +12831,7 @@ class StatementParser extends ExpressionParser {
     const currentContextDecorators = this.state.decoratorStack[this.state.decoratorStack.length - 1];
 
     if (currentContextDecorators.length) {
-      const isClass = node.declaration && (node.declaration.type === "ClassDeclaration" || node.declaration.type === "ClassExpression");
-
-      if (!node.declaration || !isClass) {
-        throw this.raise(node.start, ErrorMessages.UnsupportedDecoratorExport);
-      }
-
-      this.takeDecorators(node.declaration);
+      throw this.raise(node.start, ErrorMessages.UnsupportedDecoratorExport);
     }
   }
 
@@ -13043,2045 +13245,113 @@ exports.tokTypes = types;
 
 /***/ }),
 
-/***/ "./node_modules/end-of-stream/index.js":
-/*!*********************************************!*\
-  !*** ./node_modules/end-of-stream/index.js ***!
-  \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var once = __webpack_require__(/*! once */ "./node_modules/once/once.js");
-
-var noop = function() {};
-
-var isRequest = function(stream) {
-	return stream.setHeader && typeof stream.abort === 'function';
-};
-
-var isChildProcess = function(stream) {
-	return stream.stdio && Array.isArray(stream.stdio) && stream.stdio.length === 3
-};
-
-var eos = function(stream, opts, callback) {
-	if (typeof opts === 'function') return eos(stream, null, opts);
-	if (!opts) opts = {};
-
-	callback = once(callback || noop);
-
-	var ws = stream._writableState;
-	var rs = stream._readableState;
-	var readable = opts.readable || (opts.readable !== false && stream.readable);
-	var writable = opts.writable || (opts.writable !== false && stream.writable);
-	var cancelled = false;
-
-	var onlegacyfinish = function() {
-		if (!stream.writable) onfinish();
-	};
-
-	var onfinish = function() {
-		writable = false;
-		if (!readable) callback.call(stream);
-	};
-
-	var onend = function() {
-		readable = false;
-		if (!writable) callback.call(stream);
-	};
-
-	var onexit = function(exitCode) {
-		callback.call(stream, exitCode ? new Error('exited with error code: ' + exitCode) : null);
-	};
-
-	var onerror = function(err) {
-		callback.call(stream, err);
-	};
-
-	var onclose = function() {
-		process.nextTick(onclosenexttick);
-	};
-
-	var onclosenexttick = function() {
-		if (cancelled) return;
-		if (readable && !(rs && (rs.ended && !rs.destroyed))) return callback.call(stream, new Error('premature close'));
-		if (writable && !(ws && (ws.ended && !ws.destroyed))) return callback.call(stream, new Error('premature close'));
-	};
-
-	var onrequest = function() {
-		stream.req.on('finish', onfinish);
-	};
-
-	if (isRequest(stream)) {
-		stream.on('complete', onfinish);
-		stream.on('abort', onclose);
-		if (stream.req) onrequest();
-		else stream.on('request', onrequest);
-	} else if (writable && !ws) { // legacy streams
-		stream.on('end', onlegacyfinish);
-		stream.on('close', onlegacyfinish);
-	}
-
-	if (isChildProcess(stream)) stream.on('exit', onexit);
-
-	stream.on('end', onend);
-	stream.on('finish', onfinish);
-	if (opts.error !== false) stream.on('error', onerror);
-	stream.on('close', onclose);
-
-	return function() {
-		cancelled = true;
-		stream.removeListener('complete', onfinish);
-		stream.removeListener('abort', onclose);
-		stream.removeListener('request', onrequest);
-		if (stream.req) stream.req.removeListener('finish', onfinish);
-		stream.removeListener('end', onlegacyfinish);
-		stream.removeListener('close', onlegacyfinish);
-		stream.removeListener('finish', onfinish);
-		stream.removeListener('exit', onexit);
-		stream.removeListener('end', onend);
-		stream.removeListener('error', onerror);
-		stream.removeListener('close', onclose);
-	};
-};
-
-module.exports = eos;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/index.js":
-/*!*************************************!*\
-  !*** ./node_modules/execa/index.js ***!
-  \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const path = __webpack_require__(/*! path */ "path");
-const childProcess = __webpack_require__(/*! child_process */ "child_process");
-const crossSpawn = __webpack_require__(/*! cross-spawn */ "./node_modules/execa/node_modules/cross-spawn/index.js");
-const stripFinalNewline = __webpack_require__(/*! strip-final-newline */ "./node_modules/strip-final-newline/index.js");
-const npmRunPath = __webpack_require__(/*! npm-run-path */ "./node_modules/npm-run-path/index.js");
-const onetime = __webpack_require__(/*! onetime */ "./node_modules/onetime/index.js");
-const makeError = __webpack_require__(/*! ./lib/error */ "./node_modules/execa/lib/error.js");
-const normalizeStdio = __webpack_require__(/*! ./lib/stdio */ "./node_modules/execa/lib/stdio.js");
-const {spawnedKill, spawnedCancel, setupTimeout, setExitHandler} = __webpack_require__(/*! ./lib/kill */ "./node_modules/execa/lib/kill.js");
-const {handleInput, getSpawnedResult, makeAllStream, validateInputSync} = __webpack_require__(/*! ./lib/stream.js */ "./node_modules/execa/lib/stream.js");
-const {mergePromise, getSpawnedPromise} = __webpack_require__(/*! ./lib/promise.js */ "./node_modules/execa/lib/promise.js");
-const {joinCommand, parseCommand} = __webpack_require__(/*! ./lib/command.js */ "./node_modules/execa/lib/command.js");
-
-const DEFAULT_MAX_BUFFER = 1000 * 1000 * 100;
-
-const getEnv = ({env: envOption, extendEnv, preferLocal, localDir, execPath}) => {
-	const env = extendEnv ? {...process.env, ...envOption} : envOption;
-
-	if (preferLocal) {
-		return npmRunPath.env({env, cwd: localDir, execPath});
-	}
-
-	return env;
-};
-
-const handleArguments = (file, args, options = {}) => {
-	const parsed = crossSpawn._parse(file, args, options);
-	file = parsed.command;
-	args = parsed.args;
-	options = parsed.options;
-
-	options = {
-		maxBuffer: DEFAULT_MAX_BUFFER,
-		buffer: true,
-		stripFinalNewline: true,
-		extendEnv: true,
-		preferLocal: false,
-		localDir: options.cwd || process.cwd(),
-		execPath: process.execPath,
-		encoding: 'utf8',
-		reject: true,
-		cleanup: true,
-		all: false,
-		windowsHide: true,
-		...options
-	};
-
-	options.env = getEnv(options);
-
-	options.stdio = normalizeStdio(options);
-
-	if (process.platform === 'win32' && path.basename(file, '.exe') === 'cmd') {
-		// #116
-		args.unshift('/q');
-	}
-
-	return {file, args, options, parsed};
-};
-
-const handleOutput = (options, value, error) => {
-	if (typeof value !== 'string' && !Buffer.isBuffer(value)) {
-		// When `execa.sync()` errors, we normalize it to '' to mimic `execa()`
-		return error === undefined ? undefined : '';
-	}
-
-	if (options.stripFinalNewline) {
-		return stripFinalNewline(value);
-	}
-
-	return value;
-};
-
-const execa = (file, args, options) => {
-	const parsed = handleArguments(file, args, options);
-	const command = joinCommand(file, args);
-
-	let spawned;
-	try {
-		spawned = childProcess.spawn(parsed.file, parsed.args, parsed.options);
-	} catch (error) {
-		// Ensure the returned error is always both a promise and a child process
-		const dummySpawned = new childProcess.ChildProcess();
-		const errorPromise = Promise.reject(makeError({
-			error,
-			stdout: '',
-			stderr: '',
-			all: '',
-			command,
-			parsed,
-			timedOut: false,
-			isCanceled: false,
-			killed: false
-		}));
-		return mergePromise(dummySpawned, errorPromise);
-	}
-
-	const spawnedPromise = getSpawnedPromise(spawned);
-	const timedPromise = setupTimeout(spawned, parsed.options, spawnedPromise);
-	const processDone = setExitHandler(spawned, parsed.options, timedPromise);
-
-	const context = {isCanceled: false};
-
-	spawned.kill = spawnedKill.bind(null, spawned.kill.bind(spawned));
-	spawned.cancel = spawnedCancel.bind(null, spawned, context);
-
-	const handlePromise = async () => {
-		const [{error, exitCode, signal, timedOut}, stdoutResult, stderrResult, allResult] = await getSpawnedResult(spawned, parsed.options, processDone);
-		const stdout = handleOutput(parsed.options, stdoutResult);
-		const stderr = handleOutput(parsed.options, stderrResult);
-		const all = handleOutput(parsed.options, allResult);
-
-		if (error || exitCode !== 0 || signal !== null) {
-			const returnedError = makeError({
-				error,
-				exitCode,
-				signal,
-				stdout,
-				stderr,
-				all,
-				command,
-				parsed,
-				timedOut,
-				isCanceled: context.isCanceled,
-				killed: spawned.killed
-			});
-
-			if (!parsed.options.reject) {
-				return returnedError;
-			}
-
-			throw returnedError;
-		}
-
-		return {
-			command,
-			exitCode: 0,
-			stdout,
-			stderr,
-			all,
-			failed: false,
-			timedOut: false,
-			isCanceled: false,
-			killed: false
-		};
-	};
-
-	const handlePromiseOnce = onetime(handlePromise);
-
-	crossSpawn._enoent.hookChildProcess(spawned, parsed.parsed);
-
-	handleInput(spawned, parsed.options.input);
-
-	spawned.all = makeAllStream(spawned, parsed.options);
-
-	return mergePromise(spawned, handlePromiseOnce);
-};
-
-module.exports = execa;
-
-module.exports.sync = (file, args, options) => {
-	const parsed = handleArguments(file, args, options);
-	const command = joinCommand(file, args);
-
-	validateInputSync(parsed.options);
-
-	let result;
-	try {
-		result = childProcess.spawnSync(parsed.file, parsed.args, parsed.options);
-	} catch (error) {
-		throw makeError({
-			error,
-			stdout: '',
-			stderr: '',
-			all: '',
-			command,
-			parsed,
-			timedOut: false,
-			isCanceled: false,
-			killed: false
-		});
-	}
-
-	const stdout = handleOutput(parsed.options, result.stdout, result.error);
-	const stderr = handleOutput(parsed.options, result.stderr, result.error);
-
-	if (result.error || result.status !== 0 || result.signal !== null) {
-		const error = makeError({
-			stdout,
-			stderr,
-			error: result.error,
-			signal: result.signal,
-			exitCode: result.status,
-			command,
-			parsed,
-			timedOut: result.error && result.error.code === 'ETIMEDOUT',
-			isCanceled: false,
-			killed: result.signal !== null
-		});
-
-		if (!parsed.options.reject) {
-			return error;
-		}
-
-		throw error;
-	}
-
-	return {
-		command,
-		exitCode: 0,
-		stdout,
-		stderr,
-		failed: false,
-		timedOut: false,
-		isCanceled: false,
-		killed: false
-	};
-};
-
-module.exports.command = (command, options) => {
-	const [file, ...args] = parseCommand(command);
-	return execa(file, args, options);
-};
-
-module.exports.commandSync = (command, options) => {
-	const [file, ...args] = parseCommand(command);
-	return execa.sync(file, args, options);
-};
-
-module.exports.node = (scriptPath, args, options = {}) => {
-	if (args && !Array.isArray(args) && typeof args === 'object') {
-		options = args;
-		args = [];
-	}
-
-	const stdio = normalizeStdio.node(options);
-
-	const {nodePath = process.execPath, nodeOptions = process.execArgv} = options;
-
-	return execa(
-		nodePath,
-		[
-			...nodeOptions,
-			scriptPath,
-			...(Array.isArray(args) ? args : [])
-		],
-		{
-			...options,
-			stdin: undefined,
-			stdout: undefined,
-			stderr: undefined,
-			stdio,
-			shell: false
-		}
-	);
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/lib/command.js":
-/*!*******************************************!*\
-  !*** ./node_modules/execa/lib/command.js ***!
-  \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const SPACES_REGEXP = / +/g;
-
-const joinCommand = (file, args = []) => {
-	if (!Array.isArray(args)) {
-		return file;
-	}
-
-	return [file, ...args].join(' ');
-};
-
-// Allow spaces to be escaped by a backslash if not meant as a delimiter
-const handleEscaping = (tokens, token, index) => {
-	if (index === 0) {
-		return [token];
-	}
-
-	const previousToken = tokens[tokens.length - 1];
-
-	if (previousToken.endsWith('\\')) {
-		return [...tokens.slice(0, -1), `${previousToken.slice(0, -1)} ${token}`];
-	}
-
-	return [...tokens, token];
-};
-
-// Handle `execa.command()`
-const parseCommand = command => {
-	return command
-		.trim()
-		.split(SPACES_REGEXP)
-		.reduce(handleEscaping, []);
-};
-
-module.exports = {
-	joinCommand,
-	parseCommand
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/lib/error.js":
-/*!*****************************************!*\
-  !*** ./node_modules/execa/lib/error.js ***!
-  \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const {signalsByName} = __webpack_require__(/*! human-signals */ "./node_modules/human-signals/build/src/main.js");
-
-const getErrorPrefix = ({timedOut, timeout, errorCode, signal, signalDescription, exitCode, isCanceled}) => {
-	if (timedOut) {
-		return `timed out after ${timeout} milliseconds`;
-	}
-
-	if (isCanceled) {
-		return 'was canceled';
-	}
-
-	if (errorCode !== undefined) {
-		return `failed with ${errorCode}`;
-	}
-
-	if (signal !== undefined) {
-		return `was killed with ${signal} (${signalDescription})`;
-	}
-
-	if (exitCode !== undefined) {
-		return `failed with exit code ${exitCode}`;
-	}
-
-	return 'failed';
-};
-
-const makeError = ({
-	stdout,
-	stderr,
-	all,
-	error,
-	signal,
-	exitCode,
-	command,
-	timedOut,
-	isCanceled,
-	killed,
-	parsed: {options: {timeout}}
-}) => {
-	// `signal` and `exitCode` emitted on `spawned.on('exit')` event can be `null`.
-	// We normalize them to `undefined`
-	exitCode = exitCode === null ? undefined : exitCode;
-	signal = signal === null ? undefined : signal;
-	const signalDescription = signal === undefined ? undefined : signalsByName[signal].description;
-
-	const errorCode = error && error.code;
-
-	const prefix = getErrorPrefix({timedOut, timeout, errorCode, signal, signalDescription, exitCode, isCanceled});
-	const execaMessage = `Command ${prefix}: ${command}`;
-	const isError = Object.prototype.toString.call(error) === '[object Error]';
-	const shortMessage = isError ? `${execaMessage}\n${error.message}` : execaMessage;
-	const message = [shortMessage, stderr, stdout].filter(Boolean).join('\n');
-
-	if (isError) {
-		error.originalMessage = error.message;
-		error.message = message;
-	} else {
-		error = new Error(message);
-	}
-
-	error.shortMessage = shortMessage;
-	error.command = command;
-	error.exitCode = exitCode;
-	error.signal = signal;
-	error.signalDescription = signalDescription;
-	error.stdout = stdout;
-	error.stderr = stderr;
-
-	if (all !== undefined) {
-		error.all = all;
-	}
-
-	if ('bufferedData' in error) {
-		delete error.bufferedData;
-	}
-
-	error.failed = true;
-	error.timedOut = Boolean(timedOut);
-	error.isCanceled = isCanceled;
-	error.killed = killed && !timedOut;
-
-	return error;
-};
-
-module.exports = makeError;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/lib/kill.js":
-/*!****************************************!*\
-  !*** ./node_modules/execa/lib/kill.js ***!
-  \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const os = __webpack_require__(/*! os */ "os");
-const onExit = __webpack_require__(/*! signal-exit */ "./node_modules/signal-exit/index.js");
-
-const DEFAULT_FORCE_KILL_TIMEOUT = 1000 * 5;
-
-// Monkey-patches `childProcess.kill()` to add `forceKillAfterTimeout` behavior
-const spawnedKill = (kill, signal = 'SIGTERM', options = {}) => {
-	const killResult = kill(signal);
-	setKillTimeout(kill, signal, options, killResult);
-	return killResult;
-};
-
-const setKillTimeout = (kill, signal, options, killResult) => {
-	if (!shouldForceKill(signal, options, killResult)) {
-		return;
-	}
-
-	const timeout = getForceKillAfterTimeout(options);
-	const t = setTimeout(() => {
-		kill('SIGKILL');
-	}, timeout);
-
-	// Guarded because there's no `.unref()` when `execa` is used in the renderer
-	// process in Electron. This cannot be tested since we don't run tests in
-	// Electron.
-	// istanbul ignore else
-	if (t.unref) {
-		t.unref();
-	}
-};
-
-const shouldForceKill = (signal, {forceKillAfterTimeout}, killResult) => {
-	return isSigterm(signal) && forceKillAfterTimeout !== false && killResult;
-};
-
-const isSigterm = signal => {
-	return signal === os.constants.signals.SIGTERM ||
-		(typeof signal === 'string' && signal.toUpperCase() === 'SIGTERM');
-};
-
-const getForceKillAfterTimeout = ({forceKillAfterTimeout = true}) => {
-	if (forceKillAfterTimeout === true) {
-		return DEFAULT_FORCE_KILL_TIMEOUT;
-	}
-
-	if (!Number.isFinite(forceKillAfterTimeout) || forceKillAfterTimeout < 0) {
-		throw new TypeError(`Expected the \`forceKillAfterTimeout\` option to be a non-negative integer, got \`${forceKillAfterTimeout}\` (${typeof forceKillAfterTimeout})`);
-	}
-
-	return forceKillAfterTimeout;
-};
-
-// `childProcess.cancel()`
-const spawnedCancel = (spawned, context) => {
-	const killResult = spawned.kill();
-
-	if (killResult) {
-		context.isCanceled = true;
-	}
-};
-
-const timeoutKill = (spawned, signal, reject) => {
-	spawned.kill(signal);
-	reject(Object.assign(new Error('Timed out'), {timedOut: true, signal}));
-};
-
-// `timeout` option handling
-const setupTimeout = (spawned, {timeout, killSignal = 'SIGTERM'}, spawnedPromise) => {
-	if (timeout === 0 || timeout === undefined) {
-		return spawnedPromise;
-	}
-
-	if (!Number.isFinite(timeout) || timeout < 0) {
-		throw new TypeError(`Expected the \`timeout\` option to be a non-negative integer, got \`${timeout}\` (${typeof timeout})`);
-	}
-
-	let timeoutId;
-	const timeoutPromise = new Promise((resolve, reject) => {
-		timeoutId = setTimeout(() => {
-			timeoutKill(spawned, killSignal, reject);
-		}, timeout);
-	});
-
-	const safeSpawnedPromise = spawnedPromise.finally(() => {
-		clearTimeout(timeoutId);
-	});
-
-	return Promise.race([timeoutPromise, safeSpawnedPromise]);
-};
-
-// `cleanup` option handling
-const setExitHandler = async (spawned, {cleanup, detached}, timedPromise) => {
-	if (!cleanup || detached) {
-		return timedPromise;
-	}
-
-	const removeExitHandler = onExit(() => {
-		spawned.kill();
-	});
-
-	return timedPromise.finally(() => {
-		removeExitHandler();
-	});
-};
-
-module.exports = {
-	spawnedKill,
-	spawnedCancel,
-	setupTimeout,
-	setExitHandler
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/lib/promise.js":
-/*!*******************************************!*\
-  !*** ./node_modules/execa/lib/promise.js ***!
-  \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const nativePromisePrototype = (async () => {})().constructor.prototype;
-const descriptors = ['then', 'catch', 'finally'].map(property => [
-	property,
-	Reflect.getOwnPropertyDescriptor(nativePromisePrototype, property)
-]);
-
-// The return value is a mixin of `childProcess` and `Promise`
-const mergePromise = (spawned, promise) => {
-	for (const [property, descriptor] of descriptors) {
-		// Starting the main `promise` is deferred to avoid consuming streams
-		const value = typeof promise === 'function' ?
-			(...args) => Reflect.apply(descriptor.value, promise(), args) :
-			descriptor.value.bind(promise);
-
-		Reflect.defineProperty(spawned, property, {...descriptor, value});
-	}
-
-	return spawned;
-};
-
-// Use promises instead of `child_process` events
-const getSpawnedPromise = spawned => {
-	return new Promise((resolve, reject) => {
-		spawned.on('exit', (exitCode, signal) => {
-			resolve({exitCode, signal});
-		});
-
-		spawned.on('error', error => {
-			reject(error);
-		});
-
-		if (spawned.stdin) {
-			spawned.stdin.on('error', error => {
-				reject(error);
-			});
-		}
-	});
-};
-
-module.exports = {
-	mergePromise,
-	getSpawnedPromise
-};
-
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/lib/stdio.js":
-/*!*****************************************!*\
-  !*** ./node_modules/execa/lib/stdio.js ***!
-  \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const aliases = ['stdin', 'stdout', 'stderr'];
-
-const hasAlias = opts => aliases.some(alias => opts[alias] !== undefined);
-
-const normalizeStdio = opts => {
-	if (!opts) {
-		return;
-	}
-
-	const {stdio} = opts;
-
-	if (stdio === undefined) {
-		return aliases.map(alias => opts[alias]);
-	}
-
-	if (hasAlias(opts)) {
-		throw new Error(`It's not possible to provide \`stdio\` in combination with one of ${aliases.map(alias => `\`${alias}\``).join(', ')}`);
-	}
-
-	if (typeof stdio === 'string') {
-		return stdio;
-	}
-
-	if (!Array.isArray(stdio)) {
-		throw new TypeError(`Expected \`stdio\` to be of type \`string\` or \`Array\`, got \`${typeof stdio}\``);
-	}
-
-	const length = Math.max(stdio.length, aliases.length);
-	return Array.from({length}, (value, index) => stdio[index]);
-};
-
-module.exports = normalizeStdio;
-
-// `ipc` is pushed unless it is already present
-module.exports.node = opts => {
-	const stdio = normalizeStdio(opts);
-
-	if (stdio === 'ipc') {
-		return 'ipc';
-	}
-
-	if (stdio === undefined || typeof stdio === 'string') {
-		return [stdio, stdio, stdio, 'ipc'];
-	}
-
-	if (stdio.includes('ipc')) {
-		return stdio;
-	}
-
-	return [...stdio, 'ipc'];
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/lib/stream.js":
-/*!******************************************!*\
-  !*** ./node_modules/execa/lib/stream.js ***!
-  \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const isStream = __webpack_require__(/*! is-stream */ "./node_modules/is-stream/index.js");
-const getStream = __webpack_require__(/*! get-stream */ "./node_modules/get-stream/index.js");
-const mergeStream = __webpack_require__(/*! merge-stream */ "./node_modules/merge-stream/index.js");
-
-// `input` option
-const handleInput = (spawned, input) => {
-	// Checking for stdin is workaround for https://github.com/nodejs/node/issues/26852
-	// TODO: Remove `|| spawned.stdin === undefined` once we drop support for Node.js <=12.2.0
-	if (input === undefined || spawned.stdin === undefined) {
-		return;
-	}
-
-	if (isStream(input)) {
-		input.pipe(spawned.stdin);
-	} else {
-		spawned.stdin.end(input);
-	}
-};
-
-// `all` interleaves `stdout` and `stderr`
-const makeAllStream = (spawned, {all}) => {
-	if (!all || (!spawned.stdout && !spawned.stderr)) {
-		return;
-	}
-
-	const mixed = mergeStream();
-
-	if (spawned.stdout) {
-		mixed.add(spawned.stdout);
-	}
-
-	if (spawned.stderr) {
-		mixed.add(spawned.stderr);
-	}
-
-	return mixed;
-};
-
-// On failure, `result.stdout|stderr|all` should contain the currently buffered stream
-const getBufferedData = async (stream, streamPromise) => {
-	if (!stream) {
-		return;
-	}
-
-	stream.destroy();
-
-	try {
-		return await streamPromise;
-	} catch (error) {
-		return error.bufferedData;
-	}
-};
-
-const getStreamPromise = (stream, {encoding, buffer, maxBuffer}) => {
-	if (!stream || !buffer) {
-		return;
-	}
-
-	if (encoding) {
-		return getStream(stream, {encoding, maxBuffer});
-	}
-
-	return getStream.buffer(stream, {maxBuffer});
-};
-
-// Retrieve result of child process: exit code, signal, error, streams (stdout/stderr/all)
-const getSpawnedResult = async ({stdout, stderr, all}, {encoding, buffer, maxBuffer}, processDone) => {
-	const stdoutPromise = getStreamPromise(stdout, {encoding, buffer, maxBuffer});
-	const stderrPromise = getStreamPromise(stderr, {encoding, buffer, maxBuffer});
-	const allPromise = getStreamPromise(all, {encoding, buffer, maxBuffer: maxBuffer * 2});
-
-	try {
-		return await Promise.all([processDone, stdoutPromise, stderrPromise, allPromise]);
-	} catch (error) {
-		return Promise.all([
-			{error, signal: error.signal, timedOut: error.timedOut},
-			getBufferedData(stdout, stdoutPromise),
-			getBufferedData(stderr, stderrPromise),
-			getBufferedData(all, allPromise)
-		]);
-	}
-};
-
-const validateInputSync = ({input}) => {
-	if (isStream(input)) {
-		throw new TypeError('The `input` option cannot be a stream in sync mode');
-	}
-};
-
-module.exports = {
-	handleInput,
-	makeAllStream,
-	getSpawnedResult,
-	validateInputSync
-};
-
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/cross-spawn/index.js":
-/*!**************************************************************!*\
-  !*** ./node_modules/execa/node_modules/cross-spawn/index.js ***!
-  \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const cp = __webpack_require__(/*! child_process */ "child_process");
-const parse = __webpack_require__(/*! ./lib/parse */ "./node_modules/execa/node_modules/cross-spawn/lib/parse.js");
-const enoent = __webpack_require__(/*! ./lib/enoent */ "./node_modules/execa/node_modules/cross-spawn/lib/enoent.js");
-
-function spawn(command, args, options) {
-    // Parse the arguments
-    const parsed = parse(command, args, options);
-
-    // Spawn the child process
-    const spawned = cp.spawn(parsed.command, parsed.args, parsed.options);
-
-    // Hook into child process "exit" event to emit an error if the command
-    // does not exists, see: https://github.com/IndigoUnited/node-cross-spawn/issues/16
-    enoent.hookChildProcess(spawned, parsed);
-
-    return spawned;
-}
-
-function spawnSync(command, args, options) {
-    // Parse the arguments
-    const parsed = parse(command, args, options);
-
-    // Spawn the child process
-    const result = cp.spawnSync(parsed.command, parsed.args, parsed.options);
-
-    // Analyze if the command does not exist, see: https://github.com/IndigoUnited/node-cross-spawn/issues/16
-    result.error = result.error || enoent.verifyENOENTSync(result.status, parsed);
-
-    return result;
-}
-
-module.exports = spawn;
-module.exports.spawn = spawn;
-module.exports.sync = spawnSync;
-
-module.exports._parse = parse;
-module.exports._enoent = enoent;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/cross-spawn/lib/enoent.js":
-/*!*******************************************************************!*\
-  !*** ./node_modules/execa/node_modules/cross-spawn/lib/enoent.js ***!
-  \*******************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const isWin = process.platform === 'win32';
-
-function notFoundError(original, syscall) {
-    return Object.assign(new Error(`${syscall} ${original.command} ENOENT`), {
-        code: 'ENOENT',
-        errno: 'ENOENT',
-        syscall: `${syscall} ${original.command}`,
-        path: original.command,
-        spawnargs: original.args,
-    });
-}
-
-function hookChildProcess(cp, parsed) {
-    if (!isWin) {
-        return;
-    }
-
-    const originalEmit = cp.emit;
-
-    cp.emit = function (name, arg1) {
-        // If emitting "exit" event and exit code is 1, we need to check if
-        // the command exists and emit an "error" instead
-        // See https://github.com/IndigoUnited/node-cross-spawn/issues/16
-        if (name === 'exit') {
-            const err = verifyENOENT(arg1, parsed, 'spawn');
-
-            if (err) {
-                return originalEmit.call(cp, 'error', err);
-            }
-        }
-
-        return originalEmit.apply(cp, arguments); // eslint-disable-line prefer-rest-params
-    };
-}
-
-function verifyENOENT(status, parsed) {
-    if (isWin && status === 1 && !parsed.file) {
-        return notFoundError(parsed.original, 'spawn');
-    }
-
-    return null;
-}
-
-function verifyENOENTSync(status, parsed) {
-    if (isWin && status === 1 && !parsed.file) {
-        return notFoundError(parsed.original, 'spawnSync');
-    }
-
-    return null;
-}
-
-module.exports = {
-    hookChildProcess,
-    verifyENOENT,
-    verifyENOENTSync,
-    notFoundError,
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/cross-spawn/lib/parse.js":
-/*!******************************************************************!*\
-  !*** ./node_modules/execa/node_modules/cross-spawn/lib/parse.js ***!
-  \******************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const path = __webpack_require__(/*! path */ "path");
-const resolveCommand = __webpack_require__(/*! ./util/resolveCommand */ "./node_modules/execa/node_modules/cross-spawn/lib/util/resolveCommand.js");
-const escape = __webpack_require__(/*! ./util/escape */ "./node_modules/execa/node_modules/cross-spawn/lib/util/escape.js");
-const readShebang = __webpack_require__(/*! ./util/readShebang */ "./node_modules/execa/node_modules/cross-spawn/lib/util/readShebang.js");
-
-const isWin = process.platform === 'win32';
-const isExecutableRegExp = /\.(?:com|exe)$/i;
-const isCmdShimRegExp = /node_modules[\\/].bin[\\/][^\\/]+\.cmd$/i;
-
-function detectShebang(parsed) {
-    parsed.file = resolveCommand(parsed);
-
-    const shebang = parsed.file && readShebang(parsed.file);
-
-    if (shebang) {
-        parsed.args.unshift(parsed.file);
-        parsed.command = shebang;
-
-        return resolveCommand(parsed);
-    }
-
-    return parsed.file;
-}
-
-function parseNonShell(parsed) {
-    if (!isWin) {
-        return parsed;
-    }
-
-    // Detect & add support for shebangs
-    const commandFile = detectShebang(parsed);
-
-    // We don't need a shell if the command filename is an executable
-    const needsShell = !isExecutableRegExp.test(commandFile);
-
-    // If a shell is required, use cmd.exe and take care of escaping everything correctly
-    // Note that `forceShell` is an hidden option used only in tests
-    if (parsed.options.forceShell || needsShell) {
-        // Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
-        // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
-        // Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
-        // we need to double escape them
-        const needsDoubleEscapeMetaChars = isCmdShimRegExp.test(commandFile);
-
-        // Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
-        // This is necessary otherwise it will always fail with ENOENT in those cases
-        parsed.command = path.normalize(parsed.command);
-
-        // Escape command & arguments
-        parsed.command = escape.command(parsed.command);
-        parsed.args = parsed.args.map((arg) => escape.argument(arg, needsDoubleEscapeMetaChars));
-
-        const shellCommand = [parsed.command].concat(parsed.args).join(' ');
-
-        parsed.args = ['/d', '/s', '/c', `"${shellCommand}"`];
-        parsed.command = process.env.comspec || 'cmd.exe';
-        parsed.options.windowsVerbatimArguments = true; // Tell node's spawn that the arguments are already escaped
-    }
-
-    return parsed;
-}
-
-function parse(command, args, options) {
-    // Normalize arguments, similar to nodejs
-    if (args && !Array.isArray(args)) {
-        options = args;
-        args = null;
-    }
-
-    args = args ? args.slice(0) : []; // Clone array to avoid changing the original
-    options = Object.assign({}, options); // Clone object to avoid changing the original
-
-    // Build our parsed object
-    const parsed = {
-        command,
-        args,
-        options,
-        file: undefined,
-        original: {
-            command,
-            args,
-        },
-    };
-
-    // Delegate further parsing to shell or non-shell
-    return options.shell ? parsed : parseNonShell(parsed);
-}
-
-module.exports = parse;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/cross-spawn/lib/util/escape.js":
-/*!************************************************************************!*\
-  !*** ./node_modules/execa/node_modules/cross-spawn/lib/util/escape.js ***!
-  \************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-// See http://www.robvanderwoude.com/escapechars.php
-const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
-
-function escapeCommand(arg) {
-    // Escape meta chars
-    arg = arg.replace(metaCharsRegExp, '^$1');
-
-    return arg;
-}
-
-function escapeArgument(arg, doubleEscapeMetaChars) {
-    // Convert to string
-    arg = `${arg}`;
-
-    // Algorithm below is based on https://qntm.org/cmd
-
-    // Sequence of backslashes followed by a double quote:
-    // double up all the backslashes and escape the double quote
-    arg = arg.replace(/(\\*)"/g, '$1$1\\"');
-
-    // Sequence of backslashes followed by the end of the string
-    // (which will become a double quote later):
-    // double up all the backslashes
-    arg = arg.replace(/(\\*)$/, '$1$1');
-
-    // All other backslashes occur literally
-
-    // Quote the whole thing:
-    arg = `"${arg}"`;
-
-    // Escape meta chars
-    arg = arg.replace(metaCharsRegExp, '^$1');
-
-    // Double escape meta chars if necessary
-    if (doubleEscapeMetaChars) {
-        arg = arg.replace(metaCharsRegExp, '^$1');
-    }
-
-    return arg;
-}
-
-module.exports.command = escapeCommand;
-module.exports.argument = escapeArgument;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/cross-spawn/lib/util/readShebang.js":
-/*!*****************************************************************************!*\
-  !*** ./node_modules/execa/node_modules/cross-spawn/lib/util/readShebang.js ***!
-  \*****************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const fs = __webpack_require__(/*! fs */ "fs");
-const shebangCommand = __webpack_require__(/*! shebang-command */ "./node_modules/execa/node_modules/shebang-command/index.js");
-
-function readShebang(command) {
-    // Read the first 150 bytes from the file
-    const size = 150;
-    const buffer = Buffer.alloc(size);
-
-    let fd;
-
-    try {
-        fd = fs.openSync(command, 'r');
-        fs.readSync(fd, buffer, 0, size, 0);
-        fs.closeSync(fd);
-    } catch (e) { /* Empty */ }
-
-    // Attempt to extract shebang (null is returned if not a shebang)
-    return shebangCommand(buffer.toString());
-}
-
-module.exports = readShebang;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/cross-spawn/lib/util/resolveCommand.js":
-/*!********************************************************************************!*\
-  !*** ./node_modules/execa/node_modules/cross-spawn/lib/util/resolveCommand.js ***!
-  \********************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const path = __webpack_require__(/*! path */ "path");
-const which = __webpack_require__(/*! which */ "./node_modules/execa/node_modules/which/which.js");
-const getPathKey = __webpack_require__(/*! path-key */ "./node_modules/execa/node_modules/path-key/index.js");
-
-function resolveCommandAttempt(parsed, withoutPathExt) {
-    const env = parsed.options.env || process.env;
-    const cwd = process.cwd();
-    const hasCustomCwd = parsed.options.cwd != null;
-    // Worker threads do not have process.chdir()
-    const shouldSwitchCwd = hasCustomCwd && process.chdir !== undefined && !process.chdir.disabled;
-
-    // If a custom `cwd` was specified, we need to change the process cwd
-    // because `which` will do stat calls but does not support a custom cwd
-    if (shouldSwitchCwd) {
-        try {
-            process.chdir(parsed.options.cwd);
-        } catch (err) {
-            /* Empty */
-        }
-    }
-
-    let resolved;
-
-    try {
-        resolved = which.sync(parsed.command, {
-            path: env[getPathKey({ env })],
-            pathExt: withoutPathExt ? path.delimiter : undefined,
-        });
-    } catch (e) {
-        /* Empty */
-    } finally {
-        if (shouldSwitchCwd) {
-            process.chdir(cwd);
-        }
-    }
-
-    // If we successfully resolved, ensure that an absolute path is returned
-    // Note that when a custom `cwd` was used, we need to resolve to an absolute path based on it
-    if (resolved) {
-        resolved = path.resolve(hasCustomCwd ? parsed.options.cwd : '', resolved);
-    }
-
-    return resolved;
-}
-
-function resolveCommand(parsed) {
-    return resolveCommandAttempt(parsed) || resolveCommandAttempt(parsed, true);
-}
-
-module.exports = resolveCommand;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/path-key/index.js":
+/***/ "./node_modules/@ericbiewener/utils/src/createDir.ts":
 /*!***********************************************************!*\
-  !*** ./node_modules/execa/node_modules/path-key/index.js ***!
+  !*** ./node_modules/@ericbiewener/utils/src/createDir.ts ***!
   \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! exports provided: createDir */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createDir", function() { return createDir; });
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! fs */ "fs");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_0__);
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 
-const pathKey = (options = {}) => {
-	const environment = options.env || process.env;
-	const platform = options.platform || process.platform;
+var createDir = function createDir(dirpath, options) {
+  try {
+    fs__WEBPACK_IMPORTED_MODULE_0___default.a.mkdirSync(dirpath, _objectSpread({
+      recursive: true
+    }, options));
+  } catch (e) {
+    if (e.code !== 'EEXIST') throw e;
+    return false;
+  }
 
-	if (platform !== 'win32') {
-		return 'PATH';
-	}
-
-	return Object.keys(environment).reverse().find(key => key.toUpperCase() === 'PATH') || 'Path';
+  return true;
 };
 
-module.exports = pathKey;
-// TODO: Remove this for the next major release
-module.exports.default = pathKey;
-
-
 /***/ }),
 
-/***/ "./node_modules/execa/node_modules/shebang-command/index.js":
-/*!******************************************************************!*\
-  !*** ./node_modules/execa/node_modules/shebang-command/index.js ***!
-  \******************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const shebangRegex = __webpack_require__(/*! shebang-regex */ "./node_modules/execa/node_modules/shebang-regex/index.js");
-
-module.exports = (string = '') => {
-	const match = string.match(shebangRegex);
-
-	if (!match) {
-		return null;
-	}
-
-	const [path, argument] = match[0].replace(/#! ?/, '').split(' ');
-	const binary = path.split('/').pop();
-
-	if (binary === 'env') {
-		return argument;
-	}
-
-	return argument ? `${binary} ${argument}` : binary;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/shebang-regex/index.js":
-/*!****************************************************************!*\
-  !*** ./node_modules/execa/node_modules/shebang-regex/index.js ***!
-  \****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-module.exports = /^#!(.*)/;
-
-
-/***/ }),
-
-/***/ "./node_modules/execa/node_modules/which/which.js":
+/***/ "./node_modules/@ericbiewener/utils/src/isFile.ts":
 /*!********************************************************!*\
-  !*** ./node_modules/execa/node_modules/which/which.js ***!
+  !*** ./node_modules/@ericbiewener/utils/src/isFile.ts ***!
   \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! exports provided: isFile */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-const isWindows = process.platform === 'win32' ||
-    process.env.OSTYPE === 'cygwin' ||
-    process.env.OSTYPE === 'msys'
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isFile", function() { return isFile; });
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! fs */ "fs");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_0__);
 
-const path = __webpack_require__(/*! path */ "path")
-const COLON = isWindows ? ';' : ':'
-const isexe = __webpack_require__(/*! isexe */ "./node_modules/isexe/index.js")
+var isFile = function isFile(filepath) {
+  try {
+    return fs__WEBPACK_IMPORTED_MODULE_0___default.a.statSync(filepath).isFile();
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e; // File might exist, but something else went wrong (e.g. permissions error)
 
-const getNotFoundError = (cmd) =>
-  Object.assign(new Error(`not found: ${cmd}`), { code: 'ENOENT' })
-
-const getPathInfo = (cmd, opt) => {
-  const colon = opt.colon || COLON
-
-  // If it has a slash, then we don't bother searching the pathenv.
-  // just check the file itself, and that's it.
-  const pathEnv = cmd.match(/\//) || isWindows && cmd.match(/\\/) ? ['']
-    : (
-      [
-        // windows always checks the cwd first
-        ...(isWindows ? [process.cwd()] : []),
-        ...(opt.path || process.env.PATH ||
-          /* istanbul ignore next: very unusual */ '').split(colon),
-      ]
-    )
-  const pathExtExe = isWindows
-    ? opt.pathExt || process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM'
-    : ''
-  const pathExt = isWindows ? pathExtExe.split(colon) : ['']
-
-  if (isWindows) {
-    if (cmd.indexOf('.') !== -1 && pathExt[0] !== '')
-      pathExt.unshift('')
+    return false;
   }
-
-  return {
-    pathEnv,
-    pathExt,
-    pathExtExe,
-  }
-}
-
-const which = (cmd, opt, cb) => {
-  if (typeof opt === 'function') {
-    cb = opt
-    opt = {}
-  }
-  if (!opt)
-    opt = {}
-
-  const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt)
-  const found = []
-
-  const step = i => new Promise((resolve, reject) => {
-    if (i === pathEnv.length)
-      return opt.all && found.length ? resolve(found)
-        : reject(getNotFoundError(cmd))
-
-    const ppRaw = pathEnv[i]
-    const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw
-
-    const pCmd = path.join(pathPart, cmd)
-    const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd
-      : pCmd
-
-    resolve(subStep(p, i, 0))
-  })
-
-  const subStep = (p, i, ii) => new Promise((resolve, reject) => {
-    if (ii === pathExt.length)
-      return resolve(step(i + 1))
-    const ext = pathExt[ii]
-    isexe(p + ext, { pathExt: pathExtExe }, (er, is) => {
-      if (!er && is) {
-        if (opt.all)
-          found.push(p + ext)
-        else
-          return resolve(p + ext)
-      }
-      return resolve(subStep(p, i, ii + 1))
-    })
-  })
-
-  return cb ? step(0).then(res => cb(null, res), cb) : step(0)
-}
-
-const whichSync = (cmd, opt) => {
-  opt = opt || {}
-
-  const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt)
-  const found = []
-
-  for (let i = 0; i < pathEnv.length; i ++) {
-    const ppRaw = pathEnv[i]
-    const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw
-
-    const pCmd = path.join(pathPart, cmd)
-    const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd
-      : pCmd
-
-    for (let j = 0; j < pathExt.length; j ++) {
-      const cur = p + pathExt[j]
-      try {
-        const is = isexe.sync(cur, { pathExt: pathExtExe })
-        if (is) {
-          if (opt.all)
-            found.push(cur)
-          else
-            return cur
-        }
-      } catch (ex) {}
-    }
-  }
-
-  if (opt.all && found.length)
-    return found
-
-  if (opt.nothrow)
-    return null
-
-  throw getNotFoundError(cmd)
-}
-
-module.exports = which
-which.sync = whichSync
-
+};
 
 /***/ }),
 
-/***/ "./node_modules/get-stream/buffer-stream.js":
-/*!**************************************************!*\
-  !*** ./node_modules/get-stream/buffer-stream.js ***!
-  \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ "./node_modules/@ericbiewener/utils/src/removeFileExt.ts":
+/*!***************************************************************!*\
+  !*** ./node_modules/@ericbiewener/utils/src/removeFileExt.ts ***!
+  \***************************************************************/
+/*! exports provided: removeFileExt */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "removeFileExt", function() { return removeFileExt; });
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 
-const {PassThrough: PassThroughStream} = __webpack_require__(/*! stream */ "stream");
-
-module.exports = options => {
-	options = {...options};
-
-	const {array} = options;
-	let {encoding} = options;
-	const isBuffer = encoding === 'buffer';
-	let objectMode = false;
-
-	if (array) {
-		objectMode = !(encoding || isBuffer);
-	} else {
-		encoding = encoding || 'utf8';
-	}
-
-	if (isBuffer) {
-		encoding = null;
-	}
-
-	const stream = new PassThroughStream({objectMode});
-
-	if (encoding) {
-		stream.setEncoding(encoding);
-	}
-
-	let length = 0;
-	const chunks = [];
-
-	stream.on('data', chunk => {
-		chunks.push(chunk);
-
-		if (objectMode) {
-			length = chunks.length;
-		} else {
-			length += chunk.length;
-		}
-	});
-
-	stream.getBufferedValue = () => {
-		if (array) {
-			return chunks;
-		}
-
-		return isBuffer ? Buffer.concat(chunks, length) : chunks.join('');
-	};
-
-	stream.getBufferedLength = () => length;
-
-	return stream;
+var removeFileExt = function removeFileExt(filepath, extensions) {
+  var ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath);
+  if (!ext) return filepath;
+  return !extensions || extensions.includes(ext.slice(1)) ? filepath.slice(0, -ext.length) : filepath;
 };
-
 
 /***/ }),
 
-/***/ "./node_modules/get-stream/index.js":
-/*!******************************************!*\
-  !*** ./node_modules/get-stream/index.js ***!
-  \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ "./node_modules/@ericbiewener/utils/src/writeFileIfNew.ts":
+/*!****************************************************************!*\
+  !*** ./node_modules/@ericbiewener/utils/src/writeFileIfNew.ts ***!
+  \****************************************************************/
+/*! exports provided: writeFileIfNew */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-
-const pump = __webpack_require__(/*! pump */ "./node_modules/pump/index.js");
-const bufferStream = __webpack_require__(/*! ./buffer-stream */ "./node_modules/get-stream/buffer-stream.js");
-
-class MaxBufferError extends Error {
-	constructor() {
-		super('maxBuffer exceeded');
-		this.name = 'MaxBufferError';
-	}
-}
-
-async function getStream(inputStream, options) {
-	if (!inputStream) {
-		return Promise.reject(new Error('Expected a stream'));
-	}
-
-	options = {
-		maxBuffer: Infinity,
-		...options
-	};
-
-	const {maxBuffer} = options;
-
-	let stream;
-	await new Promise((resolve, reject) => {
-		const rejectPromise = error => {
-			if (error) { // A null check
-				error.bufferedData = stream.getBufferedValue();
-			}
-
-			reject(error);
-		};
-
-		stream = pump(inputStream, bufferStream(options), error => {
-			if (error) {
-				rejectPromise(error);
-				return;
-			}
-
-			resolve();
-		});
-
-		stream.on('data', () => {
-			if (stream.getBufferedLength() > maxBuffer) {
-				rejectPromise(new MaxBufferError());
-			}
-		});
-	});
-
-	return stream.getBufferedValue();
-}
-
-module.exports = getStream;
-// TODO: Remove this for the next major release
-module.exports.default = getStream;
-module.exports.buffer = (stream, options) => getStream(stream, {...options, encoding: 'buffer'});
-module.exports.array = (stream, options) => getStream(stream, {...options, array: true});
-module.exports.MaxBufferError = MaxBufferError;
-
-
-/***/ }),
-
-/***/ "./node_modules/human-signals/build/src/core.js":
-/*!******************************************************!*\
-  !*** ./node_modules/human-signals/build/src/core.js ***!
-  \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(exports,"__esModule",{value:true});exports.SIGNALS=void 0;
-
-const SIGNALS=[
-{
-name:"SIGHUP",
-number:1,
-action:"terminate",
-description:"Terminal closed",
-standard:"posix"},
-
-{
-name:"SIGINT",
-number:2,
-action:"terminate",
-description:"User interruption with CTRL-C",
-standard:"ansi"},
-
-{
-name:"SIGQUIT",
-number:3,
-action:"core",
-description:"User interruption with CTRL-\\",
-standard:"posix"},
-
-{
-name:"SIGILL",
-number:4,
-action:"core",
-description:"Invalid machine instruction",
-standard:"ansi"},
-
-{
-name:"SIGTRAP",
-number:5,
-action:"core",
-description:"Debugger breakpoint",
-standard:"posix"},
-
-{
-name:"SIGABRT",
-number:6,
-action:"core",
-description:"Aborted",
-standard:"ansi"},
-
-{
-name:"SIGIOT",
-number:6,
-action:"core",
-description:"Aborted",
-standard:"bsd"},
-
-{
-name:"SIGBUS",
-number:7,
-action:"core",
-description:
-"Bus error due to misaligned, non-existing address or paging error",
-standard:"bsd"},
-
-{
-name:"SIGEMT",
-number:7,
-action:"terminate",
-description:"Command should be emulated but is not implemented",
-standard:"other"},
-
-{
-name:"SIGFPE",
-number:8,
-action:"core",
-description:"Floating point arithmetic error",
-standard:"ansi"},
-
-{
-name:"SIGKILL",
-number:9,
-action:"terminate",
-description:"Forced termination",
-standard:"posix",
-forced:true},
-
-{
-name:"SIGUSR1",
-number:10,
-action:"terminate",
-description:"Application-specific signal",
-standard:"posix"},
-
-{
-name:"SIGSEGV",
-number:11,
-action:"core",
-description:"Segmentation fault",
-standard:"ansi"},
-
-{
-name:"SIGUSR2",
-number:12,
-action:"terminate",
-description:"Application-specific signal",
-standard:"posix"},
-
-{
-name:"SIGPIPE",
-number:13,
-action:"terminate",
-description:"Broken pipe or socket",
-standard:"posix"},
-
-{
-name:"SIGALRM",
-number:14,
-action:"terminate",
-description:"Timeout or timer",
-standard:"posix"},
-
-{
-name:"SIGTERM",
-number:15,
-action:"terminate",
-description:"Termination",
-standard:"ansi"},
-
-{
-name:"SIGSTKFLT",
-number:16,
-action:"terminate",
-description:"Stack is empty or overflowed",
-standard:"other"},
-
-{
-name:"SIGCHLD",
-number:17,
-action:"ignore",
-description:"Child process terminated, paused or unpaused",
-standard:"posix"},
-
-{
-name:"SIGCLD",
-number:17,
-action:"ignore",
-description:"Child process terminated, paused or unpaused",
-standard:"other"},
-
-{
-name:"SIGCONT",
-number:18,
-action:"unpause",
-description:"Unpaused",
-standard:"posix",
-forced:true},
-
-{
-name:"SIGSTOP",
-number:19,
-action:"pause",
-description:"Paused",
-standard:"posix",
-forced:true},
-
-{
-name:"SIGTSTP",
-number:20,
-action:"pause",
-description:"Paused using CTRL-Z or \"suspend\"",
-standard:"posix"},
-
-{
-name:"SIGTTIN",
-number:21,
-action:"pause",
-description:"Background process cannot read terminal input",
-standard:"posix"},
-
-{
-name:"SIGBREAK",
-number:21,
-action:"terminate",
-description:"User interruption with CTRL-BREAK",
-standard:"other"},
-
-{
-name:"SIGTTOU",
-number:22,
-action:"pause",
-description:"Background process cannot write to terminal output",
-standard:"posix"},
-
-{
-name:"SIGURG",
-number:23,
-action:"ignore",
-description:"Socket received out-of-band data",
-standard:"bsd"},
-
-{
-name:"SIGXCPU",
-number:24,
-action:"core",
-description:"Process timed out",
-standard:"bsd"},
-
-{
-name:"SIGXFSZ",
-number:25,
-action:"core",
-description:"File too big",
-standard:"bsd"},
-
-{
-name:"SIGVTALRM",
-number:26,
-action:"terminate",
-description:"Timeout or timer",
-standard:"bsd"},
-
-{
-name:"SIGPROF",
-number:27,
-action:"terminate",
-description:"Timeout or timer",
-standard:"bsd"},
-
-{
-name:"SIGWINCH",
-number:28,
-action:"ignore",
-description:"Terminal window size changed",
-standard:"bsd"},
-
-{
-name:"SIGIO",
-number:29,
-action:"terminate",
-description:"I/O is available",
-standard:"other"},
-
-{
-name:"SIGPOLL",
-number:29,
-action:"terminate",
-description:"Watched event",
-standard:"other"},
-
-{
-name:"SIGINFO",
-number:29,
-action:"ignore",
-description:"Request for process information",
-standard:"other"},
-
-{
-name:"SIGPWR",
-number:30,
-action:"terminate",
-description:"Device running out of power",
-standard:"systemv"},
-
-{
-name:"SIGSYS",
-number:31,
-action:"core",
-description:"Invalid system call",
-standard:"other"},
-
-{
-name:"SIGUNUSED",
-number:31,
-action:"terminate",
-description:"Invalid system call",
-standard:"other"}];exports.SIGNALS=SIGNALS;
-//# sourceMappingURL=core.js.map
-
-/***/ }),
-
-/***/ "./node_modules/human-signals/build/src/main.js":
-/*!******************************************************!*\
-  !*** ./node_modules/human-signals/build/src/main.js ***!
-  \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(exports,"__esModule",{value:true});exports.signalsByNumber=exports.signalsByName=void 0;var _os=__webpack_require__(/*! os */ "os");
-
-var _signals=__webpack_require__(/*! ./signals.js */ "./node_modules/human-signals/build/src/signals.js");
-var _realtime=__webpack_require__(/*! ./realtime.js */ "./node_modules/human-signals/build/src/realtime.js");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "writeFileIfNew", function() { return writeFileIfNew; });
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! fs */ "fs");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _createDir__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./createDir */ "./node_modules/@ericbiewener/utils/src/createDir.ts");
+/* harmony import */ var _isFile__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
 
 
 
-const getSignalsByName=function(){
-const signals=(0,_signals.getSignals)();
-return signals.reduce(getSignalByName,{});
+
+var writeFileIfNew = function writeFileIfNew(filepath) {
+  var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+  if (Object(_isFile__WEBPACK_IMPORTED_MODULE_3__["isFile"])(filepath)) return false;
+  Object(_createDir__WEBPACK_IMPORTED_MODULE_2__["createDir"])(path__WEBPACK_IMPORTED_MODULE_1___default.a.dirname(filepath));
+  fs__WEBPACK_IMPORTED_MODULE_0___default.a.writeFileSync(filepath, data);
+  return true;
 };
-
-const getSignalByName=function(
-signalByNameMemo,
-{name,number,description,supported,action,forced,standard})
-{
-return{
-...signalByNameMemo,
-[name]:{name,number,description,supported,action,forced,standard}};
-
-};
-
-const signalsByName=getSignalsByName();exports.signalsByName=signalsByName;
-
-
-
-
-const getSignalsByNumber=function(){
-const signals=(0,_signals.getSignals)();
-const length=_realtime.SIGRTMAX+1;
-const signalsA=Array.from({length},(value,number)=>
-getSignalByNumber(number,signals));
-
-return Object.assign({},...signalsA);
-};
-
-const getSignalByNumber=function(number,signals){
-const signal=findSignalByNumber(number,signals);
-
-if(signal===undefined){
-return{};
-}
-
-const{name,description,supported,action,forced,standard}=signal;
-return{
-[number]:{
-name,
-number,
-description,
-supported,
-action,
-forced,
-standard}};
-
-
-};
-
-
-
-const findSignalByNumber=function(number,signals){
-const signal=signals.find(({name})=>_os.constants.signals[name]===number);
-
-if(signal!==undefined){
-return signal;
-}
-
-return signals.find(signalA=>signalA.number===number);
-};
-
-const signalsByNumber=getSignalsByNumber();exports.signalsByNumber=signalsByNumber;
-//# sourceMappingURL=main.js.map
-
-/***/ }),
-
-/***/ "./node_modules/human-signals/build/src/realtime.js":
-/*!**********************************************************!*\
-  !*** ./node_modules/human-signals/build/src/realtime.js ***!
-  \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(exports,"__esModule",{value:true});exports.SIGRTMAX=exports.getRealtimeSignals=void 0;
-const getRealtimeSignals=function(){
-const length=SIGRTMAX-SIGRTMIN+1;
-return Array.from({length},getRealtimeSignal);
-};exports.getRealtimeSignals=getRealtimeSignals;
-
-const getRealtimeSignal=function(value,index){
-return{
-name:`SIGRT${index+1}`,
-number:SIGRTMIN+index,
-action:"terminate",
-description:"Application-specific signal (realtime)",
-standard:"posix"};
-
-};
-
-const SIGRTMIN=34;
-const SIGRTMAX=64;exports.SIGRTMAX=SIGRTMAX;
-//# sourceMappingURL=realtime.js.map
-
-/***/ }),
-
-/***/ "./node_modules/human-signals/build/src/signals.js":
-/*!*********************************************************!*\
-  !*** ./node_modules/human-signals/build/src/signals.js ***!
-  \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(exports,"__esModule",{value:true});exports.getSignals=void 0;var _os=__webpack_require__(/*! os */ "os");
-
-var _core=__webpack_require__(/*! ./core.js */ "./node_modules/human-signals/build/src/core.js");
-var _realtime=__webpack_require__(/*! ./realtime.js */ "./node_modules/human-signals/build/src/realtime.js");
-
-
-
-const getSignals=function(){
-const realtimeSignals=(0,_realtime.getRealtimeSignals)();
-const signals=[..._core.SIGNALS,...realtimeSignals].map(normalizeSignal);
-return signals;
-};exports.getSignals=getSignals;
-
-
-
-
-
-
-
-const normalizeSignal=function({
-name,
-number:defaultNumber,
-description,
-action,
-forced=false,
-standard})
-{
-const{
-signals:{[name]:constantSignal}}=
-_os.constants;
-const supported=constantSignal!==undefined;
-const number=supported?constantSignal:defaultNumber;
-return{name,number,description,supported,action,forced,standard};
-};
-//# sourceMappingURL=signals.js.map
 
 /***/ }),
 
@@ -15126,47 +13396,6 @@ module.exports = () => {
 
 /***/ }),
 
-/***/ "./node_modules/is-stream/index.js":
-/*!*****************************************!*\
-  !*** ./node_modules/is-stream/index.js ***!
-  \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const isStream = stream =>
-	stream !== null &&
-	typeof stream === 'object' &&
-	typeof stream.pipe === 'function';
-
-isStream.writable = stream =>
-	isStream(stream) &&
-	stream.writable !== false &&
-	typeof stream._write === 'function' &&
-	typeof stream._writableState === 'object';
-
-isStream.readable = stream =>
-	isStream(stream) &&
-	stream.readable !== false &&
-	typeof stream._read === 'function' &&
-	typeof stream._readableState === 'object';
-
-isStream.duplex = stream =>
-	isStream.writable(stream) &&
-	isStream.readable(stream);
-
-isStream.transform = stream =>
-	isStream.duplex(stream) &&
-	typeof stream._transform === 'function' &&
-	typeof stream._transformState === 'object';
-
-module.exports = isStream;
-
-
-/***/ }),
-
 /***/ "./node_modules/is-wsl/index.js":
 /*!**************************************!*\
   !*** ./node_modules/is-wsl/index.js ***!
@@ -15205,179 +13434,6 @@ if (process.env.__IS_WSL_TEST__) {
 	module.exports = isWsl;
 } else {
 	module.exports = isWsl();
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/isexe/index.js":
-/*!*************************************!*\
-  !*** ./node_modules/isexe/index.js ***!
-  \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var fs = __webpack_require__(/*! fs */ "fs")
-var core
-if (process.platform === 'win32' || global.TESTING_WINDOWS) {
-  core = __webpack_require__(/*! ./windows.js */ "./node_modules/isexe/windows.js")
-} else {
-  core = __webpack_require__(/*! ./mode.js */ "./node_modules/isexe/mode.js")
-}
-
-module.exports = isexe
-isexe.sync = sync
-
-function isexe (path, options, cb) {
-  if (typeof options === 'function') {
-    cb = options
-    options = {}
-  }
-
-  if (!cb) {
-    if (typeof Promise !== 'function') {
-      throw new TypeError('callback not provided')
-    }
-
-    return new Promise(function (resolve, reject) {
-      isexe(path, options || {}, function (er, is) {
-        if (er) {
-          reject(er)
-        } else {
-          resolve(is)
-        }
-      })
-    })
-  }
-
-  core(path, options || {}, function (er, is) {
-    // ignore EACCES because that just means we aren't allowed to run it
-    if (er) {
-      if (er.code === 'EACCES' || options && options.ignoreErrors) {
-        er = null
-        is = false
-      }
-    }
-    cb(er, is)
-  })
-}
-
-function sync (path, options) {
-  // my kingdom for a filtered catch
-  try {
-    return core.sync(path, options || {})
-  } catch (er) {
-    if (options && options.ignoreErrors || er.code === 'EACCES') {
-      return false
-    } else {
-      throw er
-    }
-  }
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/isexe/mode.js":
-/*!************************************!*\
-  !*** ./node_modules/isexe/mode.js ***!
-  \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = isexe
-isexe.sync = sync
-
-var fs = __webpack_require__(/*! fs */ "fs")
-
-function isexe (path, options, cb) {
-  fs.stat(path, function (er, stat) {
-    cb(er, er ? false : checkStat(stat, options))
-  })
-}
-
-function sync (path, options) {
-  return checkStat(fs.statSync(path), options)
-}
-
-function checkStat (stat, options) {
-  return stat.isFile() && checkMode(stat, options)
-}
-
-function checkMode (stat, options) {
-  var mod = stat.mode
-  var uid = stat.uid
-  var gid = stat.gid
-
-  var myUid = options.uid !== undefined ?
-    options.uid : process.getuid && process.getuid()
-  var myGid = options.gid !== undefined ?
-    options.gid : process.getgid && process.getgid()
-
-  var u = parseInt('100', 8)
-  var g = parseInt('010', 8)
-  var o = parseInt('001', 8)
-  var ug = u | g
-
-  var ret = (mod & o) ||
-    (mod & g) && gid === myGid ||
-    (mod & u) && uid === myUid ||
-    (mod & ug) && myUid === 0
-
-  return ret
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/isexe/windows.js":
-/*!***************************************!*\
-  !*** ./node_modules/isexe/windows.js ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = isexe
-isexe.sync = sync
-
-var fs = __webpack_require__(/*! fs */ "fs")
-
-function checkPathExt (path, options) {
-  var pathext = options.pathExt !== undefined ?
-    options.pathExt : process.env.PATHEXT
-
-  if (!pathext) {
-    return true
-  }
-
-  pathext = pathext.split(';')
-  if (pathext.indexOf('') !== -1) {
-    return true
-  }
-  for (var i = 0; i < pathext.length; i++) {
-    var p = pathext[i].toLowerCase()
-    if (p && path.substr(-p.length).toLowerCase() === p) {
-      return true
-    }
-  }
-  return false
-}
-
-function checkStat (stat, path, options) {
-  if (!stat.isSymbolicLink() && !stat.isFile()) {
-    return false
-  }
-  return checkPathExt(path, options)
-}
-
-function isexe (path, options, cb) {
-  fs.stat(path, function (er, stat) {
-    cb(er, er ? false : checkStat(stat, path, options))
-  })
-}
-
-function sync (path, options) {
-  return checkStat(fs.statSync(path), path, options)
 }
 
 
@@ -15456,286 +13512,6 @@ module.exports = last;
 
 /***/ }),
 
-/***/ "./node_modules/merge-stream/index.js":
-/*!********************************************!*\
-  !*** ./node_modules/merge-stream/index.js ***!
-  \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const { PassThrough } = __webpack_require__(/*! stream */ "stream");
-
-module.exports = function (/*streams...*/) {
-  var sources = []
-  var output  = new PassThrough({objectMode: true})
-
-  output.setMaxListeners(0)
-
-  output.add = add
-  output.isEmpty = isEmpty
-
-  output.on('unpipe', remove)
-
-  Array.prototype.slice.call(arguments).forEach(add)
-
-  return output
-
-  function add (source) {
-    if (Array.isArray(source)) {
-      source.forEach(add)
-      return this
-    }
-
-    sources.push(source);
-    source.once('end', remove.bind(null, source))
-    source.once('error', output.emit.bind(output, 'error'))
-    source.pipe(output, {end: false})
-    return this
-  }
-
-  function isEmpty () {
-    return sources.length == 0;
-  }
-
-  function remove (source) {
-    sources = sources.filter(function (it) { return it !== source })
-    if (!sources.length && output.readable) { output.end() }
-  }
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/mimic-fn/index.js":
-/*!****************************************!*\
-  !*** ./node_modules/mimic-fn/index.js ***!
-  \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const mimicFn = (to, from) => {
-	for (const prop of Reflect.ownKeys(from)) {
-		Object.defineProperty(to, prop, Object.getOwnPropertyDescriptor(from, prop));
-	}
-
-	return to;
-};
-
-module.exports = mimicFn;
-// TODO: Remove this for the next major release
-module.exports.default = mimicFn;
-
-
-/***/ }),
-
-/***/ "./node_modules/npm-run-path/index.js":
-/*!********************************************!*\
-  !*** ./node_modules/npm-run-path/index.js ***!
-  \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const path = __webpack_require__(/*! path */ "path");
-const pathKey = __webpack_require__(/*! path-key */ "./node_modules/npm-run-path/node_modules/path-key/index.js");
-
-const npmRunPath = options => {
-	options = {
-		cwd: process.cwd(),
-		path: process.env[pathKey()],
-		execPath: process.execPath,
-		...options
-	};
-
-	let previous;
-	let cwdPath = path.resolve(options.cwd);
-	const result = [];
-
-	while (previous !== cwdPath) {
-		result.push(path.join(cwdPath, 'node_modules/.bin'));
-		previous = cwdPath;
-		cwdPath = path.resolve(cwdPath, '..');
-	}
-
-	// Ensure the running `node` binary is used
-	const execPathDir = path.resolve(options.cwd, options.execPath, '..');
-	result.push(execPathDir);
-
-	return result.concat(options.path).join(path.delimiter);
-};
-
-module.exports = npmRunPath;
-// TODO: Remove this for the next major release
-module.exports.default = npmRunPath;
-
-module.exports.env = options => {
-	options = {
-		env: process.env,
-		...options
-	};
-
-	const env = {...options.env};
-	const path = pathKey({env});
-
-	options.path = env[path];
-	env[path] = module.exports(options);
-
-	return env;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/npm-run-path/node_modules/path-key/index.js":
-/*!******************************************************************!*\
-  !*** ./node_modules/npm-run-path/node_modules/path-key/index.js ***!
-  \******************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-const pathKey = (options = {}) => {
-	const environment = options.env || process.env;
-	const platform = options.platform || process.platform;
-
-	if (platform !== 'win32') {
-		return 'PATH';
-	}
-
-	return Object.keys(environment).reverse().find(key => key.toUpperCase() === 'PATH') || 'Path';
-};
-
-module.exports = pathKey;
-// TODO: Remove this for the next major release
-module.exports.default = pathKey;
-
-
-/***/ }),
-
-/***/ "./node_modules/once/once.js":
-/*!***********************************!*\
-  !*** ./node_modules/once/once.js ***!
-  \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var wrappy = __webpack_require__(/*! wrappy */ "./node_modules/wrappy/wrappy.js")
-module.exports = wrappy(once)
-module.exports.strict = wrappy(onceStrict)
-
-once.proto = once(function () {
-  Object.defineProperty(Function.prototype, 'once', {
-    value: function () {
-      return once(this)
-    },
-    configurable: true
-  })
-
-  Object.defineProperty(Function.prototype, 'onceStrict', {
-    value: function () {
-      return onceStrict(this)
-    },
-    configurable: true
-  })
-})
-
-function once (fn) {
-  var f = function () {
-    if (f.called) return f.value
-    f.called = true
-    return f.value = fn.apply(this, arguments)
-  }
-  f.called = false
-  return f
-}
-
-function onceStrict (fn) {
-  var f = function () {
-    if (f.called)
-      throw new Error(f.onceError)
-    f.called = true
-    return f.value = fn.apply(this, arguments)
-  }
-  var name = fn.name || 'Function wrapped with `once`'
-  f.onceError = name + " shouldn't be called more than once"
-  f.called = false
-  return f
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/onetime/index.js":
-/*!***************************************!*\
-  !*** ./node_modules/onetime/index.js ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const mimicFn = __webpack_require__(/*! mimic-fn */ "./node_modules/mimic-fn/index.js");
-
-const calledFunctions = new WeakMap();
-
-const oneTime = (fn, options = {}) => {
-	if (typeof fn !== 'function') {
-		throw new TypeError('Expected a function');
-	}
-
-	let ret;
-	let isCalled = false;
-	let callCount = 0;
-	const functionName = fn.displayName || fn.name || '<anonymous>';
-
-	const onetime = function (...args) {
-		calledFunctions.set(onetime, ++callCount);
-
-		if (isCalled) {
-			if (options.throw === true) {
-				throw new Error(`Function \`${functionName}\` can only be called once`);
-			}
-
-			return ret;
-		}
-
-		isCalled = true;
-		ret = fn.apply(this, args);
-		fn = null;
-
-		return ret;
-	};
-
-	mimicFn(onetime, fn);
-	calledFunctions.set(onetime, callCount);
-
-	return onetime;
-};
-
-module.exports = oneTime;
-// TODO: Remove this for the next major release
-module.exports.default = oneTime;
-
-module.exports.callCount = fn => {
-	if (!calledFunctions.has(fn)) {
-		throw new Error(`The given function \`${fn.name}\` is not wrapped by the \`onetime\` package`);
-	}
-
-	return calledFunctions.get(fn);
-};
-
-
-/***/ }),
-
 /***/ "./node_modules/open/index.js":
 /*!************************************!*\
   !*** ./node_modules/open/index.js ***!
@@ -15749,7 +13525,6 @@ const {promisify} = __webpack_require__(/*! util */ "util");
 const path = __webpack_require__(/*! path */ "path");
 const childProcess = __webpack_require__(/*! child_process */ "child_process");
 const fs = __webpack_require__(/*! fs */ "fs");
-const url = __webpack_require__(/*! url */ "url");
 const isWsl = __webpack_require__(/*! is-wsl */ "./node_modules/is-wsl/index.js");
 const isDocker = __webpack_require__(/*! is-docker */ "./node_modules/is-docker/index.js");
 
@@ -15766,6 +13541,18 @@ const wslToWindowsPath = async path => {
 	return stdout.trim();
 };
 
+// Convert a path from Windows format to WSL format
+const windowsToWslPath = async path => {
+	const {stdout} = await pExecFile('wslpath', [path]);
+	return stdout.trim();
+};
+
+// Get an environment variable from Windows
+const wslGetWindowsEnvVar = async envVar => {
+	const {stdout} = await pExecFile('wslvar', [envVar]);
+	return stdout.trim();
+};
+
 module.exports = async (target, options) => {
 	if (typeof target !== 'string') {
 		throw new TypeError('Expected a `target`');
@@ -15774,30 +13561,19 @@ module.exports = async (target, options) => {
 	options = {
 		wait: false,
 		background: false,
-		url: false,
 		allowNonzeroExitCode: false,
 		...options
 	};
 
 	let command;
+	let {app} = options;
 	let appArguments = [];
 	const cliArguments = [];
 	const childProcessOptions = {};
 
-	if (Array.isArray(options.app)) {
-		appArguments = options.app.slice(1);
-		options.app = options.app[0];
-	}
-
-	// Encodes the target as if it were an URL. Especially useful to get
-	// double-quotes through the “double-quotes on Windows caveat”, but it
-	// can be used on any platform.
-	if (options.url) {
-		target = new url.URL(target).href;
-
-		if (isWsl) {
-			target = target.replace(/&/g, '^&');
-		}
+	if (Array.isArray(app)) {
+		appArguments = app.slice(1);
+		app = app[0];
 	}
 
 	if (process.platform === 'darwin') {
@@ -15811,49 +13587,56 @@ module.exports = async (target, options) => {
 			cliArguments.push('--background');
 		}
 
-		if (options.app) {
-			cliArguments.push('-a', options.app);
+		if (app) {
+			cliArguments.push('-a', app);
 		}
 	} else if (process.platform === 'win32' || (isWsl && !isDocker())) {
-		command = 'cmd' + (isWsl ? '.exe' : '');
-		cliArguments.push('/s', '/c', 'start', '""', '/b');
+		const windowsRoot = isWsl ? await wslGetWindowsEnvVar('systemroot') : process.env.SYSTEMROOT;
+		command = String.raw`${windowsRoot}\System32\WindowsPowerShell\v1.0\powershell${isWsl ? '.exe' : ''}`;
+		cliArguments.push(
+			'-NoProfile',
+			'-NonInteractive',
+			'–ExecutionPolicy',
+			'Bypass',
+			'-EncodedCommand'
+		);
 
-		if (!isWsl) {
-			// Always quoting target allows for URLs/paths to have spaces and unmarked characters, as `cmd.exe` will
-			// interpret them as plain text to be forwarded as one unique argument. Enabling `windowsVerbatimArguments`
-			// disables Node.js's default quotes and escapes handling (https://git.io/fjdem).
-			// References:
-			// - Issues #17, #44, #55, #77, #101, #115
-			// - Pull requests: #74, #98
-			//
-			// As a result, all double-quotes are stripped from the `target` and do not get to your desired destination.
-			target = `"${target}"`;
+		if (isWsl) {
+			command = await windowsToWslPath(command);
+		} else {
 			childProcessOptions.windowsVerbatimArguments = true;
-
-			if (options.app) {
-				options.app = `"${options.app}"`;
-			}
 		}
+
+		const encodedArguments = ['Start'];
 
 		if (options.wait) {
-			cliArguments.push('/wait');
+			encodedArguments.push('-Wait');
 		}
 
-		if (options.app) {
-			if (isWsl && options.app.startsWith('/mnt/')) {
-				const windowsPath = await wslToWindowsPath(options.app);
-				options.app = windowsPath;
+		if (app) {
+			if (isWsl && app.startsWith('/mnt/')) {
+				const windowsPath = await wslToWindowsPath(app);
+				app = windowsPath;
 			}
 
-			cliArguments.push(options.app);
+			// Double quote with double quotes to ensure the inner quotes are passed through.
+			// Inner quotes are delimited for PowerShell interpretation with backticks.
+			encodedArguments.push(`"\`"${app}\`""`, '-ArgumentList');
+			appArguments.unshift(target);
+		} else {
+			encodedArguments.push(`"\`"${target}\`""`);
 		}
 
 		if (appArguments.length > 0) {
-			cliArguments.push(...appArguments);
+			appArguments = appArguments.map(arg => `"\`"${arg}\`""`);
+			encodedArguments.push(appArguments.join(','));
 		}
+
+		// Using Base64-encoded command, accepted by PowerShell, to allow special characters.
+		target = Buffer.from(encodedArguments.join(' '), 'utf16le').toString('base64');
 	} else {
-		if (options.app) {
-			command = options.app;
+		if (app) {
+			command = app;
 		} else {
 			// When bundled by Webpack, there's no actual package file path and no local `xdg-open`.
 			const isBundled =  false || __dirname === '/';
@@ -15914,559 +13697,760 @@ module.exports = async (target, options) => {
 
 /***/ }),
 
-/***/ "./node_modules/pump/index.js":
-/*!************************************!*\
-  !*** ./node_modules/pump/index.js ***!
-  \************************************/
+/***/ "./node_modules/regenerator-runtime/runtime.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/regenerator-runtime/runtime.js ***!
+  \*****************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-var once = __webpack_require__(/*! once */ "./node_modules/once/once.js")
-var eos = __webpack_require__(/*! end-of-stream */ "./node_modules/end-of-stream/index.js")
-var fs = __webpack_require__(/*! fs */ "fs") // we only need fs to get the ReadStream and WriteStream prototypes
-
-var noop = function () {}
-var ancient = /^v?\.0/.test(process.version)
-
-var isFn = function (fn) {
-  return typeof fn === 'function'
-}
-
-var isFS = function (stream) {
-  if (!ancient) return false // newer node version do not need to care about fs is a special way
-  if (!fs) return false // browser
-  return (stream instanceof (fs.ReadStream || noop) || stream instanceof (fs.WriteStream || noop)) && isFn(stream.close)
-}
-
-var isRequest = function (stream) {
-  return stream.setHeader && isFn(stream.abort)
-}
-
-var destroyer = function (stream, reading, writing, callback) {
-  callback = once(callback)
-
-  var closed = false
-  stream.on('close', function () {
-    closed = true
-  })
-
-  eos(stream, {readable: reading, writable: writing}, function (err) {
-    if (err) return callback(err)
-    closed = true
-    callback()
-  })
-
-  var destroyed = false
-  return function (err) {
-    if (closed) return
-    if (destroyed) return
-    destroyed = true
-
-    if (isFS(stream)) return stream.close(noop) // use close for fs streams to avoid fd leaks
-    if (isRequest(stream)) return stream.abort() // request.destroy just do .end - .abort is what we want
-
-    if (isFn(stream.destroy)) return stream.destroy()
-
-    callback(err || new Error('stream was destroyed'))
-  }
-}
-
-var call = function (fn) {
-  fn()
-}
-
-var pipe = function (from, to) {
-  return from.pipe(to)
-}
-
-var pump = function () {
-  var streams = Array.prototype.slice.call(arguments)
-  var callback = isFn(streams[streams.length - 1] || noop) && streams.pop() || noop
-
-  if (Array.isArray(streams[0])) streams = streams[0]
-  if (streams.length < 2) throw new Error('pump requires two streams per minimum')
-
-  var error
-  var destroys = streams.map(function (stream, i) {
-    var reading = i < streams.length - 1
-    var writing = i > 0
-    return destroyer(stream, reading, writing, function (err) {
-      if (!error) error = err
-      if (err) destroys.forEach(call)
-      if (reading) return
-      destroys.forEach(call)
-      callback(error)
-    })
-  })
-
-  return streams.reduce(pipe)
-}
-
-module.exports = pump
-
-
-/***/ }),
-
-/***/ "./node_modules/signal-exit/index.js":
-/*!*******************************************!*\
-  !*** ./node_modules/signal-exit/index.js ***!
-  \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-// Note: since nyc uses this module to output coverage, any lines
-// that are in the direct sync flow of nyc's outputCoverage are
-// ignored, since we can never get coverage for them.
-var assert = __webpack_require__(/*! assert */ "assert")
-var signals = __webpack_require__(/*! ./signals.js */ "./node_modules/signal-exit/signals.js")
-var isWin = /^win/i.test(process.platform)
-
-var EE = __webpack_require__(/*! events */ "events")
-/* istanbul ignore if */
-if (typeof EE !== 'function') {
-  EE = EE.EventEmitter
-}
-
-var emitter
-if (process.__signal_exit_emitter__) {
-  emitter = process.__signal_exit_emitter__
-} else {
-  emitter = process.__signal_exit_emitter__ = new EE()
-  emitter.count = 0
-  emitter.emitted = {}
-}
-
-// Because this emitter is a global, we have to check to see if a
-// previous version of this library failed to enable infinite listeners.
-// I know what you're about to say.  But literally everything about
-// signal-exit is a compromise with evil.  Get used to it.
-if (!emitter.infinite) {
-  emitter.setMaxListeners(Infinity)
-  emitter.infinite = true
-}
-
-module.exports = function (cb, opts) {
-  assert.equal(typeof cb, 'function', 'a callback must be provided for exit handler')
-
-  if (loaded === false) {
-    load()
-  }
-
-  var ev = 'exit'
-  if (opts && opts.alwaysLast) {
-    ev = 'afterexit'
-  }
-
-  var remove = function () {
-    emitter.removeListener(ev, cb)
-    if (emitter.listeners('exit').length === 0 &&
-        emitter.listeners('afterexit').length === 0) {
-      unload()
-    }
-  }
-  emitter.on(ev, cb)
-
-  return remove
-}
-
-module.exports.unload = unload
-function unload () {
-  if (!loaded) {
-    return
-  }
-  loaded = false
-
-  signals.forEach(function (sig) {
-    try {
-      process.removeListener(sig, sigListeners[sig])
-    } catch (er) {}
-  })
-  process.emit = originalProcessEmit
-  process.reallyExit = originalProcessReallyExit
-  emitter.count -= 1
-}
-
-function emit (event, code, signal) {
-  if (emitter.emitted[event]) {
-    return
-  }
-  emitter.emitted[event] = true
-  emitter.emit(event, code, signal)
-}
-
-// { <signal>: <listener fn>, ... }
-var sigListeners = {}
-signals.forEach(function (sig) {
-  sigListeners[sig] = function listener () {
-    // If there are no other listeners, an exit is coming!
-    // Simplest way: remove us and then re-send the signal.
-    // We know that this will kill the process, so we can
-    // safely emit now.
-    var listeners = process.listeners(sig)
-    if (listeners.length === emitter.count) {
-      unload()
-      emit('exit', null, sig)
-      /* istanbul ignore next */
-      emit('afterexit', null, sig)
-      /* istanbul ignore next */
-      if (isWin && sig === 'SIGHUP') {
-        // "SIGHUP" throws an `ENOSYS` error on Windows,
-        // so use a supported signal instead
-        sig = 'SIGINT'
-      }
-      process.kill(process.pid, sig)
-    }
-  }
-})
-
-module.exports.signals = function () {
-  return signals
-}
-
-module.exports.load = load
-
-var loaded = false
-
-function load () {
-  if (loaded) {
-    return
-  }
-  loaded = true
-
-  // This is the number of onSignalExit's that are in play.
-  // It's important so that we can count the correct number of
-  // listeners on signals, and don't wait for the other one to
-  // handle it instead of us.
-  emitter.count += 1
-
-  signals = signals.filter(function (sig) {
-    try {
-      process.on(sig, sigListeners[sig])
-      return true
-    } catch (er) {
-      return false
-    }
-  })
-
-  process.emit = processEmit
-  process.reallyExit = processReallyExit
-}
-
-var originalProcessReallyExit = process.reallyExit
-function processReallyExit (code) {
-  process.exitCode = code || 0
-  emit('exit', process.exitCode, null)
-  /* istanbul ignore next */
-  emit('afterexit', process.exitCode, null)
-  /* istanbul ignore next */
-  originalProcessReallyExit.call(process, process.exitCode)
-}
-
-var originalProcessEmit = process.emit
-function processEmit (ev, arg) {
-  if (ev === 'exit') {
-    if (arg !== undefined) {
-      process.exitCode = arg
-    }
-    var ret = originalProcessEmit.apply(this, arguments)
-    emit('exit', process.exitCode, null)
-    /* istanbul ignore next */
-    emit('afterexit', process.exitCode, null)
-    return ret
-  } else {
-    return originalProcessEmit.apply(this, arguments)
-  }
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/signal-exit/signals.js":
-/*!*********************************************!*\
-  !*** ./node_modules/signal-exit/signals.js ***!
-  \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-// This is not the set of all possible signals.
-//
-// It IS, however, the set of all signals that trigger
-// an exit on either Linux or BSD systems.  Linux is a
-// superset of the signal names supported on BSD, and
-// the unknown signals just fail to register, so we can
-// catch that easily enough.
-//
-// Don't bother with SIGKILL.  It's uncatchable, which
-// means that we can't fire any callbacks anyway.
-//
-// If a user does happen to register a handler on a non-
-// fatal signal like SIGWINCH or something, and then
-// exit, it'll end up firing `process.emit('exit')`, so
-// the handler will be fired anyway.
-//
-// SIGBUS, SIGFPE, SIGSEGV and SIGILL, when not raised
-// artificially, inherently leave the process in a
-// state from which it is not safe to try and enter JS
-// listeners.
-module.exports = [
-  'SIGABRT',
-  'SIGALRM',
-  'SIGHUP',
-  'SIGINT',
-  'SIGTERM'
-]
-
-if (process.platform !== 'win32') {
-  module.exports.push(
-    'SIGVTALRM',
-    'SIGXCPU',
-    'SIGXFSZ',
-    'SIGUSR2',
-    'SIGTRAP',
-    'SIGSYS',
-    'SIGQUIT',
-    'SIGIOT'
-    // should detect profiler and enable/disable accordingly.
-    // see #21
-    // 'SIGPROF'
-  )
-}
-
-if (process.platform === 'linux') {
-  module.exports.push(
-    'SIGIO',
-    'SIGPOLL',
-    'SIGPWR',
-    'SIGSTKFLT',
-    'SIGUNUSED'
-  )
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/strip-final-newline/index.js":
-/*!***************************************************!*\
-  !*** ./node_modules/strip-final-newline/index.js ***!
-  \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = input => {
-	const LF = typeof input === 'string' ? '\n' : '\n'.charCodeAt();
-	const CR = typeof input === 'string' ? '\r' : '\r'.charCodeAt();
-
-	if (input[input.length - 1] === LF) {
-		input = input.slice(0, input.length - 1);
-	}
-
-	if (input[input.length - 1] === CR) {
-		input = input.slice(0, input.length - 1);
-	}
-
-	return input;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/utlz/dist/index.js":
-/*!*****************************************!*\
-  !*** ./node_modules/utlz/dist/index.js ***!
-  \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.exe = exports.writeFileIfNew = exports.createDir = exports.runCmd = exports.findFileForExtensions = exports.removeFileExt = exports.defaultSpawnSync = exports.readDirSync = exports.isFile = exports.sleep = void 0;
-const execa_1 = __importDefault(__webpack_require__(/*! execa */ "./node_modules/execa/index.js"));
-const fs_1 = __importDefault(__webpack_require__(/*! fs */ "fs"));
-const path_1 = __importDefault(__webpack_require__(/*! path */ "path"));
-const child_process_1 = __webpack_require__(/*! child_process */ "child_process");
-function sleep(ms = 0, value) {
-    return new Promise((resolve) => setTimeout(() => resolve(value), ms));
-}
-exports.sleep = sleep;
-function isFile(filepath) {
-    try {
-        return fs_1.default.statSync(filepath).isFile();
-    }
-    catch (e) {
-        if (e.code !== 'ENOENT')
-            throw e; // File might exist, but something else went wrong (e.g. permissions error)
-        return false;
-    }
-}
-exports.isFile = isFile;
-function readDirSync(dir) {
-    const items = [];
-    for (const name of fs_1.default.readdirSync(dir)) {
-        if (name === '.DS_Store')
-            continue;
-        const itemPath = path_1.default.join(dir, name);
-        items.push({ name, itemPath, isFile: isFile(itemPath) });
-    }
-    return items;
-}
-exports.readDirSync = readDirSync;
-function defaultSpawnSync(cmd, args, options) {
-    const { error, stderr, stdout } = child_process_1.spawnSync(cmd, args, options);
-    if (error)
-        throw error;
-    const stderrStr = stderr.toString();
-    if (stderrStr)
-        throw new Error(stderrStr);
-    return stdout.toString();
-}
-exports.defaultSpawnSync = defaultSpawnSync;
-function removeFileExt(filepath, extensions) {
-    const ext = path_1.default.extname(filepath);
-    if (!ext)
-        return filepath;
-    return !extensions || extensions.includes(ext.slice(1))
-        ? filepath.slice(0, -ext.length)
-        : filepath;
-}
-exports.removeFileExt = removeFileExt;
-function findFileForExtensions(filepath, extensions) {
-    const filepathRoot = removeFileExt(filepath);
-    for (const ext of extensions) {
-        const newPath = `${filepathRoot}.${ext}`;
-        if (isFile(newPath))
-            return newPath;
-    }
-}
-exports.findFileForExtensions = findFileForExtensions;
-function runCmd(cmd, args, options) {
-    try {
-        const { stdout } = execa_1.default.sync(cmd, args.filter(Boolean), Object.assign({ stdio: 'inherit' }, options));
-        return stdout;
-    }
-    catch (e) {
-        // Catch the error so that we don't have to see the JS stack trace. The executed command will
-        // have had its own output.
-        process.exit(1);
-    }
-}
-exports.runCmd = runCmd;
-exports.createDir = (dirpath, options) => {
-    try {
-        fs_1.default.mkdirSync(dirpath, Object.assign({ recursive: true }, options));
-    }
-    catch (e) {
-        if (e.code !== 'EEXIST')
-            throw e;
-        return false;
-    }
-    return true;
-};
-exports.writeFileIfNew = (filepath, data = '') => {
-    if (isFile(filepath))
-        return false;
-    exports.createDir(path_1.default.dirname(filepath));
-    fs_1.default.writeFileSync(filepath, data);
-    return true;
-};
-class ErrorWithData extends Error {
-    constructor(message, data) {
-        super(message);
-        this.name = 'ErrorWithData';
-        this.data = data;
-    }
-}
 /**
- * Capture stdout & stderr in variables, while also allowing it to flow through to the parent
- * process's stdout (e.g. a terminal window).
+ * Copyright (c) 2014-present, Facebook, Inc.
  *
- * Also provides some sensible error handling. Will throw if there is any stderr.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
-exports.exe = (cmd, args, options) => __awaiter(void 0, void 0, void 0, function* () {
-    const child = execa_1.default(cmd, args.filter(Boolean), Object.assign(Object.assign({}, options), { stdio: 'pipe' }));
-    // Catch the error and exit the process. This is an irrecoverable crash.
-    child.on('error', (e) => {
-        console.error(`CRASH: ${e.message}`);
-        process.exit(1);
+
+var runtime = (function (exports) {
+  "use strict";
+
+  var Op = Object.prototype;
+  var hasOwn = Op.hasOwnProperty;
+  var undefined; // More compressible than void 0.
+  var $Symbol = typeof Symbol === "function" ? Symbol : {};
+  var iteratorSymbol = $Symbol.iterator || "@@iterator";
+  var asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator";
+  var toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag";
+
+  function define(obj, key, value) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
     });
-    // Let the ouput flow through to the main process's stdout
-    child.stdout.pipe(process.stdout);
-    child.stderr.pipe(process.stderr);
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (buffer) => {
-        stdout += buffer.toString();
-    });
-    child.stderr.on('data', (buffer) => {
-        stderr += buffer.toString();
-    });
-    // Wait for both stdout and stderr to close
-    yield Promise.all([
-        new Promise((res) => child.stdout.on('close', res)),
-        new Promise((res) => child.stderr.on('close', res)),
-    ]);
-    if (stderr)
-        throw new ErrorWithData('stderr has data', { stdout, stderr });
-    return stdout;
-});
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ "./node_modules/wrappy/wrappy.js":
-/*!***************************************!*\
-  !*** ./node_modules/wrappy/wrappy.js ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-// Returns a wrapper function that returns a wrapped callback
-// The wrapper function should do some stuff, and return a
-// presumably different callback function.
-// This makes sure that own properties are retained, so that
-// decorations and such are not lost along the way.
-module.exports = wrappy
-function wrappy (fn, cb) {
-  if (fn && cb) return wrappy(fn)(cb)
-
-  if (typeof fn !== 'function')
-    throw new TypeError('need wrapper function')
-
-  Object.keys(fn).forEach(function (k) {
-    wrapper[k] = fn[k]
-  })
-
-  return wrapper
-
-  function wrapper() {
-    var args = new Array(arguments.length)
-    for (var i = 0; i < args.length; i++) {
-      args[i] = arguments[i]
-    }
-    var ret = fn.apply(this, args)
-    var cb = args[args.length-1]
-    if (typeof ret === 'function' && ret !== cb) {
-      Object.keys(cb).forEach(function (k) {
-        ret[k] = cb[k]
-      })
-    }
-    return ret
+    return obj[key];
   }
+  try {
+    // IE 8 has a broken Object.defineProperty that only works on DOM objects.
+    define({}, "");
+  } catch (err) {
+    define = function(obj, key, value) {
+      return obj[key] = value;
+    };
+  }
+
+  function wrap(innerFn, outerFn, self, tryLocsList) {
+    // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
+    var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
+    var generator = Object.create(protoGenerator.prototype);
+    var context = new Context(tryLocsList || []);
+
+    // The ._invoke method unifies the implementations of the .next,
+    // .throw, and .return methods.
+    generator._invoke = makeInvokeMethod(innerFn, self, context);
+
+    return generator;
+  }
+  exports.wrap = wrap;
+
+  // Try/catch helper to minimize deoptimizations. Returns a completion
+  // record like context.tryEntries[i].completion. This interface could
+  // have been (and was previously) designed to take a closure to be
+  // invoked without arguments, but in all the cases we care about we
+  // already have an existing method we want to call, so there's no need
+  // to create a new function object. We can even get away with assuming
+  // the method takes exactly one argument, since that happens to be true
+  // in every case, so we don't have to touch the arguments object. The
+  // only additional allocation required is the completion record, which
+  // has a stable shape and so hopefully should be cheap to allocate.
+  function tryCatch(fn, obj, arg) {
+    try {
+      return { type: "normal", arg: fn.call(obj, arg) };
+    } catch (err) {
+      return { type: "throw", arg: err };
+    }
+  }
+
+  var GenStateSuspendedStart = "suspendedStart";
+  var GenStateSuspendedYield = "suspendedYield";
+  var GenStateExecuting = "executing";
+  var GenStateCompleted = "completed";
+
+  // Returning this object from the innerFn has the same effect as
+  // breaking out of the dispatch switch statement.
+  var ContinueSentinel = {};
+
+  // Dummy constructor functions that we use as the .constructor and
+  // .constructor.prototype properties for functions that return Generator
+  // objects. For full spec compliance, you may wish to configure your
+  // minifier not to mangle the names of these two functions.
+  function Generator() {}
+  function GeneratorFunction() {}
+  function GeneratorFunctionPrototype() {}
+
+  // This is a polyfill for %IteratorPrototype% for environments that
+  // don't natively support it.
+  var IteratorPrototype = {};
+  IteratorPrototype[iteratorSymbol] = function () {
+    return this;
+  };
+
+  var getProto = Object.getPrototypeOf;
+  var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
+  if (NativeIteratorPrototype &&
+      NativeIteratorPrototype !== Op &&
+      hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) {
+    // This environment has a native %IteratorPrototype%; use it instead
+    // of the polyfill.
+    IteratorPrototype = NativeIteratorPrototype;
+  }
+
+  var Gp = GeneratorFunctionPrototype.prototype =
+    Generator.prototype = Object.create(IteratorPrototype);
+  GeneratorFunction.prototype = Gp.constructor = GeneratorFunctionPrototype;
+  GeneratorFunctionPrototype.constructor = GeneratorFunction;
+  GeneratorFunction.displayName = define(
+    GeneratorFunctionPrototype,
+    toStringTagSymbol,
+    "GeneratorFunction"
+  );
+
+  // Helper for defining the .next, .throw, and .return methods of the
+  // Iterator interface in terms of a single ._invoke method.
+  function defineIteratorMethods(prototype) {
+    ["next", "throw", "return"].forEach(function(method) {
+      define(prototype, method, function(arg) {
+        return this._invoke(method, arg);
+      });
+    });
+  }
+
+  exports.isGeneratorFunction = function(genFun) {
+    var ctor = typeof genFun === "function" && genFun.constructor;
+    return ctor
+      ? ctor === GeneratorFunction ||
+        // For the native GeneratorFunction constructor, the best we can
+        // do is to check its .name property.
+        (ctor.displayName || ctor.name) === "GeneratorFunction"
+      : false;
+  };
+
+  exports.mark = function(genFun) {
+    if (Object.setPrototypeOf) {
+      Object.setPrototypeOf(genFun, GeneratorFunctionPrototype);
+    } else {
+      genFun.__proto__ = GeneratorFunctionPrototype;
+      define(genFun, toStringTagSymbol, "GeneratorFunction");
+    }
+    genFun.prototype = Object.create(Gp);
+    return genFun;
+  };
+
+  // Within the body of any async function, `await x` is transformed to
+  // `yield regeneratorRuntime.awrap(x)`, so that the runtime can test
+  // `hasOwn.call(value, "__await")` to determine if the yielded value is
+  // meant to be awaited.
+  exports.awrap = function(arg) {
+    return { __await: arg };
+  };
+
+  function AsyncIterator(generator, PromiseImpl) {
+    function invoke(method, arg, resolve, reject) {
+      var record = tryCatch(generator[method], generator, arg);
+      if (record.type === "throw") {
+        reject(record.arg);
+      } else {
+        var result = record.arg;
+        var value = result.value;
+        if (value &&
+            typeof value === "object" &&
+            hasOwn.call(value, "__await")) {
+          return PromiseImpl.resolve(value.__await).then(function(value) {
+            invoke("next", value, resolve, reject);
+          }, function(err) {
+            invoke("throw", err, resolve, reject);
+          });
+        }
+
+        return PromiseImpl.resolve(value).then(function(unwrapped) {
+          // When a yielded Promise is resolved, its final value becomes
+          // the .value of the Promise<{value,done}> result for the
+          // current iteration.
+          result.value = unwrapped;
+          resolve(result);
+        }, function(error) {
+          // If a rejected Promise was yielded, throw the rejection back
+          // into the async generator function so it can be handled there.
+          return invoke("throw", error, resolve, reject);
+        });
+      }
+    }
+
+    var previousPromise;
+
+    function enqueue(method, arg) {
+      function callInvokeWithMethodAndArg() {
+        return new PromiseImpl(function(resolve, reject) {
+          invoke(method, arg, resolve, reject);
+        });
+      }
+
+      return previousPromise =
+        // If enqueue has been called before, then we want to wait until
+        // all previous Promises have been resolved before calling invoke,
+        // so that results are always delivered in the correct order. If
+        // enqueue has not been called before, then it is important to
+        // call invoke immediately, without waiting on a callback to fire,
+        // so that the async generator function has the opportunity to do
+        // any necessary setup in a predictable way. This predictability
+        // is why the Promise constructor synchronously invokes its
+        // executor callback, and why async functions synchronously
+        // execute code before the first await. Since we implement simple
+        // async functions in terms of async generators, it is especially
+        // important to get this right, even though it requires care.
+        previousPromise ? previousPromise.then(
+          callInvokeWithMethodAndArg,
+          // Avoid propagating failures to Promises returned by later
+          // invocations of the iterator.
+          callInvokeWithMethodAndArg
+        ) : callInvokeWithMethodAndArg();
+    }
+
+    // Define the unified helper method that is used to implement .next,
+    // .throw, and .return (see defineIteratorMethods).
+    this._invoke = enqueue;
+  }
+
+  defineIteratorMethods(AsyncIterator.prototype);
+  AsyncIterator.prototype[asyncIteratorSymbol] = function () {
+    return this;
+  };
+  exports.AsyncIterator = AsyncIterator;
+
+  // Note that simple async functions are implemented on top of
+  // AsyncIterator objects; they just return a Promise for the value of
+  // the final result produced by the iterator.
+  exports.async = function(innerFn, outerFn, self, tryLocsList, PromiseImpl) {
+    if (PromiseImpl === void 0) PromiseImpl = Promise;
+
+    var iter = new AsyncIterator(
+      wrap(innerFn, outerFn, self, tryLocsList),
+      PromiseImpl
+    );
+
+    return exports.isGeneratorFunction(outerFn)
+      ? iter // If outerFn is a generator, return the full iterator.
+      : iter.next().then(function(result) {
+          return result.done ? result.value : iter.next();
+        });
+  };
+
+  function makeInvokeMethod(innerFn, self, context) {
+    var state = GenStateSuspendedStart;
+
+    return function invoke(method, arg) {
+      if (state === GenStateExecuting) {
+        throw new Error("Generator is already running");
+      }
+
+      if (state === GenStateCompleted) {
+        if (method === "throw") {
+          throw arg;
+        }
+
+        // Be forgiving, per 25.3.3.3.3 of the spec:
+        // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
+        return doneResult();
+      }
+
+      context.method = method;
+      context.arg = arg;
+
+      while (true) {
+        var delegate = context.delegate;
+        if (delegate) {
+          var delegateResult = maybeInvokeDelegate(delegate, context);
+          if (delegateResult) {
+            if (delegateResult === ContinueSentinel) continue;
+            return delegateResult;
+          }
+        }
+
+        if (context.method === "next") {
+          // Setting context._sent for legacy support of Babel's
+          // function.sent implementation.
+          context.sent = context._sent = context.arg;
+
+        } else if (context.method === "throw") {
+          if (state === GenStateSuspendedStart) {
+            state = GenStateCompleted;
+            throw context.arg;
+          }
+
+          context.dispatchException(context.arg);
+
+        } else if (context.method === "return") {
+          context.abrupt("return", context.arg);
+        }
+
+        state = GenStateExecuting;
+
+        var record = tryCatch(innerFn, self, context);
+        if (record.type === "normal") {
+          // If an exception is thrown from innerFn, we leave state ===
+          // GenStateExecuting and loop back for another invocation.
+          state = context.done
+            ? GenStateCompleted
+            : GenStateSuspendedYield;
+
+          if (record.arg === ContinueSentinel) {
+            continue;
+          }
+
+          return {
+            value: record.arg,
+            done: context.done
+          };
+
+        } else if (record.type === "throw") {
+          state = GenStateCompleted;
+          // Dispatch the exception by looping back around to the
+          // context.dispatchException(context.arg) call above.
+          context.method = "throw";
+          context.arg = record.arg;
+        }
+      }
+    };
+  }
+
+  // Call delegate.iterator[context.method](context.arg) and handle the
+  // result, either by returning a { value, done } result from the
+  // delegate iterator, or by modifying context.method and context.arg,
+  // setting context.delegate to null, and returning the ContinueSentinel.
+  function maybeInvokeDelegate(delegate, context) {
+    var method = delegate.iterator[context.method];
+    if (method === undefined) {
+      // A .throw or .return when the delegate iterator has no .throw
+      // method always terminates the yield* loop.
+      context.delegate = null;
+
+      if (context.method === "throw") {
+        // Note: ["return"] must be used for ES3 parsing compatibility.
+        if (delegate.iterator["return"]) {
+          // If the delegate iterator has a return method, give it a
+          // chance to clean up.
+          context.method = "return";
+          context.arg = undefined;
+          maybeInvokeDelegate(delegate, context);
+
+          if (context.method === "throw") {
+            // If maybeInvokeDelegate(context) changed context.method from
+            // "return" to "throw", let that override the TypeError below.
+            return ContinueSentinel;
+          }
+        }
+
+        context.method = "throw";
+        context.arg = new TypeError(
+          "The iterator does not provide a 'throw' method");
+      }
+
+      return ContinueSentinel;
+    }
+
+    var record = tryCatch(method, delegate.iterator, context.arg);
+
+    if (record.type === "throw") {
+      context.method = "throw";
+      context.arg = record.arg;
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+
+    var info = record.arg;
+
+    if (! info) {
+      context.method = "throw";
+      context.arg = new TypeError("iterator result is not an object");
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+
+    if (info.done) {
+      // Assign the result of the finished delegate to the temporary
+      // variable specified by delegate.resultName (see delegateYield).
+      context[delegate.resultName] = info.value;
+
+      // Resume execution at the desired location (see delegateYield).
+      context.next = delegate.nextLoc;
+
+      // If context.method was "throw" but the delegate handled the
+      // exception, let the outer generator proceed normally. If
+      // context.method was "next", forget context.arg since it has been
+      // "consumed" by the delegate iterator. If context.method was
+      // "return", allow the original .return call to continue in the
+      // outer generator.
+      if (context.method !== "return") {
+        context.method = "next";
+        context.arg = undefined;
+      }
+
+    } else {
+      // Re-yield the result returned by the delegate method.
+      return info;
+    }
+
+    // The delegate iterator is finished, so forget it and continue with
+    // the outer generator.
+    context.delegate = null;
+    return ContinueSentinel;
+  }
+
+  // Define Generator.prototype.{next,throw,return} in terms of the
+  // unified ._invoke helper method.
+  defineIteratorMethods(Gp);
+
+  define(Gp, toStringTagSymbol, "Generator");
+
+  // A Generator should always return itself as the iterator object when the
+  // @@iterator function is called on it. Some browsers' implementations of the
+  // iterator prototype chain incorrectly implement this, causing the Generator
+  // object to not be returned from this call. This ensures that doesn't happen.
+  // See https://github.com/facebook/regenerator/issues/274 for more details.
+  Gp[iteratorSymbol] = function() {
+    return this;
+  };
+
+  Gp.toString = function() {
+    return "[object Generator]";
+  };
+
+  function pushTryEntry(locs) {
+    var entry = { tryLoc: locs[0] };
+
+    if (1 in locs) {
+      entry.catchLoc = locs[1];
+    }
+
+    if (2 in locs) {
+      entry.finallyLoc = locs[2];
+      entry.afterLoc = locs[3];
+    }
+
+    this.tryEntries.push(entry);
+  }
+
+  function resetTryEntry(entry) {
+    var record = entry.completion || {};
+    record.type = "normal";
+    delete record.arg;
+    entry.completion = record;
+  }
+
+  function Context(tryLocsList) {
+    // The root entry object (effectively a try statement without a catch
+    // or a finally block) gives us a place to store values thrown from
+    // locations where there is no enclosing try statement.
+    this.tryEntries = [{ tryLoc: "root" }];
+    tryLocsList.forEach(pushTryEntry, this);
+    this.reset(true);
+  }
+
+  exports.keys = function(object) {
+    var keys = [];
+    for (var key in object) {
+      keys.push(key);
+    }
+    keys.reverse();
+
+    // Rather than returning an object with a next method, we keep
+    // things simple and return the next function itself.
+    return function next() {
+      while (keys.length) {
+        var key = keys.pop();
+        if (key in object) {
+          next.value = key;
+          next.done = false;
+          return next;
+        }
+      }
+
+      // To avoid creating an additional object, we just hang the .value
+      // and .done properties off the next function object itself. This
+      // also ensures that the minifier will not anonymize the function.
+      next.done = true;
+      return next;
+    };
+  };
+
+  function values(iterable) {
+    if (iterable) {
+      var iteratorMethod = iterable[iteratorSymbol];
+      if (iteratorMethod) {
+        return iteratorMethod.call(iterable);
+      }
+
+      if (typeof iterable.next === "function") {
+        return iterable;
+      }
+
+      if (!isNaN(iterable.length)) {
+        var i = -1, next = function next() {
+          while (++i < iterable.length) {
+            if (hasOwn.call(iterable, i)) {
+              next.value = iterable[i];
+              next.done = false;
+              return next;
+            }
+          }
+
+          next.value = undefined;
+          next.done = true;
+
+          return next;
+        };
+
+        return next.next = next;
+      }
+    }
+
+    // Return an iterator with no values.
+    return { next: doneResult };
+  }
+  exports.values = values;
+
+  function doneResult() {
+    return { value: undefined, done: true };
+  }
+
+  Context.prototype = {
+    constructor: Context,
+
+    reset: function(skipTempReset) {
+      this.prev = 0;
+      this.next = 0;
+      // Resetting context._sent for legacy support of Babel's
+      // function.sent implementation.
+      this.sent = this._sent = undefined;
+      this.done = false;
+      this.delegate = null;
+
+      this.method = "next";
+      this.arg = undefined;
+
+      this.tryEntries.forEach(resetTryEntry);
+
+      if (!skipTempReset) {
+        for (var name in this) {
+          // Not sure about the optimal order of these conditions:
+          if (name.charAt(0) === "t" &&
+              hasOwn.call(this, name) &&
+              !isNaN(+name.slice(1))) {
+            this[name] = undefined;
+          }
+        }
+      }
+    },
+
+    stop: function() {
+      this.done = true;
+
+      var rootEntry = this.tryEntries[0];
+      var rootRecord = rootEntry.completion;
+      if (rootRecord.type === "throw") {
+        throw rootRecord.arg;
+      }
+
+      return this.rval;
+    },
+
+    dispatchException: function(exception) {
+      if (this.done) {
+        throw exception;
+      }
+
+      var context = this;
+      function handle(loc, caught) {
+        record.type = "throw";
+        record.arg = exception;
+        context.next = loc;
+
+        if (caught) {
+          // If the dispatched exception was caught by a catch block,
+          // then let that catch block handle the exception normally.
+          context.method = "next";
+          context.arg = undefined;
+        }
+
+        return !! caught;
+      }
+
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        var record = entry.completion;
+
+        if (entry.tryLoc === "root") {
+          // Exception thrown outside of any try block that could handle
+          // it, so set the completion value of the entire function to
+          // throw the exception.
+          return handle("end");
+        }
+
+        if (entry.tryLoc <= this.prev) {
+          var hasCatch = hasOwn.call(entry, "catchLoc");
+          var hasFinally = hasOwn.call(entry, "finallyLoc");
+
+          if (hasCatch && hasFinally) {
+            if (this.prev < entry.catchLoc) {
+              return handle(entry.catchLoc, true);
+            } else if (this.prev < entry.finallyLoc) {
+              return handle(entry.finallyLoc);
+            }
+
+          } else if (hasCatch) {
+            if (this.prev < entry.catchLoc) {
+              return handle(entry.catchLoc, true);
+            }
+
+          } else if (hasFinally) {
+            if (this.prev < entry.finallyLoc) {
+              return handle(entry.finallyLoc);
+            }
+
+          } else {
+            throw new Error("try statement without catch or finally");
+          }
+        }
+      }
+    },
+
+    abrupt: function(type, arg) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.tryLoc <= this.prev &&
+            hasOwn.call(entry, "finallyLoc") &&
+            this.prev < entry.finallyLoc) {
+          var finallyEntry = entry;
+          break;
+        }
+      }
+
+      if (finallyEntry &&
+          (type === "break" ||
+           type === "continue") &&
+          finallyEntry.tryLoc <= arg &&
+          arg <= finallyEntry.finallyLoc) {
+        // Ignore the finally entry if control is not jumping to a
+        // location outside the try/catch block.
+        finallyEntry = null;
+      }
+
+      var record = finallyEntry ? finallyEntry.completion : {};
+      record.type = type;
+      record.arg = arg;
+
+      if (finallyEntry) {
+        this.method = "next";
+        this.next = finallyEntry.finallyLoc;
+        return ContinueSentinel;
+      }
+
+      return this.complete(record);
+    },
+
+    complete: function(record, afterLoc) {
+      if (record.type === "throw") {
+        throw record.arg;
+      }
+
+      if (record.type === "break" ||
+          record.type === "continue") {
+        this.next = record.arg;
+      } else if (record.type === "return") {
+        this.rval = this.arg = record.arg;
+        this.method = "return";
+        this.next = "end";
+      } else if (record.type === "normal" && afterLoc) {
+        this.next = afterLoc;
+      }
+
+      return ContinueSentinel;
+    },
+
+    finish: function(finallyLoc) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.finallyLoc === finallyLoc) {
+          this.complete(entry.completion, entry.afterLoc);
+          resetTryEntry(entry);
+          return ContinueSentinel;
+        }
+      }
+    },
+
+    "catch": function(tryLoc) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.tryLoc === tryLoc) {
+          var record = entry.completion;
+          if (record.type === "throw") {
+            var thrown = record.arg;
+            resetTryEntry(entry);
+          }
+          return thrown;
+        }
+      }
+
+      // The context.catch method must only be called with a location
+      // argument that corresponds to a known catch block.
+      throw new Error("illegal catch attempt");
+    },
+
+    delegateYield: function(iterable, resultName, nextLoc) {
+      this.delegate = {
+        iterator: values(iterable),
+        resultName: resultName,
+        nextLoc: nextLoc
+      };
+
+      if (this.method === "next") {
+        // Deliberately forget the last sent value so that we don't
+        // accidentally pass it on to the delegate.
+        this.arg = undefined;
+      }
+
+      return ContinueSentinel;
+    }
+  };
+
+  // Regardless of whether this script is executing as a CommonJS module
+  // or not, return the runtime object so that we can declare the variable
+  // regeneratorRuntime in the outer scope, which allows this module to be
+  // injected easily by `bin/regenerator --include-runtime script.js`.
+  return exports;
+
+}(
+  // If this script is executing as a CommonJS module, use module.exports
+  // as the regeneratorRuntime namespace. Otherwise create a new empty
+  // object. Either way, the resulting object will be used to initialize
+  // the regeneratorRuntime variable at the top of this file.
+   true ? module.exports : undefined
+));
+
+try {
+  regeneratorRuntime = runtime;
+} catch (accidentalStrictMode) {
+  // This module should not be running in strict mode, so the above
+  // assignment should always work unless something is misconfigured. Just
+  // in case runtime.js accidentally runs in strict mode, we can escape
+  // strict mode using a global Function call. This could conceivably fail
+  // if a Content Security Policy forbids using Function, but in that case
+  // the proper solution is to fix the accidental strict mode problem. If
+  // you've misconfigured your bundler to force strict mode and applied a
+  // CSP to forbid Function, and you're not willing to fix either of those
+  // problems, please detail your unique predicament in a GitHub issue.
+  Function("r", "regeneratorRuntime = r")(runtime);
 }
 
 
@@ -16492,39 +14476,96 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
-async function addReturnToArrowFunction() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_2__["window"].activeTextEditor;
-  if (!editor) return;
-  const {
-    document,
-    selection
-  } = editor;
-  const node = Object(_parseText__WEBPACK_IMPORTED_MODULE_3__["parseActiveDocument"])();
-  const offset = document.offsetAt(selection.start);
-  const allArrowFns = findInnerArrowFns(node, offset).filter(r => r.body.type !== 'BlockStatement');
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
-  const innerMost = lodash_last__WEBPACK_IMPORTED_MODULE_1___default()(allArrowFns);
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
-  if (!innerMost) return;
-  const {
-    start,
-    end
-  } = innerMost;
-  const text = document.getText();
-  const bodyStart = text.indexOf('=>', start) + 2;
-  await editor.edit(builder => {
-    builder.insert(document.positionAt(end), '}');
-    builder.insert(document.positionAt(bodyStart), '{ return ');
-  });
-  await vscode__WEBPACK_IMPORTED_MODULE_2__["commands"].executeCommand('editor.action.formatDocument');
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+
+
+function addReturnToArrowFunction() {
+  return _addReturnToArrowFunction.apply(this, arguments);
 }
 
-function findInnerArrowFns(node, offset, results = []) {
+function _addReturnToArrowFunction() {
+  _addReturnToArrowFunction = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    var editor, document, selection, node, offset, allArrowFns, innerMost, start, end, text, bodyStart;
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            editor = vscode__WEBPACK_IMPORTED_MODULE_2__["window"].activeTextEditor;
+
+            if (editor) {
+              _context.next = 3;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 3:
+            document = editor.document, selection = editor.selection;
+            node = Object(_parseText__WEBPACK_IMPORTED_MODULE_3__["parseActiveDocument"])();
+            offset = document.offsetAt(selection.start);
+            allArrowFns = findInnerArrowFns(node, offset).filter(function (r) {
+              return r.body.type !== 'BlockStatement';
+            });
+            innerMost = lodash_last__WEBPACK_IMPORTED_MODULE_1___default()(allArrowFns);
+
+            if (innerMost) {
+              _context.next = 10;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 10:
+            start = innerMost.start, end = innerMost.end;
+            text = document.getText();
+            bodyStart = text.indexOf('=>', start) + 2;
+            _context.next = 15;
+            return editor.edit(function (builder) {
+              builder.insert(document.positionAt(end), '}');
+              builder.insert(document.positionAt(bodyStart), '{ return ');
+            });
+
+          case 15:
+            _context.next = 17;
+            return vscode__WEBPACK_IMPORTED_MODULE_2__["commands"].executeCommand('editor.action.formatDocument');
+
+          case 17:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+  return _addReturnToArrowFunction.apply(this, arguments);
+}
+
+function findInnerArrowFns(node, offset) {
+  var results = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
   if (!node) return results;
 
   if (Array.isArray(node)) {
-    for (const n of node) findInnerArrowFns(n, offset, results);
+    var _iterator = _createForOfIteratorHelper(node),
+        _step;
+
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var n = _step.value;
+        findInnerArrowFns(n, offset, results);
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
 
     return results;
   } // Use `>=` for start to ensure that we are not immediately to the left of the arrow function
@@ -16576,13 +14617,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 function parseActiveDocument() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
-  const {
-    document
-  } = editor;
-  const typePlugin = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(document.uri.fsPath).startsWith('.ts') ? 'typescript' : 'flow';
-  const ast = _babel_parser__WEBPACK_IMPORTED_MODULE_2__["parse"](document.getText(), {
+  var document = editor.document;
+  var typePlugin = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(document.uri.fsPath).startsWith('.ts') ? 'typescript' : 'flow';
+  var ast = _babel_parser__WEBPACK_IMPORTED_MODULE_2__["parse"](document.getText(), {
     sourceType: 'unambiguous',
     allowImportExportEverywhere: true,
     allowAwaitOutsideFunction: true,
@@ -16616,35 +14655,70 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var utlz__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! utlz */ "./node_modules/utlz/dist/index.js");
-/* harmony import */ var utlz__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(utlz__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _utils_filepaths__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/filepaths */ "./src/utils/filepaths.ts");
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ericbiewener/utils/src/writeFileIfNew */ "./node_modules/@ericbiewener/utils/src/writeFileIfNew.ts");
+/* harmony import */ var _ericbiewener_utils_src_removeFileExt__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ericbiewener/utils/src/removeFileExt */ "./node_modules/@ericbiewener/utils/src/removeFileExt.ts");
+/* harmony import */ var _utils_filepaths__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/filepaths */ "./src/utils/filepaths.ts");
+/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 
 
 
 
-const CSS_EXTENSIONS = ['css', 'pcss'];
-const JS_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx'];
-const openCorrespondingCssModule = () => {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+
+
+var CSS_EXTENSIONS = ['css', 'pcss'];
+var JS_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx'];
+var openCorrespondingCssModule = function openCorrespondingCssModule() {
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
-  const filepath = editor.document.fileName;
-  const ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath);
-  const correspondingFile = CSS_EXTENSIONS.includes(ext) ? Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_3__["findFileForExtensions"])(filepath, JS_EXTENSIONS) : Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_3__["findFileForExtensions"])(filepath, CSS_EXTENSIONS);
-  if (correspondingFile) Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(correspondingFile);
+  var filepath = editor.document.fileName;
+  var ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath);
+  var correspondingFile = CSS_EXTENSIONS.includes(ext) ? Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_4__["findFileForExtensions"])(filepath, JS_EXTENSIONS) : Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_4__["findFileForExtensions"])(filepath, CSS_EXTENSIONS);
+  if (correspondingFile) Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["showTextDocument"])(correspondingFile);
 };
-const createCorrespondingCssModule = async () => {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
-  if (!editor) return;
-  const {
-    cssModuleFileExtension
-  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["getConfiguration"])();
-  const filepath = `${Object(utlz__WEBPACK_IMPORTED_MODULE_2__["removeFileExt"])(editor.document.fileName)}.${cssModuleFileExtension}`;
-  Object(utlz__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(filepath);
-  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(filepath);
-};
+var createCorrespondingCssModule = /*#__PURE__*/function () {
+  var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    var editor, _yield$getConfigurati, cssModuleFileExtension, filepath;
+
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+
+            if (editor) {
+              _context.next = 3;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 3:
+            _context.next = 5;
+            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["getConfiguration"])();
+
+          case 5:
+            _yield$getConfigurati = _context.sent;
+            cssModuleFileExtension = _yield$getConfigurati.cssModuleFileExtension;
+            filepath = "".concat(Object(_ericbiewener_utils_src_removeFileExt__WEBPACK_IMPORTED_MODULE_3__["removeFileExt"])(editor.document.fileName), ".").concat(cssModuleFileExtension);
+            Object(_ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(filepath);
+            Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["showTextDocument"])(filepath);
+
+          case 10:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+
+  return function createCorrespondingCssModule() {
+    return _ref.apply(this, arguments);
+  };
+}();
 
 /***/ }),
 
@@ -16664,48 +14738,162 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 
-async function closeAllPanels() {
-  vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.closePanel');
-  await vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.maximizeEditor');
-  vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.evenEditorWidths');
+
+function closeAllPanels() {
+  return _closeAllPanels.apply(this, arguments);
 }
-async function moveEditorToOtherGroup() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
-  if (!editor || !editor.viewColumn) return;
-  const {
-    maxEditorGroups
-  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["getConfiguration"])();
 
-  if (editor.viewColumn >= maxEditorGroups) {
-    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToFirstGroup');
-  } else {
-    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToNextGroup');
-  }
-}
-async function consolidateToTwoEditors() {
-  console.log('here');
-  let editor;
+function _closeAllPanels() {
+  _closeAllPanels = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.closePanel');
+            _context.next = 3;
+            return vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.maximizeEditor');
 
-  while (editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].visibleTextEditors.find(e => e.viewColumn && e.viewColumn > 2)) {
-    console.log(editor);
-    vscode__WEBPACK_IMPORTED_MODULE_0__["window"].showTextDocument(editor.document.uri);
-    vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToPreviousGroup');
-  }
+          case 3:
+            vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.evenEditorWidths');
+
+          case 4:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+  return _closeAllPanels.apply(this, arguments);
 }
-async function moveCaret(down = true) {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
-  if (!editor) return;
-  const position = editor.selection.active;
-  const change = down ? 10 : -10;
-  const newLine = Math.min(editor.document.lineCount, Math.max(0, position.line + change));
-  const newPosition = position.with(newLine, position.character);
-  const newSelection = new vscode__WEBPACK_IMPORTED_MODULE_0__["Selection"](newPosition, newPosition);
-  editor.selection = newSelection;
-  vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('revealLine', {
-    lineNumber: newLine
-  });
+
+function moveEditorToOtherGroup() {
+  return _moveEditorToOtherGroup.apply(this, arguments);
+}
+
+function _moveEditorToOtherGroup() {
+  _moveEditorToOtherGroup = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
+    var editor, _yield$getConfigurati, maxEditorGroups;
+
+    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+      while (1) {
+        switch (_context2.prev = _context2.next) {
+          case 0:
+            editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
+
+            if (!(!editor || !editor.viewColumn)) {
+              _context2.next = 3;
+              break;
+            }
+
+            return _context2.abrupt("return");
+
+          case 3:
+            _context2.next = 5;
+            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["getConfiguration"])();
+
+          case 5:
+            _yield$getConfigurati = _context2.sent;
+            maxEditorGroups = _yield$getConfigurati.maxEditorGroups;
+
+            if (editor.viewColumn >= maxEditorGroups) {
+              vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToFirstGroup');
+            } else {
+              vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToNextGroup');
+            }
+
+          case 8:
+          case "end":
+            return _context2.stop();
+        }
+      }
+    }, _callee2);
+  }));
+  return _moveEditorToOtherGroup.apply(this, arguments);
+}
+
+function consolidateToTwoEditors() {
+  return _consolidateToTwoEditors.apply(this, arguments);
+}
+
+function _consolidateToTwoEditors() {
+  _consolidateToTwoEditors = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3() {
+    var editor;
+    return regeneratorRuntime.wrap(function _callee3$(_context3) {
+      while (1) {
+        switch (_context3.prev = _context3.next) {
+          case 0:
+            console.log('here');
+
+            while (editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].visibleTextEditors.find(function (e) {
+              return e.viewColumn && e.viewColumn > 2;
+            })) {
+              console.log(editor);
+              vscode__WEBPACK_IMPORTED_MODULE_0__["window"].showTextDocument(editor.document.uri);
+              vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToPreviousGroup');
+            }
+
+          case 2:
+          case "end":
+            return _context3.stop();
+        }
+      }
+    }, _callee3);
+  }));
+  return _consolidateToTwoEditors.apply(this, arguments);
+}
+
+function moveCaret() {
+  return _moveCaret.apply(this, arguments);
+}
+
+function _moveCaret() {
+  _moveCaret = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4() {
+    var down,
+        editor,
+        position,
+        change,
+        newLine,
+        newPosition,
+        newSelection,
+        _args4 = arguments;
+    return regeneratorRuntime.wrap(function _callee4$(_context4) {
+      while (1) {
+        switch (_context4.prev = _context4.next) {
+          case 0:
+            down = _args4.length > 0 && _args4[0] !== undefined ? _args4[0] : true;
+            editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
+
+            if (editor) {
+              _context4.next = 4;
+              break;
+            }
+
+            return _context4.abrupt("return");
+
+          case 4:
+            position = editor.selection.active;
+            change = down ? 10 : -10;
+            newLine = Math.min(editor.document.lineCount, Math.max(0, position.line + change));
+            newPosition = position["with"](newLine, position.character);
+            newSelection = new vscode__WEBPACK_IMPORTED_MODULE_0__["Selection"](newPosition, newPosition);
+            editor.selection = newSelection;
+            vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('revealLine', {
+              lineNumber: newLine
+            });
+
+          case 11:
+          case "end":
+            return _context4.stop();
+        }
+      }
+    }, _callee4);
+  }));
+  return _moveCaret.apply(this, arguments);
 }
 
 /***/ }),
@@ -16720,15 +14908,20 @@ async function moveCaret(down = true) {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "activate", function() { return activate; });
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./codemods/addReturnToArrowFunction */ "./src/codemods/addReturnToArrowFunction.ts");
-/* harmony import */ var _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./editor-manipulation */ "./src/editor-manipulation.ts");
-/* harmony import */ var _jest__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./jest */ "./src/jest.ts");
-/* harmony import */ var _misc__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./misc */ "./src/misc.ts");
-/* harmony import */ var _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./correspondingCssModule */ "./src/correspondingCssModule.ts");
-/* harmony import */ var _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./openCorrespondingReduxContainer */ "./src/openCorrespondingReduxContainer.ts");
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! regenerator-runtime/runtime */ "./node_modules/regenerator-runtime/runtime.js");
+/* harmony import */ var regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(regenerator_runtime_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./codemods/addReturnToArrowFunction */ "./src/codemods/addReturnToArrowFunction.ts");
+/* harmony import */ var _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./editor-manipulation */ "./src/editor-manipulation.ts");
+/* harmony import */ var _jest__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./jest */ "./src/jest.ts");
+/* harmony import */ var _misc__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./misc */ "./src/misc.ts");
+/* harmony import */ var _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./correspondingCssModule */ "./src/correspondingCssModule.ts");
+/* harmony import */ var _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./openCorrespondingReduxContainer */ "./src/openCorrespondingReduxContainer.ts");
+/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 
 
@@ -16737,10 +14930,35 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const activate = async function activate(ctx) {
-  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_7__["setExtCtx"])(ctx);
-  ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_6__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretDown', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])()), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.moveCaretUp', () => Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false)), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_1__["addReturnToArrowFunction"]), vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesOrLinksListedInDocument"]));
-};
+
+
+var activate = /*#__PURE__*/function () {
+  var _activate = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(ctx) {
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            Object(_utils_misc__WEBPACK_IMPORTED_MODULE_8__["setExtCtx"])(ctx);
+            ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_4__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_4__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_4__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretDown', function () {
+              return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["moveCaret"])();
+            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretUp', function () {
+              return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["moveCaret"])(false);
+            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_5__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_2__["addReturnToArrowFunction"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_5__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_5__["openFileInDefaultProgram"]));
+
+          case 2:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+
+  function activate(_x) {
+    return _activate.apply(this, arguments);
+  }
+
+  return activate;
+}();
 
 /***/ }),
 
@@ -16761,57 +14979,94 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var utlz__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! utlz */ "./node_modules/utlz/dist/index.js");
-/* harmony import */ var utlz__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(utlz__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ericbiewener/utils/src/writeFileIfNew */ "./node_modules/@ericbiewener/utils/src/writeFileIfNew.ts");
 /* harmony import */ var _utils_filepaths__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/filepaths */ "./src/utils/filepaths.ts");
 /* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 
 
 
 
-async function openCorrespondingTestFile() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
-  if (!editor) return;
-  const filepath = editor.document.fileName;
-  const filenameParts = getFilenameParts(filepath);
-  if (filenameParts.length === 1) return;
-  const dir = path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath);
-  let filepathToShow;
-  let testFilepath;
 
-  if (filenameParts[filenameParts.length - 1] === 'snap') {
-    // Snapshot
-    filepathToShow = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(dir, '..', path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath, '.snap'));
-    testFilepath = filepathToShow;
-  } else if (filenameParts[filenameParts.length - 2] === 'test') {
-    // Test file
-    filenameParts.splice(-2, 1);
-    filepathToShow = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(dir, '..', filenameParts.join('.'));
-    testFilepath = filepath;
-  } else {
-    // Production Code
-    filepathToShow = getCorrespondingTestFilepath(filepath);
-    testFilepath = filepathToShow;
-  }
-
-  copyTestCommand(testFilepath);
-  return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(filepathToShow);
+function openCorrespondingTestFile() {
+  return _openCorrespondingTestFile.apply(this, arguments);
 }
+
+function _openCorrespondingTestFile() {
+  _openCorrespondingTestFile = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    var editor, filepath, filenameParts, dir, filepathToShow, testFilepath;
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+
+            if (editor) {
+              _context.next = 3;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 3:
+            filepath = editor.document.fileName;
+            filenameParts = getFilenameParts(filepath);
+
+            if (!(filenameParts.length === 1)) {
+              _context.next = 7;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 7:
+            dir = path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath);
+
+            if (filenameParts[filenameParts.length - 1] === 'snap') {
+              // Snapshot
+              filepathToShow = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(dir, '..', path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath, '.snap'));
+              testFilepath = filepathToShow;
+            } else if (filenameParts[filenameParts.length - 2] === 'test') {
+              // Test file
+              filenameParts.splice(-2, 1);
+              filepathToShow = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(dir, '..', filenameParts.join('.'));
+              testFilepath = filepath;
+            } else {
+              // Production Code
+              filepathToShow = getCorrespondingTestFilepath(filepath);
+              testFilepath = filepathToShow;
+            }
+
+            copyTestCommand(testFilepath);
+            return _context.abrupt("return", Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(filepathToShow));
+
+          case 11:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+  return _openCorrespondingTestFile.apply(this, arguments);
+}
+
 function openCorrespondingSnapshot() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
-  const filepath = editor.document.fileName;
-  const snapshot = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__snapshots__', `${path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath)}.snap`);
+  var filepath = editor.document.fileName;
+  var snapshot = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__snapshots__', "".concat(path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath), ".snap"));
   return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(snapshot);
 }
 function createCorrespondingTestFile() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
-  const testFilepath = getCorrespondingTestFilepath(editor.document.fileName);
+  var testFilepath = getCorrespondingTestFilepath(editor.document.fileName);
 
   try {
-    Object(utlz__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(testFilepath);
+    Object(_ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(testFilepath);
     copyTestCommand(testFilepath);
     Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(testFilepath);
   } catch (e) {
@@ -16823,20 +15078,47 @@ function getFilenameParts(filepath) {
 }
 
 function getCorrespondingTestFilepath(filepath) {
-  const filenameParts = getFilenameParts(filepath);
+  var filenameParts = getFilenameParts(filepath);
   filenameParts.splice(-1, 0, 'test');
   return path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__tests__', filenameParts.join('.'));
 }
 
-async function copyTestCommand(filepath) {
-  const {
-    testCommand
-  } = await Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["getConfiguration"])();
+function copyTestCommand(_x) {
+  return _copyTestCommand.apply(this, arguments);
+}
 
-  if (testCommand) {
-    const relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_3__["maybeSwapExtension"])(filepath));
-    await vscode__WEBPACK_IMPORTED_MODULE_1__["env"].clipboard.writeText(`${testCommand} ${relativePath}`);
-  }
+function _copyTestCommand() {
+  _copyTestCommand = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(filepath) {
+    var _yield$getConfigurati, testCommand, relativePath;
+
+    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+      while (1) {
+        switch (_context2.prev = _context2.next) {
+          case 0:
+            _context2.next = 2;
+            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["getConfiguration"])();
+
+          case 2:
+            _yield$getConfigurati = _context2.sent;
+            testCommand = _yield$getConfigurati.testCommand;
+
+            if (!testCommand) {
+              _context2.next = 8;
+              break;
+            }
+
+            relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_3__["maybeSwapExtension"])(filepath));
+            _context2.next = 8;
+            return vscode__WEBPACK_IMPORTED_MODULE_1__["env"].clipboard.writeText("".concat(testCommand, " ").concat(relativePath));
+
+          case 8:
+          case "end":
+            return _context2.stop();
+        }
+      }
+    }, _callee2);
+  }));
+  return _copyTestCommand.apply(this, arguments);
 }
 
 /***/ }),
@@ -16845,45 +15127,69 @@ async function copyTestCommand(filepath) {
 /*!*********************!*\
   !*** ./src/misc.ts ***!
   \*********************/
-/*! exports provided: gotoSymbolGrouped, openAllFilesOrLinksListedInDocument */
+/*! exports provided: gotoSymbolGrouped, openAllFilesOrLinksListedInDocument, openFileInDefaultProgram */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "gotoSymbolGrouped", function() { return gotoSymbolGrouped; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openAllFilesOrLinksListedInDocument", function() { return openAllFilesOrLinksListedInDocument; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openFileInDefaultProgram", function() { return openFileInDefaultProgram; });
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! open */ "./node_modules/open/index.js");
 /* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(open__WEBPACK_IMPORTED_MODULE_2__);
+function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
 
 
 
 function gotoSymbolGrouped() {
   vscode__WEBPACK_IMPORTED_MODULE_1___default.a.commands.executeCommand('workbench.action.quickOpen', '@:');
 }
-const openAllFilesOrLinksListedInDocument = () => {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.activeTextEditor;
-  const {
-    workspaceFolders
-  } = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.workspace;
+var openAllFilesOrLinksListedInDocument = function openAllFilesOrLinksListedInDocument() {
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.activeTextEditor;
+  var workspaceFolders = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.workspace.workspaceFolders;
   if (!editor || !workspaceFolders) return;
-  const lines = editor.document.getText().split('\n').map(l => l.trim()).filter(Boolean);
-  const rootPath = workspaceFolders[0].uri.fsPath;
+  var lines = editor.document.getText().split('\n').map(function (l) {
+    return l.trim();
+  }).filter(Boolean);
+  var rootPath = workspaceFolders[0].uri.fsPath;
 
-  for (const line of lines) {
-    if (line.startsWith('http')) {
-      open__WEBPACK_IMPORTED_MODULE_2___default()(line);
-      continue;
+  var _iterator = _createForOfIteratorHelper(lines),
+      _step;
+
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var line = _step.value;
+
+      if (line.startsWith('http')) {
+        open__WEBPACK_IMPORTED_MODULE_2___default()(line);
+        continue;
+      }
+
+      var filepath = !line.startsWith('/') ? path__WEBPACK_IMPORTED_MODULE_0___default.a.join(rootPath, line) : line;
+      vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.showTextDocument(vscode__WEBPACK_IMPORTED_MODULE_1___default.a.Uri.file(filepath), {
+        preview: false
+      });
     }
-
-    const filepath = !line.startsWith('/') ? path__WEBPACK_IMPORTED_MODULE_0___default.a.join(rootPath, line) : line;
-    vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.showTextDocument(vscode__WEBPACK_IMPORTED_MODULE_1___default.a.Uri.file(filepath), {
-      preview: false
-    });
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
   }
+};
+var openFileInDefaultProgram = function openFileInDefaultProgram() {
+  var _vsc$window$activeTex;
+
+  var filepath = (_vsc$window$activeTex = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.activeTextEditor) === null || _vsc$window$activeTex === void 0 ? void 0 : _vsc$window$activeTex.document.fileName;
+  if (filepath) open__WEBPACK_IMPORTED_MODULE_2___default()(filepath);
 };
 
 /***/ }),
@@ -16906,13 +15212,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const SUFFIX = 'connect';
+var SUFFIX = 'connect';
 function openCorrespondingReduxContainer() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor) return;
-  const filepath = editor.document.fileName;
-  const parts = path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
-  const containerIndex = parts.length - 2;
+  var filepath = editor.document.fileName;
+  var parts = path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
+  var containerIndex = parts.length - 2;
 
   if (parts[containerIndex] === SUFFIX) {
     parts.splice(containerIndex, 1);
@@ -16939,9 +15245,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/misc */ "./src/utils/misc.ts");
+function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
 
-const EXTENSION_MAP = {
+
+var EXTENSION_MAP = {
   js: 'jsx',
   jsx: 'js',
   ts: 'tsx',
@@ -16951,17 +15263,27 @@ const EXTENSION_MAP = {
 };
 function maybeSwapExtension(filepath) {
   if (Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["isFile"])(filepath)) return filepath;
-  const ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath).slice(1);
-  const newExt = EXTENSION_MAP[ext];
+  var ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath).slice(1);
+  var newExt = EXTENSION_MAP[ext];
   if (!newExt) return filepath;
-  return `${filepath.slice(0, filepath.lastIndexOf('.'))}.${newExt}`;
+  return "".concat(filepath.slice(0, filepath.lastIndexOf('.')), ".").concat(newExt);
 }
 function findFileForExtensions(filepath, extensions) {
-  const filepathRoot = filepath.slice(0, filepath.lastIndexOf('.'));
+  var filepathRoot = filepath.slice(0, filepath.lastIndexOf('.'));
 
-  for (const ext of extensions) {
-    const newPath = `${filepathRoot}.${ext}`;
-    if (Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["isFile"])(newPath)) return newPath;
+  var _iterator = _createForOfIteratorHelper(extensions),
+      _step;
+
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var ext = _step.value;
+      var newPath = "".concat(filepathRoot, ".").concat(ext);
+      if (Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["isFile"])(newPath)) return newPath;
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
   }
 }
 
@@ -16986,10 +15308,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _filepaths__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./filepaths */ "./src/utils/filepaths.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 
 
-let CTX;
+
+var CTX;
 function setExtCtx(ctx) {
   CTX = ctx;
 }
@@ -17002,26 +15328,64 @@ function isFile(filepath) {
     return false;
   }
 }
-async function showTextDocument(filepath, moveToOtherColumn = true, preserveFocus = false) {
-  filepath = Object(_filepaths__WEBPACK_IMPORTED_MODULE_2__["maybeSwapExtension"])(filepath);
-  if (!isFile(filepath)) return;
-  let viewColumn = 1;
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+function showTextDocument(_x) {
+  return _showTextDocument.apply(this, arguments);
+}
 
-  if (moveToOtherColumn && editor && editor.viewColumn) {
-    viewColumn = editor.viewColumn + (editor.viewColumn > 1 ? -1 : 1);
-  }
+function _showTextDocument() {
+  _showTextDocument = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(filepath) {
+    var moveToOtherColumn,
+        preserveFocus,
+        viewColumn,
+        editor,
+        newEditor,
+        _args = arguments;
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            moveToOtherColumn = _args.length > 1 && _args[1] !== undefined ? _args[1] : true;
+            preserveFocus = _args.length > 2 && _args[2] !== undefined ? _args[2] : false;
+            filepath = Object(_filepaths__WEBPACK_IMPORTED_MODULE_2__["maybeSwapExtension"])(filepath);
 
-  const newEditor = await vscode__WEBPACK_IMPORTED_MODULE_1__["window"].showTextDocument(vscode__WEBPACK_IMPORTED_MODULE_1__["Uri"].file(filepath), {
-    preserveFocus,
-    preview: false
-  });
-  if (newEditor.viewColumn !== viewColumn) moveEditorToOtherGroup();
-  return filepath;
+            if (isFile(filepath)) {
+              _context.next = 5;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 5:
+            viewColumn = 1;
+            editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+
+            if (moveToOtherColumn && editor && editor.viewColumn) {
+              viewColumn = editor.viewColumn + (editor.viewColumn > 1 ? -1 : 1);
+            }
+
+            _context.next = 10;
+            return vscode__WEBPACK_IMPORTED_MODULE_1__["window"].showTextDocument(vscode__WEBPACK_IMPORTED_MODULE_1__["Uri"].file(filepath), {
+              preserveFocus: preserveFocus,
+              preview: false
+            });
+
+          case 10:
+            newEditor = _context.sent;
+            if (newEditor.viewColumn !== viewColumn) moveEditorToOtherGroup();
+            return _context.abrupt("return", filepath);
+
+          case 13:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+  return _showTextDocument.apply(this, arguments);
 }
 
 function moveEditorToOtherGroup() {
-  const editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
   if (!editor || !editor.viewColumn) return;
 
   if (editor.viewColumn > 1) {
@@ -17031,18 +15395,9 @@ function moveEditorToOtherGroup() {
   }
 }
 
-const getConfiguration = resource => vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].getConfiguration('grabBag', resource);
-
-/***/ }),
-
-/***/ "assert":
-/*!*************************!*\
-  !*** external "assert" ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("assert");
+var getConfiguration = function getConfiguration(resource) {
+  return vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].getConfiguration('grabBag', resource);
+};
 
 /***/ }),
 
@@ -17054,17 +15409,6 @@ module.exports = require("assert");
 /***/ (function(module, exports) {
 
 module.exports = require("child_process");
-
-/***/ }),
-
-/***/ "events":
-/*!*************************!*\
-  !*** external "events" ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("events");
 
 /***/ }),
 
@@ -17098,28 +15442,6 @@ module.exports = require("os");
 /***/ (function(module, exports) {
 
 module.exports = require("path");
-
-/***/ }),
-
-/***/ "stream":
-/*!*************************!*\
-  !*** external "stream" ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("stream");
-
-/***/ }),
-
-/***/ "url":
-/*!**********************!*\
-  !*** external "url" ***!
-  \**********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("url");
 
 /***/ }),
 

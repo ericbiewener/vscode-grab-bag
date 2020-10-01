@@ -1,6 +1,6 @@
 import path from 'path'
 import { window, workspace, env } from 'vscode'
-import { writeFileIfNew } from 'utlz'
+import { writeFileIfNew } from '@ericbiewener/utils/src/writeFileIfNew'
 import { maybeSwapExtension } from './utils/filepaths'
 import { getConfiguration, showTextDocument } from './utils/misc'
 
@@ -43,7 +43,7 @@ export function openCorrespondingSnapshot() {
   const snapshot = path.join(
     path.dirname(filepath),
     '__snapshots__',
-    `${path.basename(filepath)}.snap`,
+    `${path.basename(filepath)}.snap`
   )
   return showTextDocument(snapshot)
 }

@@ -1,3 +1,4 @@
+import 'regenerator-runtime/runtime'
 import { commands, ExtensionContext } from 'vscode'
 import { addReturnToArrowFunction } from './codemods/addReturnToArrowFunction'
 import {
@@ -11,7 +12,11 @@ import {
   openCorrespondingSnapshot,
   openCorrespondingTestFile,
 } from './jest'
-import { gotoSymbolGrouped, openAllFilesOrLinksListedInDocument } from './misc'
+import {
+  gotoSymbolGrouped,
+  openAllFilesOrLinksListedInDocument,
+  openFileInDefaultProgram,
+} from './misc'
 import { openCorrespondingCssModule, createCorrespondingCssModule } from './correspondingCssModule'
 import { openCorrespondingReduxContainer } from './openCorrespondingReduxContainer'
 import { setExtCtx } from './utils/misc'
@@ -27,7 +32,7 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.createCorrespondingTestFile', createCorrespondingTestFile),
     commands.registerCommand(
       'grabBag.openCorrespondingReduxContainer',
-      openCorrespondingReduxContainer,
+      openCorrespondingReduxContainer
     ),
     commands.registerCommand('grabBag.closeAllPanels', closeAllPanels),
     commands.registerCommand('grabBag.moveEditorToOtherGroup', moveEditorToOtherGroup),
@@ -38,7 +43,8 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.addReturnToArrowFunction', addReturnToArrowFunction),
     commands.registerCommand(
       'grabBag.openAllFilesOrLinksListedInDocument',
-      openAllFilesOrLinksListedInDocument,
+      openAllFilesOrLinksListedInDocument
     ),
+    commands.registerCommand('grabBag.openFileInDefaultProgram', openFileInDefaultProgram)
   )
 }

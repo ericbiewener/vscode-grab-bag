@@ -107,6 +107,11 @@
         "title": "Open all files or links listed in document",
         "command": "grabBag.openAllFilesOrLinksListedInDocument",
         "category": "Grab Bag"
+      },
+      {
+        "title": "Open file in default program",
+        "command": "grabBag.openFileInDefaultProgram",
+        "category": "Grab Bag"
       }
     ],
     "configuration": {
@@ -141,32 +146,32 @@
     "vsce": "vsce publish --yarn"
   },
   "devDependencies": {
-    "@babel/core": "7.10.5",
+    "@babel/core": "7.11.6",
     "@babel/plugin-proposal-class-properties": "7.10.4",
-    "@babel/plugin-proposal-object-rest-spread": "7.10.4",
+    "@babel/plugin-proposal-object-rest-spread": "7.11.0",
+    "@babel/preset-env": "7.11.5",
     "@babel/preset-typescript": "7.10.4",
-    "@babel/types": "7.10.5",
-    "@types/lodash": "4.14.157",
-    "@types/node": "14.0.24",
-    "@types/vscode": "1.47.0",
-    "@types/webpack": "4.41.21",
-    "@typescript-eslint/eslint-plugin": "3.7.0",
-    "@typescript-eslint/parser": "3.7.0",
+    "@babel/types": "7.11.5",
+    "@types/lodash": "4.14.161",
+    "@types/node": "14.11.2",
+    "@types/vscode": "1.49.0",
+    "@types/webpack": "4.41.22",
+    "@typescript-eslint/eslint-plugin": "4.3.0",
+    "@typescript-eslint/parser": "4.3.0",
     "babel-eslint": "11.0.0-beta.2",
     "babel-loader": "8.1.0",
     "babel-plugin-lodash": "3.3.4",
-    "eslint": "7.5.0",
-    "eslint-config-ericbiewener-typescript": "5.14.0",
-    "eslint-config-prettier": "6.11.0",
-    "eslint-plugin-react": "7.20.3",
-    "eslint-plugin-react-hooks": "4.0.8",
-    "husky": "4.2.5",
-    "lint-staged": "10.2.11",
-    "prettier": "2.0.5",
-    "ts-node": "8.10.2",
-    "typescript": "3.9.7",
+    "eslint": "7.10.0",
+    "eslint-config-prettier": "6.12.0",
+    "eslint-plugin-react": "7.21.2",
+    "eslint-plugin-react-hooks": "4.1.2",
+    "husky": "4.3.0",
+    "lint-staged": "10.4.0",
+    "prettier": "2.1.2",
+    "ts-node": "9.0.0",
+    "typescript": "4.0.3",
     "vscode": "1.1.37",
-    "webpack": "4.43.0",
+    "webpack": "4.44.2",
     "webpack-cli": "3.3.12"
   },
   "lint-staged": {
@@ -184,11 +189,13 @@
     }
   },
   "dependencies": {
-    "@babel/parser": "7.10.5",
-    "@typescript-eslint/typescript-estree": "3.7.0",
-    "estraverse": "5.1.0",
-    "open": "7.1.0",
-    "run-jxa": "2.0.0",
-    "utlz": "3.2.2"
+    "@babel/parser": "7.11.5",
+    "@ericbiewener/eslint-config-typescript": "2.3.0",
+    "@ericbiewener/utils": "1.5.0",
+    "@typescript-eslint/typescript-estree": "4.3.0",
+    "estraverse": "5.2.0",
+    "open": "7.3.0",
+    "regenerator-runtime": "0.13.7",
+    "run-jxa": "2.0.0"
   }
 }

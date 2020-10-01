@@ -28,3 +28,8 @@ export const openAllFilesOrLinksListedInDocument = () => {
     vsc.window.showTextDocument(vsc.Uri.file(filepath), { preview: false })
   }
 }
+
+export const openFileInDefaultProgram = () => {
+  const filepath = vsc.window.activeTextEditor?.document.fileName
+  if (filepath) open(filepath)
+}

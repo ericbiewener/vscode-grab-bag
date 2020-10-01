@@ -1,9 +1,9 @@
 module.exports = {
-  extends: "ericbiewener-typescript",
+  extends: '@ericbiewener/eslint-config-typescript',
   env: {
     browser: false,
     es6: true,
     node: true,
   },
-  ignorePatterns: ["test-workspace"]
+  ignorePatterns: ['test-workspace']
 };
