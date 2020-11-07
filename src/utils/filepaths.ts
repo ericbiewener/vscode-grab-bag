@@ -1,5 +1,5 @@
 import path from 'path'
-import { isFile } from '../utils/misc'
+import { isFile } from '@ericbiewener/utils/src/isFile'
 
 const EXTENSION_MAP: Record<string, string> = {
   js: 'jsx',

@@ -18,12 +18,10 @@ import {
   openFileInDefaultProgram,
 } from './misc'
 import { openCorrespondingCssModule, createCorrespondingCssModule } from './correspondingCssModule'
+import { openCoverageReport } from './open-coverage-report'
 import { openCorrespondingReduxContainer } from './openCorrespondingReduxContainer'
-import { setExtCtx } from './utils/misc'
 
 export const activate = async function activate(ctx: ExtensionContext) {
-  setExtCtx(ctx)
-
   ctx.subscriptions.push(
     commands.registerCommand('grabBag.openCorrespondingCssModule', openCorrespondingCssModule),
     commands.registerCommand('grabBag.createCorrespondingCssModule', createCorrespondingCssModule),
@@ -45,6 +43,7 @@ export const activate = async function activate(ctx: ExtensionContext) {
       'grabBag.openAllFilesOrLinksListedInDocument',
       openAllFilesOrLinksListedInDocument
     ),
-    commands.registerCommand('grabBag.openFileInDefaultProgram', openFileInDefaultProgram)
+    commands.registerCommand('grabBag.openFileInDefaultProgram', openFileInDefaultProgram),
+    commands.registerCommand('grabBag.openCoverageReport', openCoverageReport)
   )
 }

@@ -6,6 +6,17 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Glass",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "${workspaceFolder}/../_test_workspaces/glass",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+        // "--disable-extensions"
+      ]
+    },
+    {
       "name": "Test Workspace",
       "type": "extensionHost",
       "request": "launch",

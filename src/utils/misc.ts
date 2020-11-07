@@ -1,38 +1,23 @@
-import fs from 'fs'
-import { commands, Uri, window, workspace, ExtensionContext } from 'vscode'
+import vsc from 'vscode'
+import { isFile } from '@ericbiewener/utils/src/isFile'
 import { maybeSwapExtension } from './filepaths'
-
-export let CTX: ExtensionContext
-
-export function setExtCtx(ctx: ExtensionContext) {
-  CTX = ctx
-}
-
-export function isFile(filepath: string) {
-  try {
-    return fs.statSync(filepath).isFile()
-  } catch (e) {
-    if (e.code !== 'ENOENT') throw e // File might exist, but something else went wrong (e.g. permissions error)
-    return false
-  }
-}
 
 export async function showTextDocument(
   filepath: string,
   moveToOtherColumn = true,
-  preserveFocus = false,
+  preserveFocus = false
 ) {
   filepath = maybeSwapExtension(filepath)
   if (!isFile(filepath)) return
 
   let viewColumn = 1
-  const editor = window.activeTextEditor
+  const editor = vsc.window.activeTextEditor
 
   if (moveToOtherColumn && editor && editor.viewColumn) {
     viewColumn = editor.viewColumn + (editor.viewColumn > 1 ? -1 : 1)
   }
 
-  const newEditor = await window.showTextDocument(Uri.file(filepath), {
+  const newEditor = await vsc.window.showTextDocument(vsc.Uri.file(filepath), {
     preserveFocus,
     preview: false,
   })
@@ -42,14 +27,22 @@ export async function showTextDocument(
 }
 
 function moveEditorToOtherGroup() {
-  const editor = window.activeTextEditor
+  const editor = vsc.window.activeTextEditor
   if (!editor || !editor.viewColumn) return
 
   if (editor.viewColumn > 1) {
-    commands.executeCommand('workbench.action.moveEditorToPreviousGroup')
+    vsc.commands.executeCommand('workbench.action.moveEditorToPreviousGroup')
   } else {
-    commands.executeCommand('workbench.action.moveEditorToNextGroup')
+    vsc.commands.executeCommand('workbench.action.moveEditorToNextGroup')
   }
 }
 
-export const getConfiguration = (resource?: Uri) => workspace.getConfiguration('grabBag', resource)
+export const getConfiguration = (resource?: vsc.Uri) =>
+  vsc.workspace.getConfiguration('grabBag', resource)
+
+export const getWorkspaceRoot = () => {
+  const { workspaceFolders } = vsc.workspace
+  const workspaceFolder = workspaceFolders ? workspaceFolders[0] : null
+  if (!workspaceFolder) throw new Error('No workspace folders')
+  return workspaceFolder.uri.fsPath
+}

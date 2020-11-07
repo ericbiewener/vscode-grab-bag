@@ -112,6 +112,11 @@
         "title": "Open file in default program",
         "command": "grabBag.openFileInDefaultProgram",
         "category": "Grab Bag"
+      },
+      {
+        "title": "Open coverage report",
+        "command": "grabBag.openCoverageReport",
+        "category": "Grab Bag"
       }
     ],
     "configuration": {

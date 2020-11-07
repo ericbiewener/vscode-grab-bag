@@ -14917,8 +14917,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _jest__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./jest */ "./src/jest.ts");
 /* harmony import */ var _misc__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./misc */ "./src/misc.ts");
 /* harmony import */ var _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./correspondingCssModule */ "./src/correspondingCssModule.ts");
-/* harmony import */ var _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./openCorrespondingReduxContainer */ "./src/openCorrespondingReduxContainer.ts");
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _open_coverage_report__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./open-coverage-report */ "./src/open-coverage-report.ts");
+/* harmony import */ var _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./openCorrespondingReduxContainer */ "./src/openCorrespondingReduxContainer.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -14938,14 +14938,13 @@ var activate = /*#__PURE__*/function () {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
-            Object(_utils_misc__WEBPACK_IMPORTED_MODULE_8__["setExtCtx"])(ctx);
-            ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_4__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_4__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_4__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretDown', function () {
+            ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_6__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_4__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_4__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_4__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_8__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretDown', function () {
               return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["moveCaret"])();
             }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretUp', function () {
               return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_3__["moveCaret"])(false);
-            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_5__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_2__["addReturnToArrowFunction"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_5__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_5__["openFileInDefaultProgram"]));
+            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_5__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.addReturnToArrowFunction', _codemods_addReturnToArrowFunction__WEBPACK_IMPORTED_MODULE_2__["addReturnToArrowFunction"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_5__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_5__["openFileInDefaultProgram"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCoverageReport', _open_coverage_report__WEBPACK_IMPORTED_MODULE_7__["openCoverageReport"]));
 
-          case 2:
+          case 1:
           case "end":
             return _context.stop();
         }
@@ -15194,6 +15193,43 @@ var openFileInDefaultProgram = function openFileInDefaultProgram() {
 
 /***/ }),
 
+/***/ "./src/open-coverage-report.ts":
+/*!*************************************!*\
+  !*** ./src/open-coverage-report.ts ***!
+  \*************************************/
+/*! exports provided: openCoverageReport */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openCoverageReport", function() { return openCoverageReport; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! open */ "./node_modules/open/index.js");
+/* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(open__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+
+
+
+
+var openCoverageReport = function openCoverageReport() {
+  var _vsc$window$activeTex;
+
+  var filename = (_vsc$window$activeTex = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor) === null || _vsc$window$activeTex === void 0 ? void 0 : _vsc$window$activeTex.document.fileName;
+  if (!filename) return;
+  var workspaceRoot = Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["getWorkspaceRoot"])();
+  var relativeFilepath = filename.slice(workspaceRoot.length);
+  var libFilepath = relativeFilepath.replace(/\/src.*/, '');
+  var coveragePath = path__WEBPACK_IMPORTED_MODULE_1___default.a.join(workspaceRoot, 'coverage', libFilepath, 'lcov-report', "".concat(path__WEBPACK_IMPORTED_MODULE_1___default.a.basename(filename), ".html"));
+  open__WEBPACK_IMPORTED_MODULE_2___default()(coveragePath, {
+    app: 'google chrome'
+  });
+};
+
+/***/ }),
+
 /***/ "./src/openCorrespondingReduxContainer.ts":
 /*!************************************************!*\
   !*** ./src/openCorrespondingReduxContainer.ts ***!
@@ -15244,7 +15280,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "findFileForExtensions", function() { return findFileForExtensions; });
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
@@ -15262,7 +15298,7 @@ var EXTENSION_MAP = {
   pcss: 'css'
 };
 function maybeSwapExtension(filepath) {
-  if (Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["isFile"])(filepath)) return filepath;
+  if (Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__["isFile"])(filepath)) return filepath;
   var ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath).slice(1);
   var newExt = EXTENSION_MAP[ext];
   if (!newExt) return filepath;
@@ -15278,7 +15314,7 @@ function findFileForExtensions(filepath, extensions) {
     for (_iterator.s(); !(_step = _iterator.n()).done;) {
       var ext = _step.value;
       var newPath = "".concat(filepathRoot, ".").concat(ext);
-      if (Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["isFile"])(newPath)) return newPath;
+      if (Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__["isFile"])(newPath)) return newPath;
     }
   } catch (err) {
     _iterator.e(err);
@@ -15293,20 +15329,17 @@ function findFileForExtensions(filepath, extensions) {
 /*!***************************!*\
   !*** ./src/utils/misc.ts ***!
   \***************************/
-/*! exports provided: CTX, setExtCtx, isFile, showTextDocument, getConfiguration */
+/*! exports provided: showTextDocument, getConfiguration, getWorkspaceRoot */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CTX", function() { return CTX; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setExtCtx", function() { return setExtCtx; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isFile", function() { return isFile; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "showTextDocument", function() { return showTextDocument; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getConfiguration", function() { return getConfiguration; });
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! fs */ "fs");
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getWorkspaceRoot", function() { return getWorkspaceRoot; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
 /* harmony import */ var _filepaths__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./filepaths */ "./src/utils/filepaths.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
@@ -15315,19 +15348,6 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
 
 
-var CTX;
-function setExtCtx(ctx) {
-  CTX = ctx;
-}
-function isFile(filepath) {
-  try {
-    return fs__WEBPACK_IMPORTED_MODULE_0___default.a.statSync(filepath).isFile();
-  } catch (e) {
-    if (e.code !== 'ENOENT') throw e; // File might exist, but something else went wrong (e.g. permissions error)
-
-    return false;
-  }
-}
 function showTextDocument(_x) {
   return _showTextDocument.apply(this, arguments);
 }
@@ -15348,7 +15368,7 @@ function _showTextDocument() {
             preserveFocus = _args.length > 2 && _args[2] !== undefined ? _args[2] : false;
             filepath = Object(_filepaths__WEBPACK_IMPORTED_MODULE_2__["maybeSwapExtension"])(filepath);
 
-            if (isFile(filepath)) {
+            if (Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__["isFile"])(filepath)) {
               _context.next = 5;
               break;
             }
@@ -15357,14 +15377,14 @@ function _showTextDocument() {
 
           case 5:
             viewColumn = 1;
-            editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+            editor = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor;
 
             if (moveToOtherColumn && editor && editor.viewColumn) {
               viewColumn = editor.viewColumn + (editor.viewColumn > 1 ? -1 : 1);
             }
 
             _context.next = 10;
-            return vscode__WEBPACK_IMPORTED_MODULE_1__["window"].showTextDocument(vscode__WEBPACK_IMPORTED_MODULE_1__["Uri"].file(filepath), {
+            return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.showTextDocument(vscode__WEBPACK_IMPORTED_MODULE_0___default.a.Uri.file(filepath), {
               preserveFocus: preserveFocus,
               preview: false
             });
@@ -15385,18 +15405,24 @@ function _showTextDocument() {
 }
 
 function moveEditorToOtherGroup() {
-  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor;
   if (!editor || !editor.viewColumn) return;
 
   if (editor.viewColumn > 1) {
-    vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].executeCommand('workbench.action.moveEditorToPreviousGroup');
+    vscode__WEBPACK_IMPORTED_MODULE_0___default.a.commands.executeCommand('workbench.action.moveEditorToPreviousGroup');
   } else {
-    vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].executeCommand('workbench.action.moveEditorToNextGroup');
+    vscode__WEBPACK_IMPORTED_MODULE_0___default.a.commands.executeCommand('workbench.action.moveEditorToNextGroup');
   }
 }
 
 var getConfiguration = function getConfiguration(resource) {
-  return vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].getConfiguration('grabBag', resource);
+  return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.getConfiguration('grabBag', resource);
+};
+var getWorkspaceRoot = function getWorkspaceRoot() {
+  var workspaceFolders = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.workspaceFolders;
+  var workspaceFolder = workspaceFolders ? workspaceFolders[0] : null;
+  if (!workspaceFolder) throw new Error('No workspace folders');
+  return workspaceFolder.uri.fsPath;
 };
 
 /***/ }),
