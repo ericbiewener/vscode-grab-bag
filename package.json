@@ -99,11 +99,6 @@
         "category": "Grab Bag"
       },
       {
-        "title": "Add return statement to arrow function",
-        "command": "grabBag.addReturnToArrowFunction",
-        "category": "Grab Bag"
-      },
-      {
         "title": "Open all files or links listed in document",
         "command": "grabBag.openAllFilesOrLinksListedInDocument",
         "category": "Grab Bag"
@@ -116,6 +111,11 @@
       {
         "title": "Open coverage report",
         "command": "grabBag.openCoverageReport",
+        "category": "Grab Bag"
+      },
+      {
+        "title": "Update index file to export all files in directory",
+        "command": "grabBag.exportAllFromDir",
         "category": "Grab Bag"
       }
     ],
