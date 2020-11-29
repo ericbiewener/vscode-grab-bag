@@ -11,7 +11,7 @@ export const exportAllFromDir = async () => {
   const filename = path.basename(document.fileName)
   if (!['index.ts', 'index.js'].includes(filename)) return
 
-  const dir = path.dirname(filename)
+  const dir = path.dirname(document.fileName)
   const items = await fs.readdir(dir)
   const extensions = ['.js', '.jsx', '.ts', '.tsx']
   const importPaths = items

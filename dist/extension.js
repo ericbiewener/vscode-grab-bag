@@ -1554,7 +1554,7 @@ var exportAllFromDir = /*#__PURE__*/function () {
             return _context.abrupt("return");
 
           case 7:
-            dir = path__WEBPACK_IMPORTED_MODULE_2___default.a.dirname(filename);
+            dir = path__WEBPACK_IMPORTED_MODULE_2___default.a.dirname(document.fileName);
             _context.next = 10;
             return fs__WEBPACK_IMPORTED_MODULE_1__["promises"].readdir(dir);
 
