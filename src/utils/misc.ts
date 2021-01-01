@@ -37,7 +37,7 @@ function moveEditorToOtherGroup() {
   }
 }
 
-export const getConfiguration = (resource?: vsc.Uri) =>
+export const getExtensionConfig = (resource?: vsc.Uri) =>
   vsc.workspace.getConfiguration('grabBag', resource)
 
 export const getWorkspaceRoot = () => {

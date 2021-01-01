@@ -2,8 +2,9 @@ import * as vsc from 'vscode'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { removeEndOfString } from '@ericbiewener/utils/src/removeEndOfString'
+import { isFile } from '@ericbiewener/utils/src/isFile'
 
-export const exportAllFromDir = async () => {
+export const updateIndexFileToExportAllFromDir = async () => {
   const editor = vsc.window.activeTextEditor
   if (!editor) return
 
@@ -15,7 +16,11 @@ export const exportAllFromDir = async () => {
   const items = await fs.readdir(dir)
   const extensions = ['.js', '.jsx', '.ts', '.tsx']
   const importPaths = items
-    .filter((p) => p !== filename && extensions.includes(path.extname(p)))
+    .filter(
+      (p) =>
+        p !== filename &&
+        (!isFile(path.join(dir, p)) || extensions.includes(path.extname(p)))
+    )
     .map((p) => `export * from './${removeEndOfString(p)}'`)
 
   await editor.edit((builder) => {

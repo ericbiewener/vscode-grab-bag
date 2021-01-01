@@ -115,7 +115,7 @@
       },
       {
         "title": "Update index file to export all files in directory",
-        "command": "grabBag.exportAllFromDir",
+        "command": "grabBag.updateIndexFileToExportAllFromDir",
         "category": "Grab Bag"
       }
     ],

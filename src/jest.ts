@@ -2,7 +2,7 @@ import path from 'path'
 import { window, workspace, env } from 'vscode'
 import { writeFileIfNew } from '@ericbiewener/utils/src/writeFileIfNew'
 import { maybeSwapExtension } from './utils/filepaths'
-import { getConfiguration, showTextDocument } from './utils/misc'
+import { getExtensionConfig, showTextDocument } from './utils/misc'
 
 export async function openCorrespondingTestFile() {
   const editor = window.activeTextEditor
@@ -73,7 +73,7 @@ function getCorrespondingTestFilepath(filepath: string) {
 }
 
 async function copyTestCommand(filepath: string) {
-  const { testCommand } = await getConfiguration()
+  const { testCommand } = await getExtensionConfig()
   if (testCommand) {
     const relativePath = workspace.asRelativePath(maybeSwapExtension(filepath))
     await env.clipboard.writeText(`${testCommand} ${relativePath}`)

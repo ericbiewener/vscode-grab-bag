@@ -22,7 +22,7 @@ import {
 } from './correspondingCssModule'
 import { openCoverageReport } from './open-coverage-report'
 import { openCorrespondingReduxContainer } from './openCorrespondingReduxContainer'
-import { exportAllFromDir } from './export-all-from-dir'
+import { updateIndexFileToExportAllFromDir } from './update-index-file-to-export-all-from-dir'
 
 export const activate = async function activate(ctx: ExtensionContext) {
   ctx.subscriptions.push(
@@ -71,6 +71,9 @@ export const activate = async function activate(ctx: ExtensionContext) {
       openFileInDefaultProgram
     ),
     commands.registerCommand('grabBag.openCoverageReport', openCoverageReport),
-    commands.registerCommand('grabBag.exportAllFromDir', exportAllFromDir)
+    commands.registerCommand(
+      'grabBag.updateIndexFileToExportAllFromDir',
+      updateIndexFileToExportAllFromDir
+    )
   )
 }

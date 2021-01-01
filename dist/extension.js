@@ -1284,7 +1284,7 @@ var openCorrespondingCssModule = function openCorrespondingCssModule() {
 };
 var createCorrespondingCssModule = /*#__PURE__*/function () {
   var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
-    var editor, _yield$getConfigurati, cssModuleFileExtension, filepath;
+    var editor, _yield$getExtensionCo, cssModuleFileExtension, filepath;
 
     return regeneratorRuntime.wrap(function _callee$(_context) {
       while (1) {
@@ -1301,11 +1301,11 @@ var createCorrespondingCssModule = /*#__PURE__*/function () {
 
           case 3:
             _context.next = 5;
-            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["getConfiguration"])();
+            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["getExtensionConfig"])();
 
           case 5:
-            _yield$getConfigurati = _context.sent;
-            cssModuleFileExtension = _yield$getConfigurati.cssModuleFileExtension;
+            _yield$getExtensionCo = _context.sent;
+            cssModuleFileExtension = _yield$getExtensionCo.cssModuleFileExtension;
             filepath = "".concat(Object(_ericbiewener_utils_src_removeFileExt__WEBPACK_IMPORTED_MODULE_3__["removeFileExt"])(editor.document.fileName), ".").concat(cssModuleFileExtension);
             Object(_ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(filepath);
             Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["showTextDocument"])(filepath);
@@ -1380,7 +1380,7 @@ function moveEditorToOtherGroup() {
 
 function _moveEditorToOtherGroup() {
   _moveEditorToOtherGroup = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
-    var editor, _yield$getConfigurati, maxEditorGroups;
+    var editor, _yield$getExtensionCo, maxEditorGroups;
 
     return regeneratorRuntime.wrap(function _callee2$(_context2) {
       while (1) {
@@ -1397,11 +1397,11 @@ function _moveEditorToOtherGroup() {
 
           case 3:
             _context2.next = 5;
-            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["getConfiguration"])();
+            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["getExtensionConfig"])();
 
           case 5:
-            _yield$getConfigurati = _context2.sent;
-            maxEditorGroups = _yield$getConfigurati.maxEditorGroups;
+            _yield$getExtensionCo = _context2.sent;
+            maxEditorGroups = _yield$getExtensionCo.maxEditorGroups;
 
             if (editor.viewColumn >= maxEditorGroups) {
               vscode__WEBPACK_IMPORTED_MODULE_0__["commands"].executeCommand('workbench.action.moveEditorToFirstGroup');
@@ -1501,92 +1501,6 @@ function _moveCaret() {
 
 /***/ }),
 
-/***/ "./src/export-all-from-dir.ts":
-/*!************************************!*\
-  !*** ./src/export-all-from-dir.ts ***!
-  \************************************/
-/*! exports provided: exportAllFromDir */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "exportAllFromDir", function() { return exportAllFromDir; });
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! fs */ "fs");
-/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! path */ "path");
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ericbiewener/utils/src/removeEndOfString */ "./node_modules/@ericbiewener/utils/src/removeEndOfString.ts");
-function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
-
-function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
-
-
-
-
-
-var exportAllFromDir = /*#__PURE__*/function () {
-  var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
-    var editor, document, filename, dir, items, extensions, importPaths;
-    return regeneratorRuntime.wrap(function _callee$(_context) {
-      while (1) {
-        switch (_context.prev = _context.next) {
-          case 0:
-            editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
-
-            if (editor) {
-              _context.next = 3;
-              break;
-            }
-
-            return _context.abrupt("return");
-
-          case 3:
-            document = editor.document;
-            filename = path__WEBPACK_IMPORTED_MODULE_2___default.a.basename(document.fileName);
-
-            if (['index.ts', 'index.js'].includes(filename)) {
-              _context.next = 7;
-              break;
-            }
-
-            return _context.abrupt("return");
-
-          case 7:
-            dir = path__WEBPACK_IMPORTED_MODULE_2___default.a.dirname(document.fileName);
-            _context.next = 10;
-            return fs__WEBPACK_IMPORTED_MODULE_1__["promises"].readdir(dir);
-
-          case 10:
-            items = _context.sent;
-            extensions = ['.js', '.jsx', '.ts', '.tsx'];
-            importPaths = items.filter(function (p) {
-              return p !== filename && extensions.includes(path__WEBPACK_IMPORTED_MODULE_2___default.a.extname(p));
-            }).map(function (p) {
-              return "export * from './".concat(Object(_ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_3__["removeEndOfString"])(p), "'");
-            });
-            _context.next = 15;
-            return editor.edit(function (builder) {
-              var endPos = document.positionAt(document.getText().length);
-              builder.replace(new vscode__WEBPACK_IMPORTED_MODULE_0__["Range"](0, 0, endPos.line, endPos.character), importPaths.join('\n'));
-            });
-
-          case 15:
-          case "end":
-            return _context.stop();
-        }
-      }
-    }, _callee);
-  }));
-
-  return function exportAllFromDir() {
-    return _ref.apply(this, arguments);
-  };
-}();
-
-/***/ }),
-
 /***/ "./src/index.ts":
 /*!**********************!*\
   !*** ./src/index.ts ***!
@@ -1607,7 +1521,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./correspondingCssModule */ "./src/correspondingCssModule.ts");
 /* harmony import */ var _open_coverage_report__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./open-coverage-report */ "./src/open-coverage-report.ts");
 /* harmony import */ var _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./openCorrespondingReduxContainer */ "./src/openCorrespondingReduxContainer.ts");
-/* harmony import */ var _export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./export-all-from-dir */ "./src/export-all-from-dir.ts");
+/* harmony import */ var _update_index_file_to_export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./update-index-file-to-export-all-from-dir */ "./src/update-index-file-to-export-all-from-dir.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -1631,7 +1545,7 @@ var activate = /*#__PURE__*/function () {
               return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])();
             }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretUp', function () {
               return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false);
-            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_4__["openFileInDefaultProgram"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCoverageReport', _open_coverage_report__WEBPACK_IMPORTED_MODULE_6__["openCoverageReport"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.exportAllFromDir', _export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__["exportAllFromDir"]));
+            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_4__["openFileInDefaultProgram"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCoverageReport', _open_coverage_report__WEBPACK_IMPORTED_MODULE_6__["openCoverageReport"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.updateIndexFileToExportAllFromDir', _update_index_file_to_export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__["updateIndexFileToExportAllFromDir"]));
 
           case 1:
           case "end":
@@ -1777,18 +1691,18 @@ function copyTestCommand(_x) {
 
 function _copyTestCommand() {
   _copyTestCommand = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(filepath) {
-    var _yield$getConfigurati, testCommand, relativePath;
+    var _yield$getExtensionCo, testCommand, relativePath;
 
     return regeneratorRuntime.wrap(function _callee2$(_context2) {
       while (1) {
         switch (_context2.prev = _context2.next) {
           case 0:
             _context2.next = 2;
-            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["getConfiguration"])();
+            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["getExtensionConfig"])();
 
           case 2:
-            _yield$getConfigurati = _context2.sent;
-            testCommand = _yield$getConfigurati.testCommand;
+            _yield$getExtensionCo = _context2.sent;
+            testCommand = _yield$getExtensionCo.testCommand;
 
             if (!testCommand) {
               _context2.next = 8;
@@ -1956,6 +1870,94 @@ function openCorrespondingReduxContainer() {
 
 /***/ }),
 
+/***/ "./src/update-index-file-to-export-all-from-dir.ts":
+/*!*********************************************************!*\
+  !*** ./src/update-index-file-to-export-all-from-dir.ts ***!
+  \*********************************************************/
+/*! exports provided: updateIndexFileToExportAllFromDir */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "updateIndexFileToExportAllFromDir", function() { return updateIndexFileToExportAllFromDir; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! fs */ "fs");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ericbiewener/utils/src/removeEndOfString */ "./node_modules/@ericbiewener/utils/src/removeEndOfString.ts");
+/* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+
+
+
+
+
+var updateIndexFileToExportAllFromDir = /*#__PURE__*/function () {
+  var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    var editor, document, filename, dir, items, extensions, importPaths;
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
+
+            if (editor) {
+              _context.next = 3;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 3:
+            document = editor.document;
+            filename = path__WEBPACK_IMPORTED_MODULE_2___default.a.basename(document.fileName);
+
+            if (['index.ts', 'index.js'].includes(filename)) {
+              _context.next = 7;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 7:
+            dir = path__WEBPACK_IMPORTED_MODULE_2___default.a.dirname(document.fileName);
+            _context.next = 10;
+            return fs__WEBPACK_IMPORTED_MODULE_1__["promises"].readdir(dir);
+
+          case 10:
+            items = _context.sent;
+            extensions = ['.js', '.jsx', '.ts', '.tsx'];
+            importPaths = items.filter(function (p) {
+              return p !== filename && (!Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_4__["isFile"])(path__WEBPACK_IMPORTED_MODULE_2___default.a.join(dir, p)) || extensions.includes(path__WEBPACK_IMPORTED_MODULE_2___default.a.extname(p)));
+            }).map(function (p) {
+              return "export * from './".concat(Object(_ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_3__["removeEndOfString"])(p), "'");
+            });
+            _context.next = 15;
+            return editor.edit(function (builder) {
+              var endPos = document.positionAt(document.getText().length);
+              builder.replace(new vscode__WEBPACK_IMPORTED_MODULE_0__["Range"](0, 0, endPos.line, endPos.character), importPaths.join('\n'));
+            });
+
+          case 15:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+
+  return function updateIndexFileToExportAllFromDir() {
+    return _ref.apply(this, arguments);
+  };
+}();
+
+/***/ }),
+
 /***/ "./src/utils/filepaths.ts":
 /*!********************************!*\
   !*** ./src/utils/filepaths.ts ***!
@@ -2018,13 +2020,13 @@ function findFileForExtensions(filepath, extensions) {
 /*!***************************!*\
   !*** ./src/utils/misc.ts ***!
   \***************************/
-/*! exports provided: showTextDocument, getConfiguration, getWorkspaceRoot */
+/*! exports provided: showTextDocument, getExtensionConfig, getWorkspaceRoot */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "showTextDocument", function() { return showTextDocument; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getConfiguration", function() { return getConfiguration; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getExtensionConfig", function() { return getExtensionConfig; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getWorkspaceRoot", function() { return getWorkspaceRoot; });
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
@@ -2104,7 +2106,7 @@ function moveEditorToOtherGroup() {
   }
 }
 
-var getConfiguration = function getConfiguration(resource) {
+var getExtensionConfig = function getExtensionConfig(resource) {
   return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.getConfiguration('grabBag', resource);
 };
 var getWorkspaceRoot = function getWorkspaceRoot() {

@@ -3,7 +3,7 @@ import { window } from 'vscode'
 import { writeFileIfNew } from '@ericbiewener/utils/src/writeFileIfNew'
 import { removeFileExt } from '@ericbiewener/utils/src/removeFileExt'
 import { findFileForExtensions } from './utils/filepaths'
-import { getConfiguration, showTextDocument } from './utils/misc'
+import { getExtensionConfig, showTextDocument } from './utils/misc'
 
 const CSS_EXTENSIONS = ['css', 'pcss']
 const JS_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx']
@@ -26,9 +26,11 @@ export const createCorrespondingCssModule = async () => {
   const editor = window.activeTextEditor
   if (!editor) return
 
-  const { cssModuleFileExtension } = await getConfiguration()
+  const { cssModuleFileExtension } = await getExtensionConfig()
 
-  const filepath = `${removeFileExt(editor.document.fileName)}.${cssModuleFileExtension}`
+  const filepath = `${removeFileExt(
+    editor.document.fileName
+  )}.${cssModuleFileExtension}`
   writeFileIfNew(filepath)
   showTextDocument(filepath)
 }
