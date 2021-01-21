@@ -87,6 +87,35 @@ module.exports =
 /************************************************************************/
 /******/ ({
 
+/***/ "./node_modules/@ericbiewener/utils/dist/isFile.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/@ericbiewener/utils/dist/isFile.js ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.isFile = void 0;
+const fs_1 = __importDefault(__webpack_require__(/*! fs */ "fs"));
+exports.isFile = (filepath) => {
+    try {
+        return fs_1.default.statSync(filepath).isFile();
+    }
+    catch (e) {
+        if (e.code !== 'ENOENT')
+            throw e; // File might exist, but something else went wrong (e.g. permissions error)
+        return false;
+    }
+};
+//# sourceMappingURL=isFile.js.map
+
+/***/ }),
+
 /***/ "./node_modules/@ericbiewener/utils/src/createDir.ts":
 /*!***********************************************************!*\
   !*** ./node_modules/@ericbiewener/utils/src/createDir.ts ***!
@@ -1260,12 +1289,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ericbiewener/utils/src/writeFileIfNew */ "./node_modules/@ericbiewener/utils/src/writeFileIfNew.ts");
 /* harmony import */ var _ericbiewener_utils_src_removeFileExt__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ericbiewener/utils/src/removeFileExt */ "./node_modules/@ericbiewener/utils/src/removeFileExt.ts");
-/* harmony import */ var _utils_filepaths__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/filepaths */ "./src/utils/filepaths.ts");
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
-
 
 
 
@@ -1279,8 +1306,8 @@ var openCorrespondingCssModule = function openCorrespondingCssModule() {
   if (!editor) return;
   var filepath = editor.document.fileName;
   var ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath);
-  var correspondingFile = CSS_EXTENSIONS.includes(ext) ? Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_4__["findFileForExtensions"])(filepath, JS_EXTENSIONS) : Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_4__["findFileForExtensions"])(filepath, CSS_EXTENSIONS);
-  if (correspondingFile) Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["showTextDocument"])(correspondingFile);
+  var correspondingFile = CSS_EXTENSIONS.includes(ext) ? Object(_utils__WEBPACK_IMPORTED_MODULE_4__["findFileForExtensions"])(filepath, JS_EXTENSIONS) : Object(_utils__WEBPACK_IMPORTED_MODULE_4__["findFileForExtensions"])(filepath, CSS_EXTENSIONS);
+  if (correspondingFile) Object(_utils__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(correspondingFile);
 };
 var createCorrespondingCssModule = /*#__PURE__*/function () {
   var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
@@ -1301,14 +1328,14 @@ var createCorrespondingCssModule = /*#__PURE__*/function () {
 
           case 3:
             _context.next = 5;
-            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["getExtensionConfig"])();
+            return Object(_utils__WEBPACK_IMPORTED_MODULE_4__["getExtensionConfig"])();
 
           case 5:
             _yield$getExtensionCo = _context.sent;
             cssModuleFileExtension = _yield$getExtensionCo.cssModuleFileExtension;
             filepath = "".concat(Object(_ericbiewener_utils_src_removeFileExt__WEBPACK_IMPORTED_MODULE_3__["removeFileExt"])(editor.document.fileName), ".").concat(cssModuleFileExtension);
             Object(_ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(filepath);
-            Object(_utils_misc__WEBPACK_IMPORTED_MODULE_5__["showTextDocument"])(filepath);
+            Object(_utils__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(filepath);
 
           case 10:
           case "end":
@@ -1340,7 +1367,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "moveCaret", function() { return moveCaret; });
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -1397,7 +1424,7 @@ function _moveEditorToOtherGroup() {
 
           case 3:
             _context2.next = 5;
-            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_1__["getExtensionConfig"])();
+            return Object(_utils__WEBPACK_IMPORTED_MODULE_1__["getExtensionConfig"])();
 
           case 5:
             _yield$getExtensionCo = _context2.sent;
@@ -1516,15 +1543,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./editor-manipulation */ "./src/editor-manipulation.ts");
-/* harmony import */ var _jest__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./jest */ "./src/jest.ts");
+/* harmony import */ var _jest__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./jest */ "./src/jest/index.ts");
 /* harmony import */ var _misc__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./misc */ "./src/misc.ts");
 /* harmony import */ var _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./correspondingCssModule */ "./src/correspondingCssModule.ts");
 /* harmony import */ var _open_coverage_report__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./open-coverage-report */ "./src/open-coverage-report.ts");
 /* harmony import */ var _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./openCorrespondingReduxContainer */ "./src/openCorrespondingReduxContainer.ts");
 /* harmony import */ var _update_index_file_to_export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./update-index-file-to-export-all-from-dir */ "./src/update-index-file-to-export-all-from-dir.ts");
+/* harmony import */ var _toggle_jest_test__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./toggle-jest-test */ "./src/toggle-jest-test.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
 
 
 
@@ -1541,11 +1570,15 @@ var activate = /*#__PURE__*/function () {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
-            ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretDown', function () {
+            ctx.subscriptions.push(vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingCssModule', _correspondingCssModule__WEBPACK_IMPORTED_MODULE_5__["createCorrespondingCssModule"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.copyTestCommand', _jest__WEBPACK_IMPORTED_MODULE_3__["copyTestCommand"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingSnapshot', _jest__WEBPACK_IMPORTED_MODULE_3__["openCorrespondingSnapshot"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.createCorrespondingTestFile', _jest__WEBPACK_IMPORTED_MODULE_3__["createCorrespondingTestFile"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCorrespondingReduxContainer', _openCorrespondingReduxContainer__WEBPACK_IMPORTED_MODULE_7__["openCorrespondingReduxContainer"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.closeAllPanels', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["closeAllPanels"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveEditorToOtherGroup', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveEditorToOtherGroup"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.consolidateToTwoEditors', _editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["consolidateToTwoEditors"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretDown', function () {
               return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])();
             }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.moveCaretUp', function () {
               return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false);
-            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_4__["openFileInDefaultProgram"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCoverageReport', _open_coverage_report__WEBPACK_IMPORTED_MODULE_6__["openCoverageReport"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.updateIndexFileToExportAllFromDir', _update_index_file_to_export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__["updateIndexFileToExportAllFromDir"]));
+            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_4__["openFileInDefaultProgram"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCoverageReport', _open_coverage_report__WEBPACK_IMPORTED_MODULE_6__["openCoverageReport"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.updateIndexFileToExportAllFromDir', _update_index_file_to_export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__["updateIndexFileToExportAllFromDir"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.toggleJestOnly', _toggle_jest_test__WEBPACK_IMPORTED_MODULE_9__["toggleJestTest"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.toggleJestSkip', function () {
+              return Object(_toggle_jest_test__WEBPACK_IMPORTED_MODULE_9__["toggleJestTest"])(false);
+            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.toggleJestOnlyExclusive', function () {
+              return Object(_toggle_jest_test__WEBPACK_IMPORTED_MODULE_9__["toggleJestTestExclusive"])();
+            }));
 
           case 1:
           case "end":
@@ -1564,26 +1597,129 @@ var activate = /*#__PURE__*/function () {
 
 /***/ }),
 
-/***/ "./src/jest.ts":
-/*!*********************!*\
-  !*** ./src/jest.ts ***!
-  \*********************/
-/*! exports provided: openCorrespondingTestFile, openCorrespondingSnapshot, createCorrespondingTestFile, getFilenameParts */
+/***/ "./src/jest/copy-nx-test-command.ts":
+/*!******************************************!*\
+  !*** ./src/jest/copy-nx-test-command.ts ***!
+  \******************************************/
+/*! exports provided: copyNxTestCommand */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingTestFile", function() { return openCorrespondingTestFile; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingSnapshot", function() { return openCorrespondingSnapshot; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createCorrespondingTestFile", function() { return createCorrespondingTestFile; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFilenameParts", function() { return getFilenameParts; });
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
-/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ericbiewener/utils/src/writeFileIfNew */ "./node_modules/@ericbiewener/utils/src/writeFileIfNew.ts");
-/* harmony import */ var _utils_filepaths__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/filepaths */ "./src/utils/filepaths.ts");
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyNxTestCommand", function() { return copyNxTestCommand; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! fs */ "fs");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils_get_workspace_root__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/get-workspace-root */ "./src/utils/get-workspace-root.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+
+
+
+
+var copyNxTestCommand = /*#__PURE__*/function () {
+  var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    var _vsc$window$activeTex;
+
+    var fileName, testPath, _JSON$parse, projects, projectName, name, config;
+
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            fileName = (_vsc$window$activeTex = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor) === null || _vsc$window$activeTex === void 0 ? void 0 : _vsc$window$activeTex.document.fileName;
+
+            if (fileName) {
+              _context.next = 3;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 3:
+            testPath = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.asRelativePath(fileName);
+            _context.t0 = JSON;
+            _context.next = 7;
+            return fs__WEBPACK_IMPORTED_MODULE_2__["promises"].readFile(path__WEBPACK_IMPORTED_MODULE_1___default.a.join(Object(_utils_get_workspace_root__WEBPACK_IMPORTED_MODULE_3__["getWorkspaceRoot"])(), 'workspace.json'), 'utf8');
+
+          case 7:
+            _context.t1 = _context.sent;
+            _JSON$parse = _context.t0.parse.call(_context.t0, _context.t1);
+            projects = _JSON$parse.projects;
+            _context.t2 = regeneratorRuntime.keys(projects);
+
+          case 11:
+            if ((_context.t3 = _context.t2()).done) {
+              _context.next = 20;
+              break;
+            }
+
+            name = _context.t3.value;
+            config = projects[name];
+
+            if (testPath.startsWith(config.root)) {
+              _context.next = 16;
+              break;
+            }
+
+            return _context.abrupt("continue", 11);
+
+          case 16:
+            projectName = name;
+            return _context.abrupt("break", 20);
+
+          case 20:
+            if (projectName) {
+              _context.next = 23;
+              break;
+            }
+
+            vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.showErrorMessage('Could not find Nx project name for active file.');
+            return _context.abrupt("return");
+
+          case 23:
+            _context.next = 25;
+            return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.env.clipboard.writeText("yarn test ".concat(projectName, " --skip-nx-cache --codeCoverage 0 --testFile ").concat(testPath));
+
+          case 25:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+
+  return function copyNxTestCommand() {
+    return _ref.apply(this, arguments);
+  };
+}();
+
+/***/ }),
+
+/***/ "./src/jest/copy-test-command.ts":
+/*!***************************************!*\
+  !*** ./src/jest/copy-test-command.ts ***!
+  \***************************************/
+/*! exports provided: copyTestCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyTestCommand", function() { return copyTestCommand; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _ericbiewener_utils_dist_isFile__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ericbiewener/utils/dist/isFile */ "./node_modules/@ericbiewener/utils/dist/isFile.js");
+/* harmony import */ var _ericbiewener_utils_dist_isFile__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_ericbiewener_utils_dist_isFile__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
+/* harmony import */ var _utils_get_workspace_root__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/get-workspace-root */ "./src/utils/get-workspace-root.ts");
+/* harmony import */ var _copy_nx_test_command__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./copy-nx-test-command */ "./src/jest/copy-nx-test-command.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -1593,18 +1729,215 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
 
 
-function openCorrespondingTestFile() {
-  return _openCorrespondingTestFile.apply(this, arguments);
-}
 
-function _openCorrespondingTestFile() {
-  _openCorrespondingTestFile = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+var copyTestCommand = /*#__PURE__*/function () {
+  var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(filepath) {
+    var nxJson, _yield$getExtensionCo, testCommand, relativePath;
+
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            nxJson = path__WEBPACK_IMPORTED_MODULE_1___default.a.join(Object(_utils_get_workspace_root__WEBPACK_IMPORTED_MODULE_4__["getWorkspaceRoot"])(), 'nx.json');
+
+            if (!Object(_ericbiewener_utils_dist_isFile__WEBPACK_IMPORTED_MODULE_2__["isFile"])(nxJson)) {
+              _context.next = 3;
+              break;
+            }
+
+            return _context.abrupt("return", Object(_copy_nx_test_command__WEBPACK_IMPORTED_MODULE_5__["copyNxTestCommand"])());
+
+          case 3:
+            _context.next = 5;
+            return Object(_utils__WEBPACK_IMPORTED_MODULE_3__["getExtensionConfig"])();
+
+          case 5:
+            _yield$getExtensionCo = _context.sent;
+            testCommand = _yield$getExtensionCo.testCommand;
+
+            if (testCommand) {
+              _context.next = 9;
+              break;
+            }
+
+            return _context.abrupt("return");
+
+          case 9:
+            relativePath = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.asRelativePath(Object(_utils__WEBPACK_IMPORTED_MODULE_3__["maybeSwapExtension"])(filepath));
+            _context.next = 12;
+            return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.env.clipboard.writeText("".concat(testCommand, " ").concat(relativePath));
+
+          case 12:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+
+  return function copyTestCommand(_x) {
+    return _ref.apply(this, arguments);
+  };
+}();
+
+/***/ }),
+
+/***/ "./src/jest/create-corresponding-test-file.ts":
+/*!****************************************************!*\
+  !*** ./src/jest/create-corresponding-test-file.ts ***!
+  \****************************************************/
+/*! exports provided: createCorrespondingTestFile */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createCorrespondingTestFile", function() { return createCorrespondingTestFile; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ericbiewener/utils/src/writeFileIfNew */ "./node_modules/@ericbiewener/utils/src/writeFileIfNew.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
+/* harmony import */ var _get_corresponding_test_filepath__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./get-corresponding-test-filepath */ "./src/jest/get-corresponding-test-filepath.ts");
+/* harmony import */ var _copy_test_command__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./copy-test-command */ "./src/jest/copy-test-command.ts");
+
+
+
+
+
+var createCorrespondingTestFile = function createCorrespondingTestFile() {
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor;
+  if (!editor) return;
+  var testFilepath = Object(_get_corresponding_test_filepath__WEBPACK_IMPORTED_MODULE_3__["getCorrespondingTestFilepath"])(editor.document.fileName);
+
+  try {
+    Object(_ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_1__["writeFileIfNew"])(testFilepath);
+    Object(_copy_test_command__WEBPACK_IMPORTED_MODULE_4__["copyTestCommand"])(testFilepath);
+    Object(_utils__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(testFilepath);
+  } catch (e) {
+    console.info(':: ', e);
+  }
+};
+
+/***/ }),
+
+/***/ "./src/jest/get-corresponding-test-filepath.ts":
+/*!*****************************************************!*\
+  !*** ./src/jest/get-corresponding-test-filepath.ts ***!
+  \*****************************************************/
+/*! exports provided: getCorrespondingTestFilepath */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getCorrespondingTestFilepath", function() { return getCorrespondingTestFilepath; });
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
+
+var getCorrespondingTestFilepath = function getCorrespondingTestFilepath(filepath) {
+  var filenameParts = path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
+  filenameParts.splice(-1, 0, 'test');
+  return path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__tests__', filenameParts.join('.'));
+};
+
+/***/ }),
+
+/***/ "./src/jest/index.ts":
+/*!***************************!*\
+  !*** ./src/jest/index.ts ***!
+  \***************************/
+/*! exports provided: copyNxTestCommand, copyTestCommand, createCorrespondingTestFile, getCorrespondingTestFilepath, openCorrespondingSnapshot, openCorrespondingTestFile */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _copy_nx_test_command__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./copy-nx-test-command */ "./src/jest/copy-nx-test-command.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "copyNxTestCommand", function() { return _copy_nx_test_command__WEBPACK_IMPORTED_MODULE_0__["copyNxTestCommand"]; });
+
+/* harmony import */ var _copy_test_command__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./copy-test-command */ "./src/jest/copy-test-command.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "copyTestCommand", function() { return _copy_test_command__WEBPACK_IMPORTED_MODULE_1__["copyTestCommand"]; });
+
+/* harmony import */ var _create_corresponding_test_file__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./create-corresponding-test-file */ "./src/jest/create-corresponding-test-file.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createCorrespondingTestFile", function() { return _create_corresponding_test_file__WEBPACK_IMPORTED_MODULE_2__["createCorrespondingTestFile"]; });
+
+/* harmony import */ var _get_corresponding_test_filepath__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./get-corresponding-test-filepath */ "./src/jest/get-corresponding-test-filepath.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "getCorrespondingTestFilepath", function() { return _get_corresponding_test_filepath__WEBPACK_IMPORTED_MODULE_3__["getCorrespondingTestFilepath"]; });
+
+/* harmony import */ var _open_corresponding_snapshot__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./open-corresponding-snapshot */ "./src/jest/open-corresponding-snapshot.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingSnapshot", function() { return _open_corresponding_snapshot__WEBPACK_IMPORTED_MODULE_4__["openCorrespondingSnapshot"]; });
+
+/* harmony import */ var _open_corresponding_test_file__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./open-corresponding-test-file */ "./src/jest/open-corresponding-test-file.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingTestFile", function() { return _open_corresponding_test_file__WEBPACK_IMPORTED_MODULE_5__["openCorrespondingTestFile"]; });
+
+
+
+
+
+
+
+
+/***/ }),
+
+/***/ "./src/jest/open-corresponding-snapshot.ts":
+/*!*************************************************!*\
+  !*** ./src/jest/open-corresponding-snapshot.ts ***!
+  \*************************************************/
+/*! exports provided: openCorrespondingSnapshot */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingSnapshot", function() { return openCorrespondingSnapshot; });
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
+
+
+
+var openCorrespondingSnapshot = function openCorrespondingSnapshot() {
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.activeTextEditor;
+  if (!editor) return;
+  var filepath = editor.document.fileName;
+  var snapshot = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__snapshots__', "".concat(path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath), ".snap"));
+  return Object(_utils__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(snapshot);
+};
+
+/***/ }),
+
+/***/ "./src/jest/open-corresponding-test-file.ts":
+/*!**************************************************!*\
+  !*** ./src/jest/open-corresponding-test-file.ts ***!
+  \**************************************************/
+/*! exports provided: openCorrespondingTestFile */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openCorrespondingTestFile", function() { return openCorrespondingTestFile; });
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _get_corresponding_test_filepath__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./get-corresponding-test-filepath */ "./src/jest/get-corresponding-test-filepath.ts");
+/* harmony import */ var _copy_test_command__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./copy-test-command */ "./src/jest/copy-test-command.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+
+
+
+
+
+var openCorrespondingTestFile = /*#__PURE__*/function () {
+  var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
     var editor, filepath, filenameParts, dir, filepathToShow, testFilepath;
     return regeneratorRuntime.wrap(function _callee$(_context) {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
-            editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
+            editor = vscode__WEBPACK_IMPORTED_MODULE_1___default.a.window.activeTextEditor;
 
             if (editor) {
               _context.next = 3;
@@ -1615,7 +1948,7 @@ function _openCorrespondingTestFile() {
 
           case 3:
             filepath = editor.document.fileName;
-            filenameParts = getFilenameParts(filepath);
+            filenameParts = path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
 
             if (!(filenameParts.length === 1)) {
               _context.next = 7;
@@ -1638,12 +1971,12 @@ function _openCorrespondingTestFile() {
               testFilepath = filepath;
             } else {
               // Production Code
-              filepathToShow = getCorrespondingTestFilepath(filepath);
+              filepathToShow = Object(_get_corresponding_test_filepath__WEBPACK_IMPORTED_MODULE_2__["getCorrespondingTestFilepath"])(filepath);
               testFilepath = filepathToShow;
             }
 
-            copyTestCommand(testFilepath);
-            return _context.abrupt("return", Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(filepathToShow));
+            Object(_copy_test_command__WEBPACK_IMPORTED_MODULE_3__["copyTestCommand"])(testFilepath);
+            return _context.abrupt("return", Object(_utils__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(filepathToShow));
 
           case 11:
           case "end":
@@ -1652,76 +1985,11 @@ function _openCorrespondingTestFile() {
       }
     }, _callee);
   }));
-  return _openCorrespondingTestFile.apply(this, arguments);
-}
 
-function openCorrespondingSnapshot() {
-  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
-  if (!editor) return;
-  var filepath = editor.document.fileName;
-  var snapshot = path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__snapshots__', "".concat(path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath), ".snap"));
-  return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(snapshot);
-}
-function createCorrespondingTestFile() {
-  var editor = vscode__WEBPACK_IMPORTED_MODULE_1__["window"].activeTextEditor;
-  if (!editor) return;
-  var testFilepath = getCorrespondingTestFilepath(editor.document.fileName);
-
-  try {
-    Object(_ericbiewener_utils_src_writeFileIfNew__WEBPACK_IMPORTED_MODULE_2__["writeFileIfNew"])(testFilepath);
-    copyTestCommand(testFilepath);
-    Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["showTextDocument"])(testFilepath);
-  } catch (e) {
-    console.info(':: ', e);
-  }
-}
-function getFilenameParts(filepath) {
-  return path__WEBPACK_IMPORTED_MODULE_0___default.a.basename(filepath).split('.');
-}
-
-function getCorrespondingTestFilepath(filepath) {
-  var filenameParts = getFilenameParts(filepath);
-  filenameParts.splice(-1, 0, 'test');
-  return path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), '__tests__', filenameParts.join('.'));
-}
-
-function copyTestCommand(_x) {
-  return _copyTestCommand.apply(this, arguments);
-}
-
-function _copyTestCommand() {
-  _copyTestCommand = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(filepath) {
-    var _yield$getExtensionCo, testCommand, relativePath;
-
-    return regeneratorRuntime.wrap(function _callee2$(_context2) {
-      while (1) {
-        switch (_context2.prev = _context2.next) {
-          case 0:
-            _context2.next = 2;
-            return Object(_utils_misc__WEBPACK_IMPORTED_MODULE_4__["getExtensionConfig"])();
-
-          case 2:
-            _yield$getExtensionCo = _context2.sent;
-            testCommand = _yield$getExtensionCo.testCommand;
-
-            if (!testCommand) {
-              _context2.next = 8;
-              break;
-            }
-
-            relativePath = vscode__WEBPACK_IMPORTED_MODULE_1__["workspace"].asRelativePath(Object(_utils_filepaths__WEBPACK_IMPORTED_MODULE_3__["maybeSwapExtension"])(filepath));
-            _context2.next = 8;
-            return vscode__WEBPACK_IMPORTED_MODULE_1__["env"].clipboard.writeText("".concat(testCommand, " ").concat(relativePath));
-
-          case 8:
-          case "end":
-            return _context2.stop();
-        }
-      }
-    }, _callee2);
-  }));
-  return _copyTestCommand.apply(this, arguments);
-}
+  return function openCorrespondingTestFile() {
+    return _ref.apply(this, arguments);
+  };
+}();
 
 /***/ }),
 
@@ -1812,7 +2080,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! open */ "./node_modules/open/index.js");
 /* harmony import */ var open__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(open__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 
 
 
@@ -1822,7 +2090,7 @@ var openCoverageReport = function openCoverageReport() {
 
   var filename = (_vsc$window$activeTex = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor) === null || _vsc$window$activeTex === void 0 ? void 0 : _vsc$window$activeTex.document.fileName;
   if (!filename) return;
-  var workspaceRoot = Object(_utils_misc__WEBPACK_IMPORTED_MODULE_3__["getWorkspaceRoot"])();
+  var workspaceRoot = Object(_utils__WEBPACK_IMPORTED_MODULE_3__["getWorkspaceRoot"])();
   var relativeFilepath = filename.slice(workspaceRoot.length);
   var libFilepath = relativeFilepath.replace(/\/src.*/, '');
   var coveragePath = path__WEBPACK_IMPORTED_MODULE_1___default.a.join(workspaceRoot, 'coverage', libFilepath, 'lcov-report', "".concat(path__WEBPACK_IMPORTED_MODULE_1___default.a.basename(filename), ".html"));
@@ -1847,7 +2115,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _utils_misc__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/misc */ "./src/utils/misc.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 
 
 
@@ -1865,8 +2133,86 @@ function openCorrespondingReduxContainer() {
     parts.splice(parts.length - 1, 0, SUFFIX);
   }
 
-  Object(_utils_misc__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), parts.join('.')));
+  Object(_utils__WEBPACK_IMPORTED_MODULE_2__["showTextDocument"])(path__WEBPACK_IMPORTED_MODULE_0___default.a.join(path__WEBPACK_IMPORTED_MODULE_0___default.a.dirname(filepath), parts.join('.')));
 }
+
+/***/ }),
+
+/***/ "./src/toggle-jest-test.ts":
+/*!*********************************!*\
+  !*** ./src/toggle-jest-test.ts ***!
+  \*********************************/
+/*! exports provided: toggleJestTest, toggleJestTestExclusive */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "toggleJestTest", function() { return toggleJestTest; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "toggleJestTestExclusive", function() { return toggleJestTestExclusive; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
+
+
+var DISABLED = /(^\s*)(test|it|describe)\(/;
+var ENABLED_ONLY = /(^\s*)(test|it|describe)\.only/;
+var ENABLED_SKIP = /(^\s*)(test|it|describe)\.skip/;
+
+var disableLineReplacer = function disableLineReplacer(m, g1, g2) {
+  return "".concat(g1).concat(g2);
+};
+
+var enableLine = function enableLine(builder, lineNumber, line, useOnly) {
+  var modifier = useOnly ? 'only' : 'skip';
+  var newLine = line.replace(DISABLED, function (m, g1, g2) {
+    return "".concat(g1).concat(g2, ".").concat(modifier, "(");
+  });
+  return Object(_utils__WEBPACK_IMPORTED_MODULE_1__["updateLine"])(builder, lineNumber, newLine);
+};
+
+var disableLine = function disableLine(builder, lineNumber, line, useOnly) {
+  var enabledRegex = useOnly ? ENABLED_ONLY : ENABLED_SKIP;
+  var newLine = line.replace(enabledRegex, disableLineReplacer);
+  return Object(_utils__WEBPACK_IMPORTED_MODULE_1__["updateLine"])(builder, lineNumber, newLine);
+};
+
+var getNewLine = function getNewLine(builder, useOnly) {
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
+  var document = editor.document,
+      selection = editor.selection;
+  var enabledRegex = useOnly ? ENABLED_ONLY : ENABLED_SKIP;
+  var lines = document.getText().split('\n').slice(0, selection.end.line + 1);
+
+  for (var i = lines.length - 1; i > -1; i--) {
+    var line = lines[i];
+    if (DISABLED.test(line)) return enableLine(builder, i, line, useOnly);
+    if (enabledRegex.test(line)) return disableLine(builder, i, line, useOnly);
+  }
+};
+
+var toggleJestTest = function toggleJestTest() {
+  var useOnly = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+  return vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor.edit(function (builder) {
+    return getNewLine(builder, useOnly);
+  });
+};
+var toggleJestTestExclusive = function toggleJestTestExclusive() {
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
+  var document = editor.document,
+      selection = editor.selection;
+  var globalEnabledRegex = new RegExp(ENABLED_ONLY, 'g');
+  return editor.edit(function (builder) {
+    var newText = document.getText().replace(globalEnabledRegex, disableLineReplacer);
+  });
+  var enabledRegex = useOnly ? ENABLED_ONLY : ENABLED_SKIP;
+  var lines = document.getText().split('\n').slice(0, selection.end.line + 1);
+
+  for (var i = lines.length - 1; i > -1; i--) {
+    var line = lines[i];
+    if (DISABLED.test(line)) return enableLine(i, line, useOnly);
+    if (enabledRegex.test(line)) return disableLine(i, line, useOnly);
+  }
+};
 
 /***/ }),
 
@@ -1888,6 +2234,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var _ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ericbiewener/utils/src/removeEndOfString */ "./node_modules/@ericbiewener/utils/src/removeEndOfString.ts");
 /* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -1897,9 +2244,10 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
 
 
+
 var updateIndexFileToExportAllFromDir = /*#__PURE__*/function () {
   var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
-    var editor, document, filename, dir, items, extensions, importPaths;
+    var editor, document, filename, dir, ext, indexFilename, items, extensions, importPaths;
     return regeneratorRuntime.wrap(function _callee$(_context) {
       while (1) {
         switch (_context.prev = _context.next) {
@@ -1916,16 +2264,12 @@ var updateIndexFileToExportAllFromDir = /*#__PURE__*/function () {
           case 3:
             document = editor.document;
             filename = path__WEBPACK_IMPORTED_MODULE_2___default.a.basename(document.fileName);
-
-            if (['index.ts', 'index.js'].includes(filename)) {
-              _context.next = 7;
-              break;
-            }
-
-            return _context.abrupt("return");
-
-          case 7:
             dir = path__WEBPACK_IMPORTED_MODULE_2___default.a.dirname(document.fileName);
+            ext = path__WEBPACK_IMPORTED_MODULE_2___default.a.extname(filename); // Strip off trailing `x` from extension because if this is a new file, `maybeSwapExtension` will
+            // return whatever filename we give it, and we don't want a new file to have the `x` part of the
+            // extension.
+
+            indexFilename = Object(_utils__WEBPACK_IMPORTED_MODULE_5__["maybeSwapExtension"])(path__WEBPACK_IMPORTED_MODULE_2___default.a.join(dir, "index".concat(ext.replace(/x$/, ''))));
             _context.next = 10;
             return fs__WEBPACK_IMPORTED_MODULE_1__["promises"].readdir(dir);
 
@@ -1933,15 +2277,12 @@ var updateIndexFileToExportAllFromDir = /*#__PURE__*/function () {
             items = _context.sent;
             extensions = ['.js', '.jsx', '.ts', '.tsx'];
             importPaths = items.filter(function (p) {
-              return p !== filename && (!Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_4__["isFile"])(path__WEBPACK_IMPORTED_MODULE_2___default.a.join(dir, p)) || extensions.includes(path__WEBPACK_IMPORTED_MODULE_2___default.a.extname(p)));
+              return p !== indexFilename && (!Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_4__["isFile"])(path__WEBPACK_IMPORTED_MODULE_2___default.a.join(dir, p)) || extensions.includes(path__WEBPACK_IMPORTED_MODULE_2___default.a.extname(p)));
             }).map(function (p) {
               return "export * from './".concat(Object(_ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_3__["removeEndOfString"])(p), "'");
             });
             _context.next = 15;
-            return editor.edit(function (builder) {
-              var endPos = document.positionAt(document.getText().length);
-              builder.replace(new vscode__WEBPACK_IMPORTED_MODULE_0__["Range"](0, 0, endPos.line, endPos.character), importPaths.join('\n'));
-            });
+            return fs__WEBPACK_IMPORTED_MODULE_1__["promises"].writeFile(indexFilename, importPaths.join('\n'), 'utf8');
 
           case 15:
           case "end":
@@ -1958,25 +2299,140 @@ var updateIndexFileToExportAllFromDir = /*#__PURE__*/function () {
 
 /***/ }),
 
-/***/ "./src/utils/filepaths.ts":
-/*!********************************!*\
-  !*** ./src/utils/filepaths.ts ***!
-  \********************************/
-/*! exports provided: maybeSwapExtension, findFileForExtensions */
+/***/ "./src/utils/find-file-for-extensions.ts":
+/*!***********************************************!*\
+  !*** ./src/utils/find-file-for-extensions.ts ***!
+  \***********************************************/
+/*! exports provided: findFileForExtensions */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "maybeSwapExtension", function() { return maybeSwapExtension; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "findFileForExtensions", function() { return findFileForExtensions; });
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
-/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
+/* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+
+var findFileForExtensions = function findFileForExtensions(filepath, extensions) {
+  var filepathRoot = filepath.slice(0, filepath.lastIndexOf('.'));
+
+  var _iterator = _createForOfIteratorHelper(extensions),
+      _step;
+
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var ext = _step.value;
+      var newPath = "".concat(filepathRoot, ".").concat(ext);
+      if (Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_0__["isFile"])(newPath)) return newPath;
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+};
+
+/***/ }),
+
+/***/ "./src/utils/get-extension-config.ts":
+/*!*******************************************!*\
+  !*** ./src/utils/get-extension-config.ts ***!
+  \*******************************************/
+/*! exports provided: getExtensionConfig */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getExtensionConfig", function() { return getExtensionConfig; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+
+var getExtensionConfig = function getExtensionConfig(resource) {
+  return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.getConfiguration('grabBag', resource);
+};
+
+/***/ }),
+
+/***/ "./src/utils/get-workspace-root.ts":
+/*!*****************************************!*\
+  !*** ./src/utils/get-workspace-root.ts ***!
+  \*****************************************/
+/*! exports provided: getWorkspaceRoot */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getWorkspaceRoot", function() { return getWorkspaceRoot; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+
+var getWorkspaceRoot = function getWorkspaceRoot() {
+  var workspaceFolders = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.workspaceFolders;
+  var workspaceFolder = workspaceFolders ? workspaceFolders[0] : null;
+  if (!workspaceFolder) throw new Error('No workspace folders');
+  return workspaceFolder.uri.fsPath;
+};
+
+/***/ }),
+
+/***/ "./src/utils/index.ts":
+/*!****************************!*\
+  !*** ./src/utils/index.ts ***!
+  \****************************/
+/*! exports provided: findFileForExtensions, getExtensionConfig, getWorkspaceRoot, maybeSwapExtension, moveEditorToOtherGroup, showTextDocument, updateLine */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _find_file_for_extensions__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./find-file-for-extensions */ "./src/utils/find-file-for-extensions.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "findFileForExtensions", function() { return _find_file_for_extensions__WEBPACK_IMPORTED_MODULE_0__["findFileForExtensions"]; });
+
+/* harmony import */ var _get_extension_config__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./get-extension-config */ "./src/utils/get-extension-config.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "getExtensionConfig", function() { return _get_extension_config__WEBPACK_IMPORTED_MODULE_1__["getExtensionConfig"]; });
+
+/* harmony import */ var _get_workspace_root__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./get-workspace-root */ "./src/utils/get-workspace-root.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "getWorkspaceRoot", function() { return _get_workspace_root__WEBPACK_IMPORTED_MODULE_2__["getWorkspaceRoot"]; });
+
+/* harmony import */ var _maybe_swap_extension__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./maybe-swap-extension */ "./src/utils/maybe-swap-extension.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "maybeSwapExtension", function() { return _maybe_swap_extension__WEBPACK_IMPORTED_MODULE_3__["maybeSwapExtension"]; });
+
+/* harmony import */ var _move_editor_to_other_group__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./move-editor-to-other-group */ "./src/utils/move-editor-to-other-group.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "moveEditorToOtherGroup", function() { return _move_editor_to_other_group__WEBPACK_IMPORTED_MODULE_4__["moveEditorToOtherGroup"]; });
+
+/* harmony import */ var _show_text_document__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./show-text-document */ "./src/utils/show-text-document.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "showTextDocument", function() { return _show_text_document__WEBPACK_IMPORTED_MODULE_5__["showTextDocument"]; });
+
+/* harmony import */ var _update_line__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./update-line */ "./src/utils/update-line.ts");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "updateLine", function() { return _update_line__WEBPACK_IMPORTED_MODULE_6__["updateLine"]; });
+
+
+
+
+
+
+
+
+
+/***/ }),
+
+/***/ "./src/utils/maybe-swap-extension.ts":
+/*!*******************************************!*\
+  !*** ./src/utils/maybe-swap-extension.ts ***!
+  \*******************************************/
+/*! exports provided: maybeSwapExtension */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "maybeSwapExtension", function() { return maybeSwapExtension; });
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! path */ "path");
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
+/* harmony import */ var _ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ericbiewener/utils/src/removeEndOfString */ "./node_modules/@ericbiewener/utils/src/removeEndOfString.ts");
 
 
 
@@ -1988,53 +2444,62 @@ var EXTENSION_MAP = {
   css: 'pcss',
   pcss: 'css'
 };
-function maybeSwapExtension(filepath) {
+var maybeSwapExtension = function maybeSwapExtension(filepath) {
   if (Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__["isFile"])(filepath)) return filepath;
   var ext = path__WEBPACK_IMPORTED_MODULE_0___default.a.extname(filepath).slice(1);
   var newExt = EXTENSION_MAP[ext];
   if (!newExt) return filepath;
-  return "".concat(filepath.slice(0, filepath.lastIndexOf('.')), ".").concat(newExt);
-}
-function findFileForExtensions(filepath, extensions) {
-  var filepathRoot = filepath.slice(0, filepath.lastIndexOf('.'));
-
-  var _iterator = _createForOfIteratorHelper(extensions),
-      _step;
-
-  try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var ext = _step.value;
-      var newPath = "".concat(filepathRoot, ".").concat(ext);
-      if (Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__["isFile"])(newPath)) return newPath;
-    }
-  } catch (err) {
-    _iterator.e(err);
-  } finally {
-    _iterator.f();
-  }
-}
+  var swappedFilepath = "".concat(Object(_ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_2__["removeEndOfString"])(filepath), ".").concat(newExt);
+  return Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__["isFile"])(swappedFilepath) ? swappedFilepath : filepath;
+};
 
 /***/ }),
 
-/***/ "./src/utils/misc.ts":
-/*!***************************!*\
-  !*** ./src/utils/misc.ts ***!
-  \***************************/
-/*! exports provided: showTextDocument, getExtensionConfig, getWorkspaceRoot */
+/***/ "./src/utils/move-editor-to-other-group.ts":
+/*!*************************************************!*\
+  !*** ./src/utils/move-editor-to-other-group.ts ***!
+  \*************************************************/
+/*! exports provided: moveEditorToOtherGroup */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "moveEditorToOtherGroup", function() { return moveEditorToOtherGroup; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+
+var moveEditorToOtherGroup = function moveEditorToOtherGroup() {
+  var editor = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor;
+  if (!editor || !editor.viewColumn) return;
+
+  if (editor.viewColumn > 1) {
+    vscode__WEBPACK_IMPORTED_MODULE_0___default.a.commands.executeCommand('workbench.action.moveEditorToPreviousGroup');
+  } else {
+    vscode__WEBPACK_IMPORTED_MODULE_0___default.a.commands.executeCommand('workbench.action.moveEditorToNextGroup');
+  }
+};
+
+/***/ }),
+
+/***/ "./src/utils/show-text-document.ts":
+/*!*****************************************!*\
+  !*** ./src/utils/show-text-document.ts ***!
+  \*****************************************/
+/*! exports provided: showTextDocument */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "showTextDocument", function() { return showTextDocument; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getExtensionConfig", function() { return getExtensionConfig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getWorkspaceRoot", function() { return getWorkspaceRoot; });
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ericbiewener/utils/src/isFile */ "./node_modules/@ericbiewener/utils/src/isFile.ts");
-/* harmony import */ var _filepaths__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./filepaths */ "./src/utils/filepaths.ts");
+/* harmony import */ var _maybe_swap_extension__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./maybe-swap-extension */ "./src/utils/maybe-swap-extension.ts");
+/* harmony import */ var _move_editor_to_other_group__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./move-editor-to-other-group */ "./src/utils/move-editor-to-other-group.ts");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
 
 
 
@@ -2057,7 +2522,7 @@ function _showTextDocument() {
           case 0:
             moveToOtherColumn = _args.length > 1 && _args[1] !== undefined ? _args[1] : true;
             preserveFocus = _args.length > 2 && _args[2] !== undefined ? _args[2] : false;
-            filepath = Object(_filepaths__WEBPACK_IMPORTED_MODULE_2__["maybeSwapExtension"])(filepath);
+            filepath = Object(_maybe_swap_extension__WEBPACK_IMPORTED_MODULE_2__["maybeSwapExtension"])(filepath);
 
             if (Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_1__["isFile"])(filepath)) {
               _context.next = 5;
@@ -2082,7 +2547,7 @@ function _showTextDocument() {
 
           case 10:
             newEditor = _context.sent;
-            if (newEditor.viewColumn !== viewColumn) moveEditorToOtherGroup();
+            if (newEditor.viewColumn !== viewColumn) Object(_move_editor_to_other_group__WEBPACK_IMPORTED_MODULE_3__["moveEditorToOtherGroup"])();
             return _context.abrupt("return", filepath);
 
           case 13:
@@ -2095,25 +2560,23 @@ function _showTextDocument() {
   return _showTextDocument.apply(this, arguments);
 }
 
-function moveEditorToOtherGroup() {
-  var editor = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.window.activeTextEditor;
-  if (!editor || !editor.viewColumn) return;
+/***/ }),
 
-  if (editor.viewColumn > 1) {
-    vscode__WEBPACK_IMPORTED_MODULE_0___default.a.commands.executeCommand('workbench.action.moveEditorToPreviousGroup');
-  } else {
-    vscode__WEBPACK_IMPORTED_MODULE_0___default.a.commands.executeCommand('workbench.action.moveEditorToNextGroup');
-  }
-}
+/***/ "./src/utils/update-line.ts":
+/*!**********************************!*\
+  !*** ./src/utils/update-line.ts ***!
+  \**********************************/
+/*! exports provided: updateLine */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-var getExtensionConfig = function getExtensionConfig(resource) {
-  return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.getConfiguration('grabBag', resource);
-};
-var getWorkspaceRoot = function getWorkspaceRoot() {
-  var workspaceFolders = vscode__WEBPACK_IMPORTED_MODULE_0___default.a.workspace.workspaceFolders;
-  var workspaceFolder = workspaceFolders ? workspaceFolders[0] : null;
-  if (!workspaceFolder) throw new Error('No workspace folders');
-  return workspaceFolder.uri.fsPath;
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "updateLine", function() { return updateLine; });
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
+/* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
+
+var updateLine = function updateLine(builder, lineNumber, line) {
+  return builder.replace(new vscode__WEBPACK_IMPORTED_MODULE_0__["Range"](lineNumber, 0, lineNumber, 9999999999), line);
 };
 
 /***/ }),

@@ -1,6 +1,6 @@
 import path from 'path'
 import { window } from 'vscode'
-import { showTextDocument } from './utils/misc'
+import { showTextDocument } from './utils'
 
 const SUFFIX = 'connect'
 

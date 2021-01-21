@@ -1,5 +1,5 @@
 import { commands, Selection, window } from 'vscode'
-import { getExtensionConfig } from './utils/misc'
+import { getExtensionConfig } from './utils'
 
 export async function closeAllPanels() {
   commands.executeCommand('workbench.action.closePanel')

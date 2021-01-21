@@ -49,6 +49,11 @@
         "category": "Grab Bag"
       },
       {
+        "title": "Copy Test Command for File",
+        "command": "grabBag.copyTestCommand",
+        "category": "Grab Bag"
+      },
+      {
         "title": "Open Corresponding Test File",
         "command": "grabBag.openCorrespondingTestFile",
         "category": "Grab Bag"
@@ -116,6 +121,21 @@
       {
         "title": "Update index file to export all files in directory",
         "command": "grabBag.updateIndexFileToExportAllFromDir",
+        "category": "Grab Bag"
+      },
+      {
+        "title": "Toggle Jest .only()",
+        "command": "grabBag.toggleJestOnly",
+        "category": "Grab Bag"
+      },
+      {
+        "title": "Toggle Jest .skip()",
+        "command": "grabBag.toggleJestSkip",
+        "category": "Grab Bag"
+      },
+      {
+        "title": "Toggle Jest .only() -- exclusive",
+        "command": "grabBag.toggleJestOnlyExclusive",
         "category": "Grab Bag"
       }
     ],

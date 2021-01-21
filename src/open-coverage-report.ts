@@ -1,7 +1,7 @@
 import vsc from 'vscode'
 import path from 'path'
 import open from 'open'
-import { getWorkspaceRoot } from './utils/misc'
+import { getWorkspaceRoot } from './utils'
 
 export const openCoverageReport = () => {
   const filename = vsc.window.activeTextEditor?.document.fileName

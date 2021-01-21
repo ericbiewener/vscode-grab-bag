@@ -2,8 +2,11 @@ import path from 'path'
 import { window } from 'vscode'
 import { writeFileIfNew } from '@ericbiewener/utils/src/writeFileIfNew'
 import { removeFileExt } from '@ericbiewener/utils/src/removeFileExt'
-import { findFileForExtensions } from './utils/filepaths'
-import { getExtensionConfig, showTextDocument } from './utils/misc'
+import {
+  findFileForExtensions,
+  getExtensionConfig,
+  showTextDocument,
+} from './utils'
 
 const CSS_EXTENSIONS = ['css', 'pcss']
 const JS_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx']
