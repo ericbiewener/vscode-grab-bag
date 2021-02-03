@@ -26,7 +26,7 @@ export const updateIndexFileToExportAllFromDir = async () => {
   const importPaths = items
     .filter(
       (p) =>
-        p !== indexFilename &&
+        !p.startsWith('index.') &&
         (!isFile(path.join(dir, p)) || extensions.includes(path.extname(p)))
     )
     .map((p) => `export * from './${removeEndOfString(p)}'`)

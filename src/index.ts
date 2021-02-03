@@ -24,7 +24,7 @@ import {
 import { openCoverageReport } from './open-coverage-report'
 import { openCorrespondingReduxContainer } from './openCorrespondingReduxContainer'
 import { updateIndexFileToExportAllFromDir } from './update-index-file-to-export-all-from-dir'
-import { toggleJestTest, toggleJestTestExclusive } from './toggle-jest-test'
+import { toggleJestTest } from './toggle-jest-test'
 
 export const activate = async function activate(ctx: ExtensionContext) {
   ctx.subscriptions.push(
@@ -81,9 +81,9 @@ export const activate = async function activate(ctx: ExtensionContext) {
     commands.registerCommand('grabBag.toggleJestOnly', toggleJestTest),
     commands.registerCommand('grabBag.toggleJestSkip', () =>
       toggleJestTest(false)
-    ),
-    commands.registerCommand('grabBag.toggleJestOnlyExclusive', () =>
-      toggleJestTestExclusive()
     )
+    // commands.registerCommand('grabBag.toggleJestOnlyExclusive', () =>
+    //   toggleJestTestExclusive()
+    // )
   )
 }

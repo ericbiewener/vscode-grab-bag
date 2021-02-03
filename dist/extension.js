@@ -2142,13 +2142,12 @@ function openCorrespondingReduxContainer() {
 /*!*********************************!*\
   !*** ./src/toggle-jest-test.ts ***!
   \*********************************/
-/*! exports provided: toggleJestTest, toggleJestTestExclusive */
+/*! exports provided: toggleJestTest */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "toggleJestTest", function() { return toggleJestTest; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "toggleJestTestExclusive", function() { return toggleJestTestExclusive; });
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vscode */ "vscode");
 /* harmony import */ var vscode__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vscode__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
@@ -2195,24 +2194,26 @@ var toggleJestTest = function toggleJestTest() {
   return vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor.edit(function (builder) {
     return getNewLine(builder, useOnly);
   });
-};
-var toggleJestTestExclusive = function toggleJestTestExclusive() {
-  var editor = vscode__WEBPACK_IMPORTED_MODULE_0__["window"].activeTextEditor;
-  var document = editor.document,
-      selection = editor.selection;
-  var globalEnabledRegex = new RegExp(ENABLED_ONLY, 'g');
-  return editor.edit(function (builder) {
-    var newText = document.getText().replace(globalEnabledRegex, disableLineReplacer);
-  });
-  var enabledRegex = useOnly ? ENABLED_ONLY : ENABLED_SKIP;
-  var lines = document.getText().split('\n').slice(0, selection.end.line + 1);
-
-  for (var i = lines.length - 1; i > -1; i--) {
-    var line = lines[i];
-    if (DISABLED.test(line)) return enableLine(i, line, useOnly);
-    if (enabledRegex.test(line)) return disableLine(i, line, useOnly);
-  }
-};
+}; // export const toggleJestTestExclusive = () => {
+//   const editor = vsc.window.activeTextEditor!
+//   const { document, selection } = editor
+//   const globalEnabledRegex = new RegExp(ENABLED_ONLY, 'g')
+//   return editor.edit((builder) => {
+//     const newText = document
+//       .getText()
+//       .replace(globalEnabledRegex, disableLineReplacer)
+//   })
+//   const enabledRegex = useOnly ? ENABLED_ONLY : ENABLED_SKIP
+//   const lines = document
+//     .getText()
+//     .split('\n')
+//     .slice(0, selection.end.line + 1)
+//   for (let i = lines.length - 1; i > -1; i--) {
+//     const line = lines[i]
+//     if (DISABLED.test(line)) return enableLine(i, line, useOnly)
+//     if (enabledRegex.test(line)) return disableLine(i, line, useOnly)
+//   }
+// }
 
 /***/ }),
 
@@ -2277,7 +2278,7 @@ var updateIndexFileToExportAllFromDir = /*#__PURE__*/function () {
             items = _context.sent;
             extensions = ['.js', '.jsx', '.ts', '.tsx'];
             importPaths = items.filter(function (p) {
-              return p !== indexFilename && (!Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_4__["isFile"])(path__WEBPACK_IMPORTED_MODULE_2___default.a.join(dir, p)) || extensions.includes(path__WEBPACK_IMPORTED_MODULE_2___default.a.extname(p)));
+              return !p.startsWith('index.') && (!Object(_ericbiewener_utils_src_isFile__WEBPACK_IMPORTED_MODULE_4__["isFile"])(path__WEBPACK_IMPORTED_MODULE_2___default.a.join(dir, p)) || extensions.includes(path__WEBPACK_IMPORTED_MODULE_2___default.a.extname(p)));
             }).map(function (p) {
               return "export * from './".concat(Object(_ericbiewener_utils_src_removeEndOfString__WEBPACK_IMPORTED_MODULE_3__["removeEndOfString"])(p), "'");
             });
