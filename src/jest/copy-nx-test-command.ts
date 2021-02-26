@@ -30,6 +30,6 @@ export const copyNxTestCommand = async () => {
   }
 
   await vsc.env.clipboard.writeText(
-    `yarn test ${projectName} --skip-nx-cache --codeCoverage 0 --testFile ${testPath}`
+    `yarn test ${projectName} --skip-nx-cache --codeCoverage 0 --testFile ${testPath} --watch`
   )
 }

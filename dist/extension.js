@@ -1576,9 +1576,10 @@ var activate = /*#__PURE__*/function () {
               return Object(_editor_manipulation__WEBPACK_IMPORTED_MODULE_2__["moveCaret"])(false);
             }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.gotoSymbolGrouped', _misc__WEBPACK_IMPORTED_MODULE_4__["gotoSymbolGrouped"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openAllFilesOrLinksListedInDocument', _misc__WEBPACK_IMPORTED_MODULE_4__["openAllFilesOrLinksListedInDocument"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openFileInDefaultProgram', _misc__WEBPACK_IMPORTED_MODULE_4__["openFileInDefaultProgram"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.openCoverageReport', _open_coverage_report__WEBPACK_IMPORTED_MODULE_6__["openCoverageReport"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.updateIndexFileToExportAllFromDir', _update_index_file_to_export_all_from_dir__WEBPACK_IMPORTED_MODULE_8__["updateIndexFileToExportAllFromDir"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.toggleJestOnly', _toggle_jest_test__WEBPACK_IMPORTED_MODULE_9__["toggleJestTest"]), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.toggleJestSkip', function () {
               return Object(_toggle_jest_test__WEBPACK_IMPORTED_MODULE_9__["toggleJestTest"])(false);
-            }), vscode__WEBPACK_IMPORTED_MODULE_1__["commands"].registerCommand('grabBag.toggleJestOnlyExclusive', function () {
-              return Object(_toggle_jest_test__WEBPACK_IMPORTED_MODULE_9__["toggleJestTestExclusive"])();
-            }));
+            }) // commands.registerCommand('grabBag.toggleJestOnlyExclusive', () =>
+            //   toggleJestTestExclusive()
+            // )
+            );
 
           case 1:
           case "end":
@@ -1684,7 +1685,7 @@ var copyNxTestCommand = /*#__PURE__*/function () {
 
           case 23:
             _context.next = 25;
-            return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.env.clipboard.writeText("yarn test ".concat(projectName, " --skip-nx-cache --codeCoverage 0 --testFile ").concat(testPath));
+            return vscode__WEBPACK_IMPORTED_MODULE_0___default.a.env.clipboard.writeText("yarn test ".concat(projectName, " --skip-nx-cache --codeCoverage 0 --testFile ").concat(testPath, " --watch"));
 
           case 25:
           case "end":
